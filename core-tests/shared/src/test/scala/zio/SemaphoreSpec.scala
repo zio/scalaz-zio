@@ -23,7 +23,8 @@ object SemaphoreSpec extends ZIOBaseSpec {
         effect     = semaphore.withPermit(ZIO.unit)
         fiber     <- effect.fork
         _         <- fiber.interrupt
-      } yield assertCompletes
+        permits   <- semaphore.available
+      } yield assertTrue(permits == 0L)
     },
     test("withPermitsScoped releases same number of permits") {
       for {
@@ -41,6 +42,45 @@ object SemaphoreSpec extends ZIOBaseSpec {
         _            <- promise.succeed(())
         waitingEnd   <- semaphore.awaiting.repeatUntil(_ == 0)
       } yield assertTrue(waitingStart == 10, waitingEnd == 0)
-    } @@ timeout(10.seconds)
+    } @@ timeout(10.seconds),
+    test("withPermits can trigger multiple effects on release") {
+      for {
+        semaphore <- Semaphore.make(2)
+        prom1     <- Promise.make[Nothing, Unit]
+        prom2     <- Promise.make[Nothing, Unit]
+        fiber     <- semaphore.withPermits(2)(ZIO.never).fork
+        _         <- semaphore.withPermit(prom1.succeed(()) *> ZIO.never).fork
+        _         <- semaphore.withPermit(prom2.succeed(()) *> ZIO.never).fork
+        _         <- fiber.interrupt
+        _         <- prom1.await &> prom2.await
+      } yield assertCompletes
+    },
+    test("withPermit acquire resets properly on interrupt") {
+      for {
+        semaphore    <- Semaphore.make(1L)
+        delayPromise <- Promise.make[Nothing, Unit]
+        ready        <- Promise.make[Nothing, Unit]
+        fiber        <- semaphore.withPermit(ready.succeed(()) *> delayPromise.await).fork
+        _            <- ready.await
+        waiters      <- ZIO.replicateZIO(10)(semaphore.withPermit(ZIO.never).fork)
+        _            <- waiters.head.interrupt
+        available1   <- semaphore.available
+        _            <- delayPromise.succeed(())
+        _            <- ZIO.foreachDiscard(waiters.tail)(_.interrupt) &> fiber.join
+        available2   <- semaphore.available
+      } yield assertTrue(available1 == 0, available2 == 1L)
+    } @@ jvm(nonFlaky),
+    test("interrupted withPermit with partial permits releases correct number") {
+      for {
+        semaphore  <- Semaphore.make(3L)
+        promise    <- Promise.make[Nothing, Unit]
+        fiber1     <- semaphore.withPermits(2)(promise.await).fork
+        fiber2     <- semaphore.withPermits(4)(ZIO.never).fork
+        _          <- promise.succeed(()) *> fiber1.join
+        available1 <- semaphore.available
+        _          <- fiber2.interrupt
+        available2 <- semaphore.available
+      } yield assertTrue(available1 == 0, available2 == 3)
+    }
   ) @@ exceptJS(nonFlaky)
 }

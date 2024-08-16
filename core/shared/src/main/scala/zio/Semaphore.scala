@@ -129,16 +129,34 @@ object Semaphore {
               }
             }
 
-        def restore(promise: Promise[Nothing, Unit], n: Long)(implicit trace: Trace): UIO[Any] =
-          ref.modify {
-            case Left(queue) =>
-              queue
-                .find(_._1 == promise)
-                .fold(releaseN(n) -> Left(queue)) { case (_, permits) =>
-                  releaseN(n - permits) -> Left(queue.filter(_._1 != promise))
+        def restore(promise: Promise[Nothing, Unit], n: Long)(implicit trace: Trace): UIO[Any] = ZIO.suspendSucceed {
+          if (promise.unsafe.isDone) {
+            // If the promise completed, then there isn't any need to remove it from the queue,
+            // since it was removed before it was completed in another release.
+            releaseN(n)
+          } else {
+            // If isDone is false, that means the fiber waiting for the promise was interrupted.
+            // We should therefore remove the promise from the queue, so that a later release doesn't
+            // true to fulfill the promise when nothing is waiting for it.
+            ref.modify {
+              case Left(queue) =>
+                // Use span so we can filter out the promise
+                // without having to iterate over the entire queue
+                val (prefix, suffix) = queue.span(_ != promise)
+                suffix match {
+                  // If we found the promise in the queue, then we need to release any permits
+                  // that have already been granted to it.
+                  case (_, permits) +: tail => releaseN(n - permits) -> Left(prefix ++ tail)
+                  // We didn't find the promise in the queue, which means N permits were assigned to this
+                  // fiber between the interruption and now, so we need to release them.
+                  case _ => releaseN(n) -> Left(prefix)
                 }
-            case Right(permits) => ZIO.unit -> Right(permits + n)
-          }.flatten
+              // If the state is a Right, that means the promise was already removed from the queue by a different release, which means the
+              // permits have effectively been assigned to us, and we need to release them again.
+              case Right(queue) => ZIO.unit -> Right(permits + n)
+            }.flatten
+          }
+        }
 
         def releaseN(n: Long)(implicit trace: Trace): UIO[Any] = {
 
