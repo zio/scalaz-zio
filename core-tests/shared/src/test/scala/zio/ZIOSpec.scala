@@ -2003,6 +2003,15 @@ object ZIOSpec extends ZIOBaseSpec {
         assertZIO(ZIO.collectAll(lst))(equalTo(List(12, 12)))
       }
     ),
+    suite("retryN")(
+      test("retryN retries n times") {
+        for {
+          ref    <- Ref.make(0)
+          _      <- (ref.update(_ + 1) *> ZIO.fail(None)).retryN(3).orElse(ZIO.unit)
+          result <- ref.get
+        } yield assertTrue(result == 4)
+      }
+    ),
     suite("retryUntil")(
       test("retryUntil retries until condition is true") {
         for {
