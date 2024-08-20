@@ -164,8 +164,8 @@ object Semaphore {
           def loop(
             n: Long,
             state: Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long],
-            acc: UIO[Any]
-          ): (UIO[Any], Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long]) =
+            acc: List[Promise[Nothing, Unit]]
+          ): (List[Promise[Nothing, Unit]], Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long]) =
             state match {
               case Right(permits) => acc -> Right(permits + n)
               case Left(queue) =>
@@ -173,15 +173,15 @@ object Semaphore {
                   case None => acc -> Right(n)
                   case Some(((promise, permits), queue)) =>
                     if (n > permits)
-                      loop(n - permits, Left(queue), acc *> promise.succeedUnit)
+                      loop(n - permits, Left(queue), promise :: acc)
                     else if (n == permits)
-                      (acc *> promise.succeedUnit) -> Left(queue)
+                      (promise :: acc) -> Left(queue)
                     else
                       acc -> Left((promise -> (permits - n)) +: queue)
                 }
             }
 
-          ref.modify(loop(n, _, ZIO.unit)).flatten
+          ref.modify(loop(n, _, Nil)).map(l => l.foreach(_.unsafe.done(Exit.unit)(Unsafe)))
         }
       }
   }
