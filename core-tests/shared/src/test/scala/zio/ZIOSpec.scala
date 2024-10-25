@@ -2745,7 +2745,7 @@ object ZIOSpec extends ZIOBaseSpec {
                     }
                     .ensuring(unexpectedPlace.update(2 :: _))
                     .forkDaemon
-          result     <- Live.withLive(fork.interrupt)(_.timeout(5.seconds))
+          result     <- Live.withLive(fork.interrupt)(_.delay(100.millis).timeout(5.seconds))
           unexpected <- unexpectedPlace.get
         } yield {
           assert(unexpected)(isEmpty) &&
