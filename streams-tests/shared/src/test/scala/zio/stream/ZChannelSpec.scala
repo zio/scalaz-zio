@@ -183,6 +183,21 @@ object ZChannelSpec extends ZIOBaseSpec {
             }
         }
       ),
+      suite("ZChannel#mapOutZIOPar")(
+        test("mapOutZIOPar in uninterruptible region") {
+          for {
+            _ <- ZChannel.unit.mapOutZIOPar(4)(_ => ZIO.unit).runDrain.uninterruptible
+          } yield assertCompletes
+        } @@ timeout(5.seconds),
+        test("mergeAllWith in uninterruptible region") {
+          for {
+            _ <- ZChannel
+                   .mergeAllWith(ZChannel.unit, 4, mergeStrategy = ZChannel.MergeStrategy.BufferSliding)((l, _) => l)
+                   .runDrain
+                   .uninterruptible
+          } yield assertCompletes
+        } @@ timeout(5.seconds)
+      ),
       suite("ZChannel.concatMap")(
         test("plain") {
           ZChannel.writeAll(1, 2, 3).concatMap(i => ZChannel.writeAll(i, i)).runCollect.map { case (chunk, _) =>

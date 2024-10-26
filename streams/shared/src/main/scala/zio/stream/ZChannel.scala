@@ -671,7 +671,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                    _ <- latch.await
                    _ <- outgoing.offer(f)
                  } yield ()
-               }.forever
+               }.forever.interruptible
              }
                .catchAllCause(cause =>
                  cause.failureOrCause match {
@@ -688,7 +688,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                        ZChannel.failUnit
                  }
                )
-               .race(errorSignal.await)
+               .race(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
@@ -750,7 +750,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                           .fork
                    _ <- latch.await
                  } yield ()
-               }.forever
+               }.forever.interruptible
              }
                .catchAllCause(cause =>
                  cause.failureOrCause match {
@@ -767,7 +767,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                        ZChannel.failUnit
                  }
                )
-               .race(errorSignal.await)
+               .race(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
@@ -1966,7 +1966,7 @@ object ZChannel {
                                    ZIO.scopedWith { scope =>
                                      (incoming >>> channel)
                                        .toPullInAlt(scope)
-                                       .flatMap(evaluatePull(_).race(canceler.await))
+                                       .flatMap(evaluatePull(_).race(canceler.await.interruptible))
                                    }
                                  childFiber <- permits
                                                  .withPermit(latch.succeed(()) *> raceIOs)
@@ -1976,7 +1976,7 @@ object ZChannel {
                              }
                        }
         _ <- ZIO
-               .fiberIdWith(pullStrategy(_).forever)
+               .fiberIdWith(pullStrategy(_).forever.interruptible)
                .catchAllCause(cause =>
                  cause.failureOrCause match {
                    case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
@@ -1989,7 +1989,7 @@ object ZChannel {
                    case Right(cause) => outgoing.offer(Exit.failCause(cause.map(Left(_))))
                  }
                )
-               .race(errorSignal.await)
+               .race(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val consumer: ZChannel[Env, Any, Any, Any, OutErr, OutElem, OutDone] =
