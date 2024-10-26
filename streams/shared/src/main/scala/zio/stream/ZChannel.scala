@@ -667,6 +667,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                                   ZChannel.failLeftUnit
                               )
                           )
+                          .interruptible
                           .fork
                    _ <- latch.await
                    _ <- outgoing.offer(f)
@@ -747,6 +748,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                                 elem => outgoing.offer(Exit.succeed(elem))
                               )
                           )
+                          .interruptible
                           .fork
                    _ <- latch.await
                  } yield ()
@@ -1949,6 +1951,7 @@ object ZChannel {
                                for {
                                  _ <- permits
                                         .withPermit(latch.succeed(()) *> raceIOs)
+                                        .interruptible
                                         .fork
                                  _ <- latch.await
                                } yield ()
@@ -1970,13 +1973,14 @@ object ZChannel {
                                    }
                                  childFiber <- permits
                                                  .withPermit(latch.succeed(()) *> raceIOs)
+                                                 .interruptible
                                                  .fork
                                  _ <- latch.await
                                } yield ()
                              }
                        }
         _ <- ZIO
-               .fiberIdWith(pullStrategy(_).forever.interruptible)
+               .fiberIdWith(pullStrategy(_).forever)
                .catchAllCause(cause =>
                  cause.failureOrCause match {
                    case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
