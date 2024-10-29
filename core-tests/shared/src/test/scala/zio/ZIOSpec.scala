@@ -2727,14 +2727,12 @@ object ZIOSpec extends ZIOBaseSpec {
                       ()
                     }
                     .ensuring {
-                      ZIO.scopeWith { /*scope*/
-                        _ =>
-                          ZIO.async[Any, Nothing, Unit] { /*k*/
-                            _ =>
+                      ZIO.scopeWith { scope =>
+                          ZIO.async[Any, Nothing, Unit] { k =>
                               Unsafe.unsafe { implicit unsafe =>
                                 runtime.unsafe.fork {
                                   //this makes sure to interrupt this fiber once the external scope closes (which happens AFTER the entire spec executed)
-                                  //scope.addFinalizer(ZIO.succeed(k(ZIO.interrupt))) *>
+                                  scope.addFinalizer(ZIO.succeed(k(ZIO.interrupt))) *>
                                   step.succeed(())
                                 }
                               }
