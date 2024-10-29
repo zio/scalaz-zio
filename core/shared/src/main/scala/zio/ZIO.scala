@@ -5557,7 +5557,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
                     //otherwise, fiber existed early and the coordinator is still able to bypass cb
                     if (bypassState.compareAndSet(BypassPossible, BypassDenied)) //won the race
                       cb(ZIO.left(b()).ensuring(fib.interrupt *> fib.inheritAll))
-                    else if (bypassState.getPlain eq BypassDenied) //supervisor won
+                    else if (bypassState.get /*Plain*/ eq BypassDenied) //supervisor won
                       cb(ZIO.left(b()).ensuring(fib.interrupt *> fib.inheritAll))
                   },
                   duration
