@@ -5509,7 +5509,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   final class TimeoutTo[-R, +E, +A, +B](self: ZIO[R, E, A], b: () => B) {
     //todo: kept here for reference, drop this once the new impl is approved (makre sure to drop the referencing benchmarks in zio.TimeoutBenchmark)
     def applyOrig[B1 >: B](f: A => B1)(duration: => Duration)(implicit
-      trace: Trace
+                                                              trace: Trace
     ): ZIO[R, E, B1] =
       ZIO.fiberIdWith { parentFiberId =>
         self.raceFibersWith[R, Nothing, E, Unit, B1](ZIO.sleep(duration).interruptible)(
@@ -5533,7 +5533,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       }
 
     def apply[B1 >: B](f: A => B1)(duration: => Duration)(implicit
-      trace: Trace
+                                                          trace: Trace
     ): ZIO[R, E, B1] =
       ZIO.clockWith(_.scheduler).flatMap { scheduler =>
         ZIO.withFiberRuntime[R, E, B1] { (fibRt, r) =>
@@ -5567,10 +5567,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
               if (
                 bypassState.get /*Plain*/ () eq BypassDenied
               ) //no need to actually start the fiber (todo: remove it from the fibers scope?)
-                {
-                  fib.startSuspended()(zio.Unsafe.unsafe)
-                  Left(ZIO.unit)
-                } //todo: can we bypass here? it'd require the scheduler to change state into BypassPendingResult and adding a state so the scheduler does the right thing for 'late' timeout
+              {
+                fib.startSuspended()(zio.Unsafe.unsafe)
+                Left(ZIO.unit)
+              } //todo: can we bypass here? it'd require the scheduler to change state into BypassPendingResult and adding a state so the scheduler does the right thing for 'late' timeout
               else {
                 fib.addObserver { ex =>
                   if (!bypassState.compareAndSet(BypassPossible, BypassPendingResult(ex))) {
@@ -5624,7 +5624,39 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
             }
         }
       }
+
+    def apply2[B1 >: B](f: A => B1)(duration: => Duration)(implicit
+                                                           trace: Trace
+    ): ZIO[R, E, B1] = {
+      val z0: ZIO[R, Option[E], A] = withRecoverableInterruption[R, E, A] { intFn =>
+        ZIO
+          .clockWith(_.scheduler)
+          .flatMap { scheduler =>
+            val c = scheduler
+              .schedule(
+                () => intFn(),
+                duration
+              )(zio.Unsafe.unsafe)
+            //not good enough, scheduler may fire late, we need a mechanism that ignores later interrupts (probably inside FiberRuntime as it messes with ProcessNewInterrupt)
+            self
+              .ensuring(ZIO.succeed(c.apply()))
+          }
+      }
+      z0
+        .foldCauseZIO(
+          c => {
+            Cause
+              .flipCauseOption(c)
+              .map(Exit.failCause)
+              .getOrElse(
+                Exit.succeed(b())
+              )
+          },
+          a => Exit.succeed(f(a))
+        )
+    }
   }
+
   private object TimeoutTo {
     sealed trait BypassState[+E, +A]
     case object BypassPossible                                 extends BypassState[Nothing, Nothing]
