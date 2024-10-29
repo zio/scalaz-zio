@@ -6431,7 +6431,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       }
     }
 
-  def withRecoverableInterruption[R, E, A](register : (() => Unit) => ZIO[R, E, A])(implicit trace: Trace) : ZIO[R, Option[E], A] = {
+  private[zio] def withRecoverableInterruption[R, E, A](register : (() => Unit) => ZIO[R, E, A])(implicit trace: Trace) : ZIO[R, Option[E], A] = {
     withFiberRuntime[R, Option[E], A] { case (currFib, st) =>
       //quick and dirty
       val currFibRt = currFib.asInstanceOf[FiberRuntime[Option[E], A]]
