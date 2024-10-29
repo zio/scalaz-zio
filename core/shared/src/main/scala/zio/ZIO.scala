@@ -16,7 +16,7 @@
 
 package zio
 
-import zio.internal.{FiberScope, Platform}
+import zio.internal.{FiberRuntime, FiberScope, Platform}
 import zio.metrics.{MetricLabel, Metrics}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
@@ -29,6 +29,7 @@ import scala.reflect.ClassTag
 import scala.util.control.NoStackTrace
 import izumi.reflect.macrortti.LightTypeTag
 
+import java.util.UUID
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
 
 /**
@@ -6397,8 +6398,69 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         }
       }
     }
-}
 
+  def withRecoverableInterruption[R, E, A](register : (() => Unit) => ZIO[R, E, A])(implicit trace: Trace) : ZIO[R, Option[E], A] = {
+    withFiberRuntime[R, Option[E], A] { case (currFib, st) =>
+      //quick and dirty
+      val currFibRt = currFib.asInstanceOf[FiberRuntime[Option[E], A]]
+      //super quick and dirty
+      val ann = s"_nothing_to_see_here__${currFibRt}-${UUID.randomUUID() /*I'd like to use stack depth here*/}"
+
+      //val theLocalInterruption = new AtomicReference[Cause.Interrupt]()
+      def signalLocalInterrupt() = {
+        //todo: fiber id, stack trace
+        val interrupt = Cause.Interrupt(FiberId.None, StackTrace.none, Nil, Map(ann -> ""))
+        currFibRt.tellInterrupt(interrupt)
+      }
+
+      val z0: ZIO[R, E, A] = register(signalLocalInterrupt)
+      ZIO.uninterruptibleMask { restore =>
+        restore(z0)
+          .foldCauseZIO(
+            c => {
+              if (!c.annotations.contains(ann))
+                Exit.failCause(c.map(Option.apply _))
+              else {
+                //we're under 'local' interruption, we have to remove this interruption from the fiber's interruptions and even 'un-interrupt' the fiber in case this is the only one
+                val intCauses = currFibRt.getInterruptedCause()
+                val clensed = intCauses.foldLog(
+                  Cause.Empty,
+                  Cause.Fail.apply[Nothing] _,
+                  Cause.Die.apply _,
+                  (fibId, stackTrace, spans, anns) =>
+                    if (anns.contains(ann))
+                      Cause.empty
+                    else
+                      Cause.Interrupt(fibId, stackTrace, spans, anns)
+                )(
+                  {
+                    case (Cause.Empty, right) => right
+                    case (left, Cause.Empty) => left
+                    case (left, right) => Cause.Then(left, right)
+                  }, {
+                    case (Cause.Empty, right) => right
+                    case (left, Cause.Empty) => left
+                    case (left, right) => Cause.Both(left, right)
+                  }, {
+                    case (Cause.Empty, _) => Cause.Empty
+                    case (cc, b) =>
+                      Cause.Stackless(cc, b)
+                  }
+                )
+
+                currFibRt.overrideInterruptedCause(clensed)
+                if (clensed.isEmpty)
+                  Exit.fail(None)
+                else
+                  Exit.failCause(c.map(Option.apply))
+              }
+            },
+            Exit.succeed(_)
+          )
+      }
+    }
+  }
+}
 /**
  * An `Exit[E, A]` describes the result of executing an `IO` value. The result
  * is either succeeded with a value `A`, or failed with a `Cause[E]`.

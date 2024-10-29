@@ -209,6 +209,12 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     setFiberRef(FiberRef.interruptedCause, oldSC ++ cause)
   }
 
+  private[zio] def overrideInterruptedCause(cause : Cause[Nothing]): Unit = {
+    setFiberRef(FiberRef.interruptedCause, cause)
+    if(cause.isEmpty)
+      _isInterrupted = false
+  }
+
   /**
    * Adds an observer to the list of observers.
    *
