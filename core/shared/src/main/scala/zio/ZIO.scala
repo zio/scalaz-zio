@@ -5532,7 +5532,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         )
       }
 
-    def apply[B1 >: B](f: A => B1)(duration: => Duration)(implicit
+    def apply2[B1 >: B](f: A => B1)(duration: => Duration)(implicit
                                                           trace: Trace
     ): ZIO[R, E, B1] =
       ZIO.clockWith(_.scheduler).flatMap { scheduler =>
@@ -5625,7 +5625,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         }
       }
 
-    def apply2[B1 >: B](f: A => B1)(duration: => Duration)(implicit
+    def apply[B1 >: B](f: A => B1)(duration: => Duration)(implicit
                                                            trace: Trace
     ): ZIO[R, E, B1] = {
       val z0: ZIO[R, Option[E], A] = withRecoverableInterruption[R, E, A] { intFn =>
