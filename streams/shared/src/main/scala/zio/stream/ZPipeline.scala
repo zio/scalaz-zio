@@ -1687,7 +1687,7 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
     )
 
   def intersperse[In](start: => In, middle: => In, end: => In)(implicit trace: Trace): ZPipeline[Any, Nothing, In, In] =
-    ZPipeline.prepend(Chunk.single(start)) >>> ZPipeline.intersperse(middle) >>> ZPipeline.append(Chunk.single(end))
+    ZPipeline.intersperse(middle) >>> ZPipeline.prepend(Chunk.single(start)) >>> ZPipeline.append(Chunk.single(end))
 
   /**
    * Creates a pipeline that converts a stream of bytes into a stream of strings

@@ -2279,7 +2279,19 @@ object ZStreamSpec extends ZIOBaseSpec {
               .take(4)
               .runCollect
               .map(result => assert(result)(equalTo(Chunk("42", "@", "42", "@"))))
-          }
+          },
+          suite("issue #9181")(
+            test("it intersperses elements") {
+              assertZIO(
+                ZStream('a', 'b', 'c').via(ZPipeline.intersperse(',')).runCollect
+              )(equalTo(Chunk('a', ',', 'b', ',', 'c')))
+            },
+            test("it intersperses elements with prefix and suffix") {
+              assertZIO(
+                ZStream('a', 'b', 'c').via(ZPipeline.intersperse('[', ',', ']')).runCollect
+              )(equalTo(Chunk('[', 'a', ',', 'b', ',', 'c', ']')))
+            }
+          )
         ),
         suite("interruptWhen")(
           suite("interruptWhen(Promise)")(

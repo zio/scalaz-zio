@@ -226,6 +226,16 @@ object JavaSpec extends ZIOBaseSpec {
           succeeds[(Integer, (Integer, List[Byte]))](equalTo((Integer.valueOf(1), (Integer.valueOf(1), list))))
         )
       }
-    ) @@ zioTag(future) @@ TestAspect.unix
+    ) @@ zioTag(future) @@ TestAspect.unix,
+    suite("`ZIO.fromNullable` must")(
+      test("succeed when value is not null") {
+        val value = "123"
+        assertZIO(ZIO.fromNullable(value))(equalTo("123"))
+      },
+      test("fail when value is null") {
+        val value: String = null
+        assertZIO(ZIO.fromNullable(value).exit)(failsWithA[None.type])
+      }
+    )
   )
 }

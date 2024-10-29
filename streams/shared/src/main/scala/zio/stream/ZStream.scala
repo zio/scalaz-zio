@@ -1748,7 +1748,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def intersperse[A1 >: A](start: => A1, middle: => A1, end: => A1)(implicit
     trace: Trace
   ): ZStream[R, E, A1] =
-    ZStream(start) ++ intersperse(middle) ++ ZStream(end)
+    self >>> ZPipeline.intersperse(start, middle, end)
 
   /**
    * Interrupts the evaluation of this stream when the provided IO completes.
