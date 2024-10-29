@@ -656,7 +656,7 @@ object Fiber extends FiberPlatformSpecific {
     /**
      * Adds a message to interrupt this fiber.
      */
-    private[zio] def tellInterrupt(cause: Cause[Nothing]): Unit
+    private[zio] def tellInterrupt(cause: Cause[Nothing], recoverableTag : Option[String]): Unit
 
     /**
      * Transfers all children of this fiber that are currently running to the

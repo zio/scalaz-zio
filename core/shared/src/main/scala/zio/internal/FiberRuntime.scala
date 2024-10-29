@@ -126,7 +126,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     ZIO.succeed {
       val cause = Cause.interrupt(fiberId, StackTrace(self.fiberId, Chunk.single(trace)))
 
-      tell(FiberMessage.InterruptSignal(cause))
+      tell(FiberMessage.InterruptSignal(cause, None))
     }
 
   def location: Trace = fiberId.location
@@ -159,9 +159,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
         getChildren().add(child)
 
         if (isInterrupted())
-          child.tellInterrupt(getInterruptedCause())
+          child.tellInterrupt(getInterruptedCause(), None)
       } else {
-        child.tellInterrupt(getInterruptedCause())
+        child.tellInterrupt(getInterruptedCause(), None)
       }
     }
 
@@ -176,7 +176,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           val child = iter.next()
           if (child.isAlive()) {
             childs.add(child)
-            child.tellInterrupt(cause)
+            child.tellInterrupt(cause, None)
           }
         }
       } else {
@@ -191,7 +191,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       while (iter.hasNext) {
         val child = iter.next()
         if (child.isAlive())
-          child.tellInterrupt(cause)
+          child.tellInterrupt(cause, None)
       }
     }
   }
@@ -209,10 +209,51 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     setFiberRef(FiberRef.interruptedCause, oldSC ++ cause)
   }
 
-  private[zio] def overrideInterruptedCause(cause : Cause[Nothing]): Unit = {
-    setFiberRef(FiberRef.interruptedCause, cause)
-    if(cause.isEmpty)
-      _isInterrupted = false
+  private[zio] def enterRecoverableInterruptSection() : String = {
+    val recoverableInterruptTag = s"${id}-${_stackSize}"
+    updateFiberRef(FiberRef.activeRecoverableInterruptTags)(_ + recoverableInterruptTag)
+    recoverableInterruptTag
+  }
+
+  private[zio] def exitRecoverableInterruptSection(recoverableInterruptTag : String) : Boolean = {
+    updateFiberRef(FiberRef.activeRecoverableInterruptTags)(_ - recoverableInterruptTag)
+
+    if(_isInterrupted) {
+      updateFiberRef(FiberRef.interruptedCause){
+        _.foldLog(
+          Cause.Empty,
+          Cause.Fail.apply[Nothing] _,
+          Cause.Die.apply _,
+          (fibId, stackTrace, spans, anns) =>
+            if (anns.contains(recoverableInterruptTag))
+              Cause.empty
+            else
+              Cause.Interrupt(fibId, stackTrace, spans, anns)
+        )(
+          {
+            case (Cause.Empty, right) => right
+            case (left, Cause.Empty) => left
+            case (left, right) => Cause.Then(left, right)
+          }, {
+            case (Cause.Empty, right) => right
+            case (left, Cause.Empty) => left
+            case (left, right) => Cause.Both(left, right)
+          }, {
+            case (Cause.Empty, _) => Cause.Empty
+            case (cc, b) =>
+              Cause.Stackless(cc, b)
+          }
+        )
+      }
+      if(getInterruptedCause().isEmpty) {
+        _isInterrupted = false
+      }
+
+      _isInterrupted
+    } else {
+      false
+    }
+
   }
 
   /**
@@ -308,14 +349,16 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
         case FiberMessage.Stateful(onFiber) =>
           processStatefulMessage(onFiber)
 
-        case FiberMessage.InterruptSignal(cause) =>
-          // Unfortunately we can't avoid the virtual call to `trace` here
-          updateLastTrace(cur.trace)
-          processNewInterruptSignal(cause)
+        case FiberMessage.InterruptSignal(cause, recoverableTag) =>
+          if(recoverableTag.isEmpty || recoverableTag.exists(tag => getFiberRef(FiberRef.activeRecoverableInterruptTags).apply(tag))) {
+            // Unfortunately we can't avoid the virtual call to `trace` here
+            updateLastTrace(cur.trace)
+            processNewInterruptSignal(cause)
 
-          if (isInterruptible()) {
-            cur = Exit.Failure(cause)
-          }
+            if (isInterruptible()) {
+              cur = Exit.Failure(cause)
+            }
+          } //else 'late' recoverable interrupt
 
         case FiberMessage.Resume(_) =>
           assert(DisableAssertions, "It is illegal to have multiple concurrent run loops in a single fiber")
@@ -344,8 +387,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
     while (message ne null) {
       message match {
-        case FiberMessage.InterruptSignal(cause) =>
-          processNewInterruptSignal(cause)
+        case FiberMessage.InterruptSignal(cause, recoverableTag) =>
+          if(recoverableTag.isEmpty || recoverableTag.exists(tag => getFiberRef(FiberRef.activeRecoverableInterruptTags).apply(tag))) {
+            processNewInterruptSignal(cause)
+          }//else 'late' recoverable interrupt
 
         case FiberMessage.Stateful(onFiber) =>
           processStatefulMessage(onFiber)
@@ -479,8 +524,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     assert(DisableAssertions || running.get)
 
     fiberMessage match {
-      case FiberMessage.InterruptSignal(cause) =>
-        processNewInterruptSignal(cause)
+      case FiberMessage.InterruptSignal(cause, recoverableTag) =>
+        if(recoverableTag.isEmpty || recoverableTag.exists(tag => getFiberRef(FiberRef.activeRecoverableInterruptTags).apply(tag))) {
+          processNewInterruptSignal(cause)
+        }//else 'late' recoverable interrupt
 
         EvaluationSignal.Continue
 
@@ -1292,7 +1339,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
         val next = iterator.next()
 
         if ((next ne null) && next.isAlive()) {
-          next.tellInterrupt(cause)
+          next.tellInterrupt(cause, None)
 
           told = true
         }
@@ -1456,8 +1503,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
   private[zio] def tellAddChildren(children: Iterable[Fiber.Runtime[_, _]]): Unit =
     tell(FiberMessage.Stateful(parentFiber => parentFiber.addChildren(children)))
 
-  private[zio] def tellInterrupt(cause: Cause[Nothing]): Unit =
-    tell(FiberMessage.InterruptSignal(cause))
+  private[zio] def tellInterrupt(cause: Cause[Nothing], recoverableTag : Option[String]): Unit =
+    tell(FiberMessage.InterruptSignal(cause, recoverableTag : Option[String]))
 
   /**
    * Transfers all children of this fiber that are currently running to the

@@ -105,7 +105,7 @@ private[zio] object FiberScope {
       } else {
         // Parent was GC'd. We immediately interrupt the child fiber using the id
         // of the current fiber (which is adding the child to the parent):
-        child.tellInterrupt(Cause.interrupt(currentFiber.id))
+        child.tellInterrupt(Cause.interrupt(currentFiber.id), None)
       }
     }
 
@@ -135,7 +135,7 @@ private[zio] object FiberScope {
         // Parent was GC'd. We immediately interrupt the child fiber using the id
         // of the current fiber (which is adding the child to the parent):
         children.foreach(
-          _.tellInterrupt(Cause.interrupt(currentFiber.id))
+          _.tellInterrupt(Cause.interrupt(currentFiber.id), None)
         )
       }
     }
