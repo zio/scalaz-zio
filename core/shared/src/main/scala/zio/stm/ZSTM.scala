@@ -1924,15 +1924,16 @@ object ZSTM {
             ZSTMLockSupport.tryLock(missing) {
               loop = !checkAndMaybeCommit(value)
             }
+            if (loop) tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
           }
         } else {
           value = stm.run(journal, fiberId, r)
           ZSTMLockSupport.tryLock(tRefsUnsafe) {
             loop = !checkAndMaybeCommit(value)
           }
+          if (loop && retries >= MaxRetries) tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
         }
 
-        if (loop && retries >= MaxRetries) tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
         retries += 1
       }
 
