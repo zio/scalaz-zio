@@ -1509,6 +1509,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       def poll(implicit unsafe: Unsafe): Option[Exit[E, A]] =
         Option(self.exitValue())
+
+      override def interrupt(cause: Cause[Nothing])(implicit unsafe: Unsafe): Unit =
+        self.tellInterrupt(cause)
     }
 
   private[this] val _hashCode: Int = fiberId.hashCode()

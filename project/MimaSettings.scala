@@ -16,7 +16,8 @@ object MimaSettings {
         exclude[Problem]("zio.stream.internal*"),
         exclude[IncompatibleResultTypeProblem]("zio.stm.TRef.todo"),
         exclude[DirectMissingMethodProblem]("zio.stm.TRef.versioned_="),
-        exclude[IncompatibleResultTypeProblem]("zio.stm.TRef.versioned")
+        exclude[IncompatibleResultTypeProblem]("zio.stm.TRef.versioned"),
+        exclude[ReversedMissingMethodProblem]("zio.Fiber#Runtime#UnsafeAPI.zio$Fiber$Runtime$UnsafeAPI$$$outer")
       ),
       mimaFailOnProblem := failOnProblem
     )
