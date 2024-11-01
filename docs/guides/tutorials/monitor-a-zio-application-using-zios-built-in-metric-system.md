@@ -12,7 +12,7 @@ ZIO has a built-in metric system that allows us to monitor the performance of ou
 
 To access the code examples, you can clone the [ZIO Quickstarts](http://github.com/zio/zio-quickstarts) project:
 
-```bash 
+```bash
 $ git clone https://github.com/zio/zio-quickstarts.git
 $ cd zio-quickstarts/zio-quickstart-restful-webservice-metrics
 ```
@@ -22,6 +22,18 @@ And finally, run the application using sbt:
 ```bash
 $ sbt run
 ```
+
+Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
+
+```bash
+sbt reStart
+```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Trying a Simple Example
 
@@ -74,7 +86,7 @@ trait UserRepo {
   def register(user: User): Task[String]
 
   def lookup(id: String): Task[Option[User]]
-  
+
   def users: Task[List[User]]
 }
 
@@ -201,7 +213,7 @@ object MainApp extends ZIOAppDefault {
 
       // An layer responsible for storing the state of the `counterApp`
       ZLayer.fromZIO(Ref.make(0)),
-      
+
       // To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
       InmemoryUserRepo.layer,
 
