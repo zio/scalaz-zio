@@ -539,6 +539,14 @@ final class ZPipeline[-Env, +Err, -In, +Out] private (
     new ZPipeline(self.channel.mapErrorCause(f))
 
   /**
+   * Transforms the errors emitted by this pipeline using `f`.
+   */
+  def mapErrorZIO[Env1 <: Env, Err2](
+    f: Err => URIO[Env1, Err2]
+  )(implicit trace: Trace): ZPipeline[Env1, Err2, In, Out] =
+    new ZPipeline(self.channel.mapErrorZIO(f))
+
+  /**
    * Translates pipeline failure into death of the fiber, making all failures
    * unchecked and not a part of the type of the effect.
    */
@@ -1679,7 +1687,7 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
     )
 
   def intersperse[In](start: => In, middle: => In, end: => In)(implicit trace: Trace): ZPipeline[Any, Nothing, In, In] =
-    ZPipeline.prepend(Chunk.single(start)) >>> ZPipeline.intersperse(middle) >>> ZPipeline.append(Chunk.single(end))
+    ZPipeline.intersperse(middle) >>> ZPipeline.prepend(Chunk.single(start)) >>> ZPipeline.append(Chunk.single(end))
 
   /**
    * Creates a pipeline that converts a stream of bytes into a stream of strings

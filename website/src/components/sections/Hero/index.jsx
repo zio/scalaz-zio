@@ -14,7 +14,7 @@ export default function Hero() {
       <div className="container flex flex-col items-center gap-6">
         <img
           className="h-20"
-          src="/img/navbar_brand.png"
+          src="/img/navbar_brand2x.png"
           alt={`${siteConfig.title}`}
         />
 

@@ -32,7 +32,11 @@ object SmartAssertionSpec extends ZIOBaseSpec {
           val a1 = Array(1, 2, 3)
           val a2 = Array(1, 3, 2)
           assertTrue(a1 == a2)
-        } @@ failing
+        } @@ failing,
+        test("i9153") {
+          val map = Map(1 -> 2)
+          assertTrue(map.view.map { case (k, v) => k -> (v + 1) }.toMap == Map(1 -> 3))
+        }
       )
     ),
     test("multiple assertions") {

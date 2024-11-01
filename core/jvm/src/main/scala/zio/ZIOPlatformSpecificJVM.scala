@@ -26,4 +26,16 @@ private[zio] trait ZIOPlatformSpecificJVM {
    */
   def fromFutureJava[A](future: => Future[A])(implicit trace: Trace): Task[A] = javaz.fromFutureJava(future)
 
+  /**
+   * Lifts a value of `A`, converting it into an error as an option in the error
+   * channel when its value is `null`, making it easier to interop with Java
+   * code.
+   */
+  final def fromNullable[A](v: => A)(implicit trace: Trace): IO[Option[Nothing], A] =
+    ZIO.suspendSucceed {
+      val v0 = v
+      if (v0 == null) Exit.failNone
+      else Exit.succeed(v0)
+    }
+
 }

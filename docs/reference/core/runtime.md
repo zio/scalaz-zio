@@ -337,7 +337,7 @@ trait LoggingService {
 
 object LoggingService {
   def log(line: String): URIO[LoggingService, Unit] =
-    ZIO.serviceWith[LoggingService](_.log(line))
+    ZIO.serviceWithZIO[LoggingService](_.log(line))
 }
 
 trait EmailService {
@@ -346,7 +346,7 @@ trait EmailService {
 
 object EmailService {
   def send(user: String, content: String): ZIO[EmailService, Throwable, Unit] =
-    ZIO.serviceWith[EmailService](_.send(user, content))
+    ZIO.serviceWithZIO[EmailService](_.send(user, content))
 }
 ```
 

@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/java
+{
+  "name": "Scala",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "features": {
+    "ghcr.io/ebaskoro/devcontainer-features/scala:1": {
+      "installSbt": true
+    }
+  },
+  // Configure tool-specific properties.
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      "settings": {
+      },
+      "extensions": [
+        "scalameta.metals"
+      ]
+    }
+  },
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "sbt update",
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  "remoteUser": "root",
+  // Envvar to enable optimizations when building ZIO and set sensible JVM values
+  "containerEnv": {
+    "CI_RELEASE_MODE": "1",
+    "JDK_JAVA_OPTIONS": "-Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M",
+    "SBT_OPTS": "-Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M"
+  },
+  "remoteEnv": {
+    "CI_RELEASE_MODE": "1",
+    "JDK_JAVA_OPTIONS": "-Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M",
+    "SBT_OPTS": "-Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M"
+  }
+}

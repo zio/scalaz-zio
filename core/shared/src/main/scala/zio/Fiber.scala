@@ -523,6 +523,8 @@ object Fiber extends FiberPlatformSpecific {
       def removeObserver(observer: Exit[E, A] => Unit)(implicit unsafe: Unsafe): Unit
 
       def poll(implicit unsafe: Unsafe): Option[Exit[E, A]]
+
+      def interrupt(cause: Cause[Nothing])(implicit unsafe: Unsafe): Unit = ()
     }
 
     /**

@@ -611,7 +611,7 @@ object ZChannelSpec extends ZIOBaseSpec {
             }
           } @@ exceptJS(nonFlaky(50))
         ),
-        suite("ZChannel#mapError") {
+        suite("ZChannel#mapError")(
           test("mapError structure confusion") {
             assertZIO(
               ZChannel
@@ -620,8 +620,17 @@ object ZChannelSpec extends ZIOBaseSpec {
                 .runCollect
                 .exit
             )(fails(equalTo(1)))
+          },
+          test("mapErrorZIO") {
+            assertZIO(
+              ZChannel
+                .fail("err")
+                .mapErrorZIO(_ => ZIO.succeed(1))
+                .runCollect
+                .exit
+            )(fails(equalTo(1)))
           }
-        }
+        )
       ),
       suite("provide")(
         test("simple provide") {

@@ -215,6 +215,9 @@ object Runtime extends RuntimePlatformSpecific {
   def addFatal(fatal: Class[_ <: Throwable])(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped(FiberRef.currentFatal.locallyScopedWith(_ | IsFatal(fatal)))
 
+  def addLogAnnotation(annotation: LogAnnotation)(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    ZLayer.scoped(FiberRef.currentLogAnnotations.locallyScopedWith(_ + (annotation.key -> annotation.value)))
+
   def addLogger(logger: ZLogger[String, Any])(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped(ZIO.withLoggerScoped(logger))
 

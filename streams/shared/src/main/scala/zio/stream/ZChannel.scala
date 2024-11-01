@@ -4,6 +4,7 @@ import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
 import ChannelExecutor.ChannelState
+import zio.internal.FiberScope
 
 /**
  * A `ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone]` is a nexus
@@ -579,6 +580,24 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
   }
 
   /**
+   * Returns a new channel, which is the same as this one, except the failure
+   * value of the returned channel is created by applying the specified function
+   * to the failure value of this channel.
+   */
+  final def mapErrorZIO[Env1 <: Env, OutErr2](
+    f: OutErr => URIO[Env1, OutErr2]
+  )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr2, OutElem, OutDone] = {
+    lazy val mapErrorZIO: ZChannel[Env1, OutErr, OutElem, OutDone, OutErr2, OutElem, OutDone] =
+      ZChannel.readWith(
+        chunk => ZChannel.write(chunk) *> mapErrorZIO,
+        error => ZChannel.fromZIO(f(error).flip),
+        done => ZChannel.succeedNow(done)
+      )
+
+    self >>> mapErrorZIO
+  }
+
+  /**
    * Returns a new channel, which is the same as this one, except the terminal
    * value of the returned channel is created by applying the specified
    * effectful function to the terminal value of this channel.
@@ -968,8 +987,20 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
               }
           }
 
-        ZChannel
-          .fromZIO(pullL.forkIn(scope).zipWith(pullR.forkIn(scope))(BothRunning(_, _, true): MergeState))
+        def inheritChildren(parentScope: FiberScope): UIO[Unit] =
+          ZIO.withFiberRuntime[Any, Nothing, Unit] { (state, _) =>
+            state.transferChildren(parentScope)
+            Exit.unit
+          }
+
+        ZChannel.fromZIO {
+          ZIO.withFiberRuntime[Env1, Nothing, MergeState] { (parent, _) =>
+            val inherit = inheritChildren(parent.scope)
+            val fL      = pullL.ensuring(inherit).forkIn(scope)
+            val fR      = pullR.ensuring(inherit).forkIn(scope)
+            fL.zipWith(fR)(BothRunning(_, _, true))
+          }
+        }
           .flatMap(go)
           .embedInput(input)
       }

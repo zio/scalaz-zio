@@ -19,6 +19,7 @@ package zio
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ThreadLocalRandom
+import scala.util.control.TailCalls
 
 /**
  * The identity of a Fiber, described by the time it began life, and a
@@ -49,35 +50,30 @@ sealed trait FiberId extends Serializable { self =>
 
   final def getOrElse(that: => FiberId): FiberId = if (isNone) that else self
 
-  final def ids: Set[Int] =
-    self match {
-      case None              => Set.empty
-      case Runtime(id, _, _) => Set(id)
-      case Composite(l, r)   => l.ids ++ r.ids
-    }
+  final def ids: Set[Int] = try {
+    FiberId.ids(self)
+  } catch {
+    // Can stack overflow for deeply nested fiber ids
+    case _: StackOverflowError => FiberId.toSetLazy(self).map(_.id)
+  }
 
-  final def isNone: Boolean =
-    self match {
-      case None             => true
-      case Runtime(_, _, _) => false
-      case Composite(l, r) =>
-        try l.isNone && r.isNone
-        catch {
-          // Can stack overflow for deeply nested fiber ids
-          case _: StackOverflowError => toSet.forall(_.isNone)
-        }
-    }
+  final def isNone: Boolean = try {
+    FiberId.isNone(self)
+  } catch {
+    // Can stack overflow for deeply nested fiber ids
+    case _: StackOverflowError => FiberId.toSetLazy(self).isEmpty
+  }
 
   final def threadName: String = s"zio-fiber-${self.ids.mkString(",")}"
 
   final def toOption: Option[FiberId] = toSet.asInstanceOf[Set[FiberId]].reduceOption(_.combine(_))
 
-  final def toSet: Set[FiberId.Runtime] =
-    self match {
-      case None                  => Set.empty[FiberId.Runtime]
-      case id @ Runtime(_, _, _) => Set(id)
-      case Composite(l, r)       => l.toSet ++ r.toSet
-    }
+  final def toSet: Set[FiberId.Runtime] = try {
+    FiberId.toSet(self)
+  } catch {
+    // Can stack overflow for deeply nested fiber ids
+    case _: StackOverflowError => FiberId.toSetLazy(self)
+  }
 }
 
 object FiberId {
@@ -95,6 +91,42 @@ object FiberId {
   case object None                                                          extends FiberId
   final case class Runtime(id: Int, startTimeMillis: Long, location: Trace) extends FiberId
   final case class Composite(left: FiberId, right: FiberId)                 extends FiberId
+
+  private def ids(id: FiberId): Set[Int] =
+    id match {
+      case None              => Set.empty[Int]
+      case Runtime(id, _, _) => Set(id)
+      case Composite(l, r)   => ids(l) ++ ids(r)
+    }
+
+  private def isNone(id: FiberId): Boolean =
+    id match {
+      case None             => true
+      case Runtime(_, _, _) => false
+      case Composite(l, r)  => isNone(l) && isNone(r)
+    }
+
+  private def toSet(id: FiberId): Set[FiberId.Runtime] =
+    id match {
+      case None                  => Set.empty[FiberId.Runtime]
+      case id @ Runtime(_, _, _) => Set(id)
+      case Composite(l, r)       => toSet(l) ++ toSet(r)
+    }
+
+  private def toSetLazy(id: FiberId): Set[FiberId.Runtime] = {
+    def go(id: FiberId): TailCalls.TailRec[Set[FiberId.Runtime]] =
+      id match {
+        case None                  => TailCalls.done(Set.empty[FiberId.Runtime])
+        case id @ Runtime(_, _, _) => TailCalls.done(Set(id))
+        case Composite(l, r) =>
+          for {
+            lSet <- TailCalls.tailcall(go(l))
+            rSet <- TailCalls.tailcall(go(r))
+          } yield lSet ++ rSet
+      }
+
+    go(id).result
+  }
 
   private[zio] trait Gen {
     def make(location: Trace)(implicit unsafe: Unsafe): FiberId.Runtime

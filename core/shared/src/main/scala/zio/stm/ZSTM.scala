@@ -1870,8 +1870,32 @@ object ZSTM {
       executor: Executor
     )(implicit unsafe: Unsafe): TryCommit[E, A] = {
       val journal     = new Journal
-      var value       = null.asInstanceOf[TExit[E, A]]
       val stateIsNull = state eq null
+
+      /**
+       * Checks that the value is a success, and commits the changes if the
+       * journal is valid and values have changed. Returns whether the
+       * transaction is valid.
+       *
+       * '''NOTE''': This method MUST be invoked while we hold the lock on the
+       * journal
+       */
+      def checkAndMaybeCommit(value: TExit[E, A]) = {
+        val isSuccess      = value.isInstanceOf[TExit.Succeed[_]]
+        val analysis       = journal.analyze(attemptCommit = isSuccess && stateIsNull)
+        val isJournalValid = analysis != JournalAnalysis.Invalid
+        if (isJournalValid) {
+          if (
+            analysis == JournalAnalysis.ReadWrite &&
+            isSuccess &&
+            (stateIsNull || state.compareAndSet(State.Running, State.done(value)))
+          ) journal.commit()
+          if (value ne TExit.Retry) journal.completeTodos(executor)
+        }
+        isJournalValid
+      }
+
+      var value = null.asInstanceOf[TExit[E, A]]
 
       // Used to store the previous snapshot of TRefs
       var tRefs = immutable.TreeSet.empty[TRef[?]]
@@ -1889,34 +1913,23 @@ object ZSTM {
           ZSTMLockSupport.lock(tRefs) {
             value = stm.run(journal, fiberId, r)
 
-            // Ensure we have the lock on all the tRefs in the current Journal (they might have changed!)
-            if (tRefsUnsafe.forall(tRefs.contains)) {
-              if (value.isInstanceOf[TExit.Succeed[?]]) {
-                val isRunning = stateIsNull || state.compareAndSet(State.Running, State.done(value))
-                if (isRunning) journal.commit()
-                loop = false
-              } else if (journal.isValid) {
-                loop = false
-              }
-            } else {
-              tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
+            /*
+              Ensure we have the lock on all the tRefs in the current Journal. They might have changed for a few reasons:
+                1. The transaction created new ZSTMs
+                2. The transaction was retried, and a different path was taken
+
+               In case they changed, try acquiring the lock on them otherwise retry the entire transaction.
+             */
+            val missing = tRefsUnsafe.diff(tRefs)
+            ZSTMLockSupport.tryLock(missing) {
+              loop = !checkAndMaybeCommit(value)
             }
-            if (!loop && (value ne TExit.Retry)) journal.completeTodos(executor)
+            if (loop) tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
           }
         } else {
           value = stm.run(journal, fiberId, r)
           ZSTMLockSupport.tryLock(tRefsUnsafe) {
-            val isSuccess = value.isInstanceOf[TExit.Succeed[_]]
-            val analysis  = journal.analyze(attemptCommit = isSuccess && stateIsNull)
-            if (analysis != JournalAnalysis.Invalid) {
-              loop = false
-              if (
-                analysis == JournalAnalysis.ReadWrite &&
-                isSuccess &&
-                (stateIsNull || state.compareAndSet(State.Running, State.done(value)))
-              ) journal.commit()
-              if (value ne TExit.Retry) journal.completeTodos(executor)
-            }
+            loop = !checkAndMaybeCommit(value)
           }
           if (loop && retries >= MaxRetries) tRefs = ZSTMUtils.newImmutableTreeSet(tRefsUnsafe)
         }

@@ -132,7 +132,8 @@ private[zio] final class UpdateOrderLinkedMap[K, +V](
   }
 
   private def reverseIterator0: Iterator[(K, V)] = new AbstractIterator[(K, V)] {
-    private[this] var slot = fields.length
+    private[this] var slot      = fields.length
+    private[this] var remaining = underlying.size
 
     @tailrec
     final private[this] def findNextKey(nextSlot: Int): K =
@@ -141,11 +142,12 @@ private[zio] final class UpdateOrderLinkedMap[K, +V](
         case Tombstone(d) if d == 1 => findNextKey(nextSlot - 1)
         case Tombstone(d)           => throw new IllegalStateException("tombstone indicate wrong position: " + d)
         case k =>
+          remaining -= 1
           slot = nextSlot
           k.asInstanceOf[K]
       }
 
-    override def hasNext: Boolean = slot > 0
+    override def hasNext: Boolean = remaining > 0
 
     override def next(): (K, V) =
       if (!hasNext) Iterator.empty.next()

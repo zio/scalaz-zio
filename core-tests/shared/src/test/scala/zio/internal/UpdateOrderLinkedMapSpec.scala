@@ -12,12 +12,12 @@ object UpdateOrderLinkedMapSpec extends ZIOBaseSpec {
       assertTrue(m.iterator.toList == List("a" -> 1, "b" -> 2, "c" -> 3))
     },
     test("updating existing elements") {
-      val m = empty.updated("a", 1).updated("b", 2).updated("c", 3).updated("b", 4)
-      assertTrue(m.iterator.toList == List("a" -> 1, "c" -> 3, "b" -> 4))
+      val m = empty.updated("a", 1).updated("b", 2).updated("c", 3).updated("b", 4).updated("a", 5)
+      assertTrue(m.iterator.toList == List("c" -> 3, "b" -> 4, "a" -> 5))
     },
     test("reverseIterator") {
-      val m = empty.updated("a", 1).updated("b", 2).updated("c", 3).updated("b", 4).updated("d", 5)
-      assertTrue(m.reverseIterator.toList == List("d" -> 5, "b" -> 4, "c" -> 3, "a" -> 1))
+      val m = empty.updated("a", 1).updated("b", 2).updated("c", 3).updated("b", 4).updated("d", 5).updated("a", 6)
+      assertTrue(m.reverseIterator.toList == List("a" -> 6, "d" -> 5, "b" -> 4, "c" -> 3))
     },
     test("builder") {
       val m =

@@ -1748,7 +1748,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def intersperse[A1 >: A](start: => A1, middle: => A1, end: => A1)(implicit
     trace: Trace
   ): ZStream[R, E, A1] =
-    ZStream(start) ++ intersperse(middle) ++ ZStream(end)
+    self >>> ZPipeline.intersperse(start, middle, end)
 
   /**
    * Interrupts the evaluation of this stream when the provided IO completes.
@@ -1893,6 +1893,12 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    */
   def mapErrorCause[E2](f: Cause[E] => Cause[E2])(implicit trace: Trace): ZStream[R, E2, A] =
     new ZStream(self.channel.mapErrorCause(f))
+
+  /**
+   * Transforms the errors emitted by this stream using `f`.
+   */
+  def mapErrorZIO[R1 <: R, E2](f: E => URIO[R1, E2])(implicit trace: Trace): ZStream[R1, E2, A] =
+    new ZStream(self.channel.mapErrorZIO(f))
 
   /**
    * Maps over elements of the stream with the specified effectful function.

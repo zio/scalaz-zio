@@ -153,6 +153,18 @@ object ZPipelineSpec extends ZIOBaseSpec {
             .exit
         )(fails(equalTo("failed!!!")))
       ),
+      test("mapErrorZIO")(
+        assertZIO(
+          ZStream(1, 2, 3)
+            .via(
+              ZPipeline
+                .fromChannel(ZChannel.fail("failed"))
+                .mapErrorZIO(v => ZIO.succeed(v + "!!!"))
+            )
+            .runCollect
+            .exit
+        )(fails(equalTo("failed!!!")))
+      ),
       suite("sample")(
         test("Works with empty input") {
           for {

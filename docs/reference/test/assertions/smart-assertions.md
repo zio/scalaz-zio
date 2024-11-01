@@ -207,7 +207,7 @@ test("optional value is anything") {
 
 ### Testing Either Values
 
-1. **`TestLens#left`** - This operator is used to peek into the `Left` value:
+1. **`TestLens#right`** - This operator is used to peek into the `Right` value:
 
 ```scala mdoc:compile-only
 import zio.test._

@@ -17,12 +17,13 @@
 package zio.test.sbt
 
 import sbt.testing._
-import zio.{Runtime, Scope, Trace, Unsafe, ZIO, ZIOAppArgs, ZLayer}
-import zio.test.{ExecutionEventPrinter, Summary, TestArgs, TestOutput, ZIOSpecAbstract}
-
-import java.util.concurrent.atomic.AtomicReference
+import zio.internal.Platform
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.test.render.{ConsoleRenderer, TestRenderer}
+import zio.test.{ExecutionEventPrinter, Summary, TestArgs, TestOutput, ZIOSpecAbstract, ZTestEventHandler}
+import zio.{Fiber, Runtime, Scope, System, Trace, Unsafe, ZIO, ZIOAppArgs, ZLayer}
+
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
 
 final class ZTestRunnerJVM(val args: Array[String], val remoteArgs: Array[String], testClassLoader: ClassLoader)
     extends Runner {
@@ -119,6 +120,7 @@ final class ZTestRunnerJVM(val args: Array[String], val remoteArgs: Array[String
       .loadModule()
       .asInstanceOf[ZIOSpecAbstract]
   }
+
 }
 
 final class ZTestTask[T](
@@ -129,9 +131,33 @@ final class ZTestTask[T](
   spec: ZIOSpecAbstract,
   runtime: zio.Runtime[T],
   console: zio.Console
-) extends BaseTestTask(taskDef, testClassLoader, sendSummary, testArgs, spec, runtime, console)
+) extends BaseTestTask(taskDef, testClassLoader, sendSummary, testArgs, spec, runtime, console) {
+
+  private def installSignalHandlers()(implicit trace: Trace): Unit =
+    try {
+      implicit val unsafe: Unsafe = Unsafe
+      if (!ZTestTask.installedSignals.getAndSet(true)) {
+        val dumpFibers =
+          () => Runtime.default.unsafe.run(Fiber.dumpAll)(trace, Unsafe.unsafe).getOrThrowFiberFailure()(Unsafe)
+
+        if (System.os.isWindows) {
+          Platform.addSignalHandler("INT", dumpFibers)
+        } else {
+          Platform.addSignalHandler("INFO", dumpFibers)
+          Platform.addSignalHandler("USR1", dumpFibers)
+        }
+      }
+    }
+
+  override private[zio] def run(eventHandlerZ: ZTestEventHandler)(implicit trace: Trace) = {
+    installSignalHandlers()
+    super.run(eventHandlerZ)
+  }
+}
 
 object ZTestTask {
+  private val installedSignals = new AtomicBoolean(false)
+
   def apply[T](
     taskDef: TaskDef,
     testClassLoader: ClassLoader,

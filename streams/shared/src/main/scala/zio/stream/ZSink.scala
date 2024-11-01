@@ -378,6 +378,12 @@ final class ZSink[-R, +E, -In, +L, +Z] private (val channel: ZChannel[R, ZNothin
     new ZSink(channel.mapErrorCause(f))
 
   /**
+   * Transforms the errors emitted by this sink using `f`.
+   */
+  def mapErrorZIO[R1 <: R, E2](f: E => URIO[R1, E2])(implicit trace: Trace): ZSink[R1, E2, In, L, Z] =
+    new ZSink(self.channel.mapErrorZIO(f))
+
+  /**
    * Transforms the leftovers emitted by this sink using `f`.
    */
   def mapLeftover[L2](f: L => L2)(implicit trace: Trace): ZSink[R, E, In, L2, Z] =

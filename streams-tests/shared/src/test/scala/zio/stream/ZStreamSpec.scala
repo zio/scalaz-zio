@@ -2279,7 +2279,19 @@ object ZStreamSpec extends ZIOBaseSpec {
               .take(4)
               .runCollect
               .map(result => assert(result)(equalTo(Chunk("42", "@", "42", "@"))))
-          }
+          },
+          suite("issue #9181")(
+            test("it intersperses elements") {
+              assertZIO(
+                ZStream('a', 'b', 'c').via(ZPipeline.intersperse(',')).runCollect
+              )(equalTo(Chunk('a', ',', 'b', ',', 'c')))
+            },
+            test("it intersperses elements with prefix and suffix") {
+              assertZIO(
+                ZStream('a', 'b', 'c').via(ZPipeline.intersperse('[', ',', ']')).runCollect
+              )(equalTo(Chunk('[', 'a', ',', 'b', ',', 'c', ']')))
+            }
+          )
         ),
         suite("interruptWhen")(
           suite("interruptWhen(Promise)")(
@@ -2371,7 +2383,26 @@ object ZStreamSpec extends ZIOBaseSpec {
               s3      = s1.zipLatest(s2).interruptWhen(ZIO.never).take(3)
               _      <- s3.runDrain
             } yield assertCompletes
-          } @@ exceptJS(nonFlaky)
+          } @@ exceptJS(nonFlaky),
+          test("i9091 - forked children are not interrupted early by interruptWhen") {
+            for {
+              requestQueue <- Queue.unbounded[String]
+              counter      <- Ref.make(0)
+              _ <- ZStream
+                     .unwrapScoped(
+                       ZStream
+                         .fromQueue(requestQueue)
+                         .runForeach(_ => counter.update(_ + 1))
+                         .fork
+                         .as(ZStream.succeed("") ++ ZStream.never)
+                     )
+                     .interruptWhen(ZIO.never)
+                     .runDrain
+                     .fork
+              _ <- requestQueue.offer("some message").forever.fork
+              _ <- counter.get.repeatUntil(_ >= 10)
+            } yield assertCompletes
+          } @@ exceptJS(nonFlaky) @@ TestAspect.timeout(10.seconds)
         ),
         suite("interruptAfter")(
           test("interrupts after given duration") {
@@ -2563,6 +2594,14 @@ object ZStreamSpec extends ZIOBaseSpec {
           ZStream
             .failCause(Cause.fail("123"))
             .mapErrorCause(_.map(_.toInt))
+            .runCollect
+            .either
+            .map(assert(_)(isLeft(equalTo(123))))
+        },
+        test("mapErrorZIO") {
+          ZStream
+            .fail("123")
+            .mapErrorZIO(v => ZIO.succeed(v.toInt))
             .runCollect
             .either
             .map(assert(_)(isLeft(equalTo(123))))

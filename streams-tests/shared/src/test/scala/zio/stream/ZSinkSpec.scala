@@ -317,6 +317,11 @@ object ZSinkSpec extends ZIOBaseSpec {
           equalTo(Left("fail!"))
         )
       ),
+      test("mapErrorZIO")(
+        assertZIO(ZStream.range(1, 10).run(ZSink.fail("fail").mapErrorZIO(s => ZIO.succeed(s + "!"))).either)(
+          equalTo(Left("fail!"))
+        )
+      ),
       test("as")(
         assertZIO(ZStream.range(1, 10).run(ZSink.succeed(1).as("as")))(
           equalTo("as")
