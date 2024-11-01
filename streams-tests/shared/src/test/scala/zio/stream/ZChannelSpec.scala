@@ -455,20 +455,6 @@ object ZChannelSpec extends ZIOBaseSpec {
           }
         },
         test("pipeline") {
-          lazy val identity: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
-            ZChannel.readWith(
-              (i: Int) => ZChannel.write(i) *> identity,
-              (_: Any) => ZChannel.unit,
-              (_: Any) => ZChannel.unit
-            )
-
-          lazy val doubler: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
-            ZChannel.readWith(
-              (i: Int) => ZChannel.writeAll(i, i) *> doubler,
-              (_: Any) => ZChannel.unit,
-              (_: Any) => ZChannel.unit
-            )
-
           val effect = ZChannel.fromZIO(Ref.make[List[Int]](Nil)).flatMap { ref =>
             lazy val inner: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
               ZChannel.readWith(
