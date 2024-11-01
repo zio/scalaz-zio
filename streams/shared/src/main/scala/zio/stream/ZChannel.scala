@@ -689,7 +689,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                        ZChannel.failUnit
                  }
                )
-               .race(errorSignal.await.interruptible)
+               .raceFirst(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
@@ -769,7 +769,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                        ZChannel.failUnit
                  }
                )
-               .race(errorSignal.await.interruptible)
+               .raceFirst(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
@@ -1993,7 +1993,7 @@ object ZChannel {
                    case Right(cause) => outgoing.offer(Exit.failCause(cause.map(Left(_))))
                  }
                )
-               .race(errorSignal.await.interruptible)
+               .raceFirst(errorSignal.await.interruptible)
                .forkIn(scope)
       } yield {
         lazy val consumer: ZChannel[Env, Any, Any, Any, OutErr, OutElem, OutDone] =
