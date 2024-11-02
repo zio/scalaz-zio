@@ -2,7 +2,7 @@ import sbt.*
 
 object Dependencies {
   val ZioMetricsConnectorsVersion      = "2.3.1"
-  val ZioHttpVersion                   = "3.0.0-RC9"
+  val ZioHttpVersion                   = "3.0.1"
   val IzumiVersion                     = "1.2.11"
   val ZioConfigVersion                 = "4.0.2"
   val ZioFtpVersion                    = "0.4.2"
