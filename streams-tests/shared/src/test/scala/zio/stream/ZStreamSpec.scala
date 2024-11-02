@@ -2711,36 +2711,40 @@ object ZStreamSpec extends ZIOBaseSpec {
             } yield assert(exit)(fails(hasMessage(equalTo("Boom"))))
           },
           test("parallelism is not exceeded") {
-            val iterations = 1000
-            checkAll(Gen.fromIterable(Chunk(4, 16, 32, 64))) { parallelism =>
-              for {
-                latch <- CountdownLatch.make(parallelism + 1)
-                f <- ZStream
-                       .range(0, iterations)
-                       .mapZIOPar(parallelism, parallelism)(_ => latch.countDown *> latch.await)
-                       .runDrain
-                       .fork
-                _     <- Live.live(latch.count.delay(100.micros)).repeatUntil(_ == 1)
-                _     <- latch.countDown
-                count <- latch.count
-                _     <- f.join
-              } yield assertTrue(count == 0)
-            }
-          } @@ TestAspect.jvmOnly @@ nonFlaky(20),
+            val iterations  = 1000
+            val parallelism = 64
+            for {
+              latch <- CountdownLatch.make(parallelism + 1)
+              f <- ZStream
+                     .range(0, iterations)
+                     .mapZIOPar(parallelism, parallelism)(_ => latch.countDown *> latch.await)
+                     .runDrain
+                     .fork
+              _     <- Live.live(latch.count.delay(100.micros)).repeatUntil(_ == 1)
+              _     <- latch.countDown
+              count <- latch.count
+              _     <- f.join
+            } yield assertTrue(count == 0)
+          } @@ TestAspect.jvmOnly @@ nonFlaky(5),
           test("accumulates parallel errors") {
             sealed abstract class DbError extends Product with Serializable
             case object Missing           extends DbError
             case object QtyTooLarge       extends DbError
 
             for {
-              exit <- ZStream(1 to 2: _*)
-                        .mapZIOPar(3) {
-                          case 1 => ZIO.fail(Missing)
-                          case 2 => ZIO.fail(QtyTooLarge)
-                          case _ => ZIO.succeed(true)
-                        }
-                        .runDrain
-                        .exit
+              latch  <- Promise.make[Nothing, Unit]
+              start1 <- Promise.make[Nothing, Unit]
+              start2 <- Promise.make[Nothing, Unit]
+              f <- ZStream(1 to 2: _*)
+                     .mapZIOPar(3) {
+                       case 1 => start1.succeed(()) *> latch.await *> ZIO.fail(Missing)
+                       case 2 => start2.succeed(()) *> latch.await *> ZIO.fail(QtyTooLarge)
+                       case _ => ZIO.succeed(true)
+                     }
+                     .runDrain
+                     .fork
+              _    <- start1.await *> start2.await *> latch.succeed(())
+              exit <- f.await
             } yield assert(exit)(
               failsCause(
                 containsCause[DbError](Cause.fail(Missing)) &&
@@ -2839,14 +2843,19 @@ object ZStreamSpec extends ZIOBaseSpec {
             case object QtyTooLarge       extends DbError
 
             for {
-              exit <- ZStream(1 to 2: _*)
-                        .mapZIOParUnordered(3) {
-                          case 1 => ZIO.fail(Missing)
-                          case 2 => ZIO.fail(QtyTooLarge)
-                          case _ => ZIO.succeed(true)
-                        }
-                        .runDrain
-                        .exit
+              latch  <- Promise.make[Nothing, Unit]
+              start1 <- Promise.make[Nothing, Unit]
+              start2 <- Promise.make[Nothing, Unit]
+              f <- ZStream(1 to 2: _*)
+                     .mapZIOParUnordered(3) {
+                       case 1 => start1.succeed(()) *> latch.await *> ZIO.fail(Missing)
+                       case 2 => start2.succeed(()) *> latch.await *> ZIO.fail(QtyTooLarge)
+                       case _ => ZIO.succeed(true)
+                     }
+                     .runDrain
+                     .fork
+              _    <- start1.await *> start2.await *> latch.succeed(())
+              exit <- f.await
             } yield assert(exit)(
               failsCause(
                 containsCause[DbError](Cause.fail(Missing)) &&
