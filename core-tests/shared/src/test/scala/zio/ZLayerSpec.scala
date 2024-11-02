@@ -582,6 +582,17 @@ object ZLayerSpec extends ZIOBaseSpec {
           layer3    = layer1 ++ layer2
           _        <- layer3.build
         } yield assertCompletes
+      },
+      test("runWith executes the main layer with specified dependencies") {
+        for {
+          ref     <- makeRef
+          layer1   = makeLayer1(ref)
+          layer2   = makeLayer2(ref)
+          layer3   = makeLayer3(ref)
+          appLayer = ZLayer.unit
+          _       <- ZIO.scoped(appLayer.runWith(layer1, layer2, layer3))
+          actual  <- ref.get
+        } yield assert(actual)(equalTo(Vector(acquire1, acquire2, acquire3, release3, release2, release1)))
       }
     )
 }
