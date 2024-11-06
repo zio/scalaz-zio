@@ -526,8 +526,9 @@ final class TMap[K, V] private (
   /**
    * Collects all bindings into a map.
    */
-  def toMap: USTM[Map[K, V]] =
+  def toMap: USTM[Map[K, V]] = ZSTM.suspend {
     fold(Map.newBuilder[K, V])(_ += _).map(_.result())
+  }
 
   /**
    * Atomically updates all bindings using a pure function.
