@@ -19,56 +19,26 @@ package zio
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import java.lang.{System => JSystem}
-import scala.annotation.nowarn
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.Dynamic.global
 
 private[zio] trait SystemPlatformSpecific { self: System.type =>
 
-  trait SystemLivePlatformSpecific extends System {
-    @transient override val unsafe: UnsafeAPI =
-      new UnsafeAPI {
-        private val envMap: mutable.Map[String, String] = {
-          if (js.typeOf(global.process) != "undefined" && js.typeOf(global.process.env) != "undefined") {
-            global.process.env.asInstanceOf[js.Dictionary[String]]
-          } else {
-            mutable.Map.empty
-          }
-        }
-
-        override def env(variable: String)(implicit unsafe: Unsafe): Option[String] =
-          envMap.get(variable)
-
-        override def envOrElse(variable: String, alt: => String)(implicit unsafe: Unsafe): String =
-          envOrElseWith(variable, alt)(env)
-
-        override def envOrOption(variable: String, alt: => Option[String])(implicit unsafe: Unsafe): Option[String] =
-          envOrOptionWith(variable, alt)(env)
-
-        override def envs()(implicit unsafe: Unsafe): Map[String, String] =
-          envMap.toMap
-
-        override def lineSeparator()(implicit unsafe: Unsafe): String =
-          JSystem.lineSeparator()
-
-        @nowarn("msg=JavaConverters")
-        override def properties()(implicit unsafe: Unsafe): Map[String, String] =
-          JSystem.getProperties.asScala.toMap
-
-        override def property(prop: String)(implicit unsafe: Unsafe): Option[String] =
-          Option(JSystem.getProperty(prop))
-
-        override def propertyOrElse(prop: String, alt: => String)(implicit unsafe: Unsafe): String =
-          propertyOrElseWith(prop, alt)(property)
-
-        override def propertyOrOption(prop: String, alt: => Option[String])(implicit
-          unsafe: Unsafe
-        ): Option[String] =
-          propertyOrOptionWith(prop, alt)(property)
+  private[zio] val environmentProvider = new EnvironmentProvider {
+    private val envMap: mutable.Map[String, String] = {
+      if (js.typeOf(global.process) != "undefined" && js.typeOf(global.process.env) != "undefined") {
+        global.process.env.asInstanceOf[js.Dictionary[String]]
+      } else {
+        mutable.Map.empty
       }
+    }
+
+    override def env(variable: String): Option[String] =
+      envMap.get(variable)
+
+    override def envs: Map[String, String] =
+      envMap.toMap
   }
 
 }

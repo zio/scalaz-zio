@@ -19,6 +19,10 @@ package zio
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.lang.{System => JSystem}
+import scala.annotation.nowarn
+import scala.collection.JavaConverters._
+
 trait System extends Serializable { self =>
   def env(variable: => String)(implicit trace: Trace): IO[SecurityException, Option[String]]
 
@@ -101,7 +105,7 @@ object System extends SystemPlatformSpecific {
 
   val tag: Tag[System] = Tag[System]
 
-  object SystemLive extends System with SystemLivePlatformSpecific {
+  object SystemLive extends System {
     def env(variable: => String)(implicit trace: Trace): IO[SecurityException, Option[String]] =
       ZIO.attempt(unsafe.env(variable)(Unsafe.unsafe)).refineToOrDie[SecurityException]
 
@@ -132,6 +136,44 @@ object System extends SystemPlatformSpecific {
       trace: Trace
     ): IO[Throwable, Option[String]] =
       ZIO.attempt(unsafe.propertyOrOption(prop, alt)(Unsafe.unsafe))
+
+    @transient override val unsafe: UnsafeAPI =
+      new UnsafeAPI {
+        override def env(variable: String)(implicit unsafe: Unsafe): Option[String] =
+          environmentProvider.env(variable)
+
+        override def envOrElse(variable: String, alt: => String)(implicit unsafe: Unsafe): String =
+          envOrElseWith(variable, alt)(env)
+
+        override def envOrOption(variable: String, alt: => Option[String])(implicit unsafe: Unsafe): Option[String] =
+          envOrOptionWith(variable, alt)(env)
+
+        override def envs()(implicit unsafe: Unsafe): Map[String, String] =
+          environmentProvider.envs
+
+        override def lineSeparator()(implicit unsafe: Unsafe): String =
+          JSystem.lineSeparator
+
+        @nowarn("msg=JavaConverters")
+        override def properties()(implicit unsafe: Unsafe): Map[String, String] =
+          JSystem.getProperties.asScala.toMap
+
+        override def property(prop: String)(implicit unsafe: Unsafe): Option[String] =
+          Option(JSystem.getProperty(prop))
+
+        override def propertyOrElse(prop: String, alt: => String)(implicit unsafe: Unsafe): String =
+          propertyOrElseWith(prop, alt)(property)
+
+        override def propertyOrOption(prop: String, alt: => Option[String])(implicit
+          unsafe: Unsafe
+        ): Option[String] =
+          propertyOrOptionWith(prop, alt)(property)
+      }
+  }
+
+  private[zio] trait EnvironmentProvider {
+    def env(variable: String): Option[String]
+    def envs: Map[String, String]
   }
 
   private[zio] def envOrElseWith(variable: String, alt: => String)(env: String => Option[String]): String =
