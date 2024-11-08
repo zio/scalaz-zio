@@ -1048,7 +1048,7 @@ sealed trait ZIO[-R, +E, +A]
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
     ZIO.uninterruptibleMask { restore =>
-      restore(self).foldZIO(e => restore(error(e)), s => restore(success(s))).forkDaemon.unit
+      restore(self).foldZIO(e => restore(error(e)), s => restore(success(s))).unit
     }
 
   final def onDoneCause[R1 <: R](
@@ -1056,7 +1056,7 @@ sealed trait ZIO[-R, +E, +A]
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
     ZIO.uninterruptibleMask { restore =>
-      restore(self).foldCauseZIO(e => restore(error(e)), s => restore(success(s))).forkDaemon.unit
+      restore(self).foldCauseZIO(e => restore(error(e)), s => restore(success(s))).unit
     }
 
   /**
