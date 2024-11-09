@@ -847,20 +847,25 @@ object Cause extends Serializable {
       }
 
       def bothCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        if (left.nonEmpty) {
-          if (right.nonEmpty) Cause.Both(left, right)
-          else left
-        } else if (right.nonEmpty) right
-        else Cause.empty
+        (left, right) match {
+          case (Cause.Empty, _) => right
+          case (_, Cause.Empty) => left
+          case _                => Both(left, right)
+        }
 
       def thenCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        if (left.nonEmpty) {
-          if (right.nonEmpty) Cause.Then(left, right)
-          else left
-        } else if (right.nonEmpty) right
-        else Cause.empty
+        (left, right) match {
+          case (Cause.Empty, _) => right
+          case (_, Cause.Empty) => left
+          case _                => Then(left, right)
+        }
 
-      def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] = Stackless(value, stackless)
+      def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] =
+        value match {
+          case Cause.Empty => value
+          case _ =>
+            Stackless(value, stackless)
+        }
     }
   }
 
