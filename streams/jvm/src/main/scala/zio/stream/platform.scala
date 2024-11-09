@@ -699,8 +699,9 @@ private[stream] trait ZSinkPlatformSpecificConstructors {
    * consumes byte chunks and writes them to the `OutputStream`. The sink will
    * yield the count of bytes written.
    *
-   * The `OutputStream` will be automatically closed after the stream is
-   * finished or an error occurred.
+   * The `Scope` of the provided effect will be automatically closed after the
+   * stream is finished or an error occurred. It's the responsibility of the
+   * user to attach the closing of the `OutputStream` to the `Scope`.
    */
   final def fromOutputStreamScoped(
     os: => ZIO[Scope, IOException, OutputStream]

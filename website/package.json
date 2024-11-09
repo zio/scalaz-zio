@@ -71,7 +71,7 @@
     "@zio.dev/zio-sql": "0.1.2",
     "@zio.dev/zio-sqs": "2022.11.23-5a814304824c",
     "@zio.dev/zio-streams-compress": "0.0.2",
-    "@zio.dev/zio-telemetry": "3.0.0",
+    "@zio.dev/zio-telemetry": "3.0.1",
     "@zio.dev/zio-webhooks": "0.2.1",
     "@zio.dev/zio2-interop-cats2": "2023.1.23-571dabdd91f9",
     "autoprefixer": "10.4.20",

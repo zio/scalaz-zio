@@ -14,7 +14,7 @@ In this tutorial, we will learn how to use ZIO Streams and ZIO Kafka to produce 
 
 To access the code examples, you can clone the [ZIO Quickstarts](http://github.com/zio/zio-quickstarts) project:
 
-```bash 
+```bash
 $ git clone https://github.com/zio/zio-quickstarts.git
 $ cd zio-quickstarts/zio-quickstart-kafka
 ```
@@ -24,6 +24,18 @@ And finally, run the application using sbt:
 ```bash
 $ sbt run
 ```
+
+Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
+
+```bash
+sbt reStart
+```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Adding Dependencies to The Project
 
@@ -58,7 +70,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
-  
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -184,7 +196,7 @@ class ProducerSettings {
 
 ### 4. Creating a Consumer
 
-ZIO Kafka also has several consumers that can be used to consume data from Kafka topics including the support for ZIO Streams which we will discuss later.  In this example, we will use the `Consumer.consumeWith` function.
+ZIO Kafka also has several consumers that can be used to consume data from Kafka topics including the support for ZIO Streams which we will discuss later. In this example, we will use the `Consumer.consumeWith` function.
 
 The following helper function will create a ZIO workflow that if we run it, will run forever and consume records from the given topic and finally print them to the console:
 
@@ -411,7 +423,7 @@ object StreamingKafkaApp extends ZIOAppDefault {
         .map(time => new ProducerRecord(KAFKA_TOPIC, time.getMinute, s"$time -- Hello, World!"))
         .via(Producer.produceAll(Serde.int, Serde.string))
         .drain
-        
+
     val c: ZStream[Consumer, Throwable, Nothing] =
       Consumer
         .plainStream(Subscription.topics(KAFKA_TOPIC), Serde.int, Serde.string)
@@ -420,7 +432,7 @@ object StreamingKafkaApp extends ZIOAppDefault {
         .aggregateAsync(Consumer.offsetBatches)
         .mapZIO(_.commit)
         .drain
-    
+
     (p merge c).runDrain.provide(producer, consumer)
   }
 
@@ -515,7 +527,7 @@ val KAFKA_TOPIC = "json-streaming-hello"
 
 val events: UStream[ProducerRecord[Int, Event]] = ???
 
-val producer = 
+val producer =
   events.via(Producer.produceAll(KafkaSerde.key, KafkaSerde.value))
 
 val consumer =

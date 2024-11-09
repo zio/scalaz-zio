@@ -36,6 +36,26 @@ object SuiteAllSpec extends ZIOBaseSpec {
         } @@ ignore
       }
 
+      suiteAll("statements within suite") {
+        case class Foo(value: Int)
+        val one = 1
+        def two = 2
+        val foo = Foo(3)
+
+        test("val") {
+          assertTrue(one == 1)
+        }
+
+        test("def") {
+          assertTrue(two == 2)
+        }
+
+        test("case class") {
+          assertTrue(foo == Foo(3))
+        }
+
+      }
+
     }
       .provide(ZLayer.succeed(123))
 

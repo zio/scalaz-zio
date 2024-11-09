@@ -153,7 +153,7 @@ val r3: ZIO[Any, NumberFormatException, Int] =
   ZIO.getOrFailWith(new NumberFormatException("invalid input"))(parseInt("1.2"))
 ```
 
-4. **`ZIO.nonOrFail`**— It lifts an option into a ZIO value. If the option is empty it succeeds with `Unit` and if the option is defined it fails with a proper error type:
+4. **`ZIO.noneOrFail`**— It lifts an option into a ZIO value. If the option is empty it succeeds with `Unit` and if the option is defined it fails with a proper error type:
 
 - `ZIO.noneOrFail` fails with the content of the optional value.
 - `ZIO.noneOrFailUnit` fails with the `Unit` error type.
