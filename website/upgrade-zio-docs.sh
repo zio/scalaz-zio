@@ -12,7 +12,6 @@ packages=(
   "@zio.dev/zio-config"
   "@zio.dev/zio-connect"
   "@zio.dev/zio-constraintless"
-  "@zio.dev/zio-crypto"
   "@zio.dev/zio-deriving"
   "@zio.dev/zio-direct"
   "@zio.dev/zio-dynamodb"
