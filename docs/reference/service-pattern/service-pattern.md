@@ -114,7 +114,7 @@ final class DocRepoLive(
       _        <- metadataRepo.put(id, metadata)
     } yield id
 
-  override def delete(id: String): ZIO[Any, Throwable, Unit] = (blobStorage.delete(id) <&> metadataRepo.delete(id)).unit
+  override def delete(id: String): ZIO[Any, Throwable, Unit] = blobStorage.delete(id) &> metadataRepo.delete(id).unit
 
   override def findByTitle(title: String): ZIO[Any, Throwable, List[Doc]] =
     for {
