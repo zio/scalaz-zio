@@ -982,6 +982,14 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
         self.getSupervisor().onEffect(self, cur)(Unsafe)
       }
 
+      if (RuntimeFlags.opLog(_runtimeFlags)) {
+        val message: () => String = () => s"Executing Effect: $cur"
+        val cause: Cause[Any] = Cause.empty
+        val overrideLogLevel: Option[LogLevel] = Some(LogLevel.Info)
+        val trace: Trace = Trace.empty
+        log(message, cause, overrideLogLevel, trace)
+      }
+
       cur = drainQueueWhileRunning(cur)
 
       ops += 1
