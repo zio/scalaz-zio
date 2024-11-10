@@ -1066,6 +1066,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               stackIndex = pushStackFrame(flatmap, stackIndex)
 
               val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
 
               if (null eq result)
                 return null
@@ -1096,6 +1097,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               stackIndex = pushStackFrame(fold, stackIndex)
 
               val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
+
               if (null eq result)
                 return null
               else {
@@ -1161,6 +1164,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 stackIndex = pushStackFrame(k, stackIndex)
 
                 val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
 
                 if (null eq exit)
                   return null
