@@ -60,7 +60,7 @@
     "@zio.dev/zio-nio": "2.0.0",
     "@zio.dev/zio-optics": "0.2.2",
     "@zio.dev/zio-parser": "0.1.9",
-    "@zio.dev/zio-prelude": "1.0.0-RC31",
+    "@zio.dev/zio-prelude": "1.0.0-RC32",
     "@zio.dev/zio-process": "0.7.2",
     "@zio.dev/zio-profiling": "0.3.2",
     "@zio.dev/zio-query": "0.7.6",
