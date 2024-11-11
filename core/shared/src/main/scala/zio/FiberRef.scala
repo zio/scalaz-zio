@@ -551,6 +551,9 @@ object FiberRef {
   private[zio] val interruptedCause: FiberRef[Cause[Nothing]] =
     FiberRef.unsafe.make[Cause[Nothing]](Cause.empty, _ => Cause.empty, (parent, _) => parent)(Unsafe.unsafe)
 
+  private[zio] val activeRecoverableInterruptTags : FiberRef[Set[String]] =
+    FiberRef.unsafe.make[Set[String]](Set.empty, _ => Set.empty, (parent, _) => parent)(Unsafe.unsafe)
+
   private[zio] val currentBlockingExecutor: FiberRef[Executor] =
     FiberRef.unsafe.make(Runtime.defaultBlockingExecutor)(Unsafe.unsafe)
 

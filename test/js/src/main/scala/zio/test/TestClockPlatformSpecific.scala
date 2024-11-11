@@ -26,7 +26,7 @@ trait TestClockPlatformSpecific { self: TestClock.Test =>
       new Scheduler {
         def schedule(runnable: Runnable, duration: Duration)(implicit unsafe: Unsafe): Scheduler.CancelToken = {
           val fiber =
-            runtime.unsafe.fork(sleep(duration) *> ZIO.succeed(runnable.run()))
+            runtime.unsafe.fork((sleep(duration) *> ZIO.succeed(runnable.run())).interruptible)
           () => runtime.unsafe.run(fiber.interruptAs(zio.FiberId.None)).getOrThrowFiberFailure().isInterrupted
         }
       }
