@@ -58,8 +58,16 @@ sealed abstract class ZLayer[-RIn, +E, +ROut] { self =>
    */
   final def ++[E1 >: E, RIn2, ROut1 >: ROut, ROut2](
     that: ZLayer[RIn2, E1, ROut2]
-  )(implicit ev: Has.Union[ROut1, ROut2], tag: Tag[ROut2]): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
+  )(implicit ev: Has.Union[ROut1, ROut2]): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
     self.zipWithPar(that)(ev.union)
+
+  @deprecated("Kept for binary compatibility", since = "1.0.19")
+  private[zio] final def ++[E1 >: E, RIn2, ROut1 >: ROut, ROut2](
+    that: ZLayer[RIn2, E1, ROut2],
+    ev: Has.Union[ROut1, ROut2],
+    tag: Tag[ROut2]
+  ): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
+    and[E1, RIn2, ROut1, ROut2](that)(ev)
 
   /**
    * A symbolic alias for `zipPar`.
@@ -82,8 +90,16 @@ sealed abstract class ZLayer[-RIn, +E, +ROut] { self =>
    */
   final def >+>[E1 >: E, RIn2 >: ROut, ROut1 >: ROut, ROut2](
     that: ZLayer[RIn2, E1, ROut2]
-  )(implicit ev: Has.Union[ROut1, ROut2], tagged: Tag[ROut2]): ZLayer[RIn, E1, ROut1 with ROut2] =
+  )(implicit ev: Has.Union[ROut1, ROut2]): ZLayer[RIn, E1, ROut1 with ROut2] =
     ZLayer.ZipWith(self, self >>> that, ev.union)
+
+  @deprecated("Kept for binary compatibility", since = "1.0.19")
+  private[zio] final def >+>[E1 >: E, RIn2 >: ROut, ROut1 >: ROut, ROut2](
+    that: ZLayer[RIn2, E1, ROut2],
+    ev: Has.Union[ROut1, ROut2],
+    tagged: Tag[ROut2]
+  ): ZLayer[RIn, E1, ROut1 with ROut2] =
+    andTo[E1, RIn2, ROut1, ROut2](that)(ev)
 
   /**
    * Feeds the output services of this layer into the input of the specified
@@ -98,16 +114,32 @@ sealed abstract class ZLayer[-RIn, +E, +ROut] { self =>
    */
   final def and[E1 >: E, RIn2, ROut1 >: ROut, ROut2](
     that: ZLayer[RIn2, E1, ROut2]
-  )(implicit ev: Has.Union[ROut1, ROut2], tagged: Tag[ROut2]): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
+  )(implicit ev: Has.Union[ROut1, ROut2]): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
     self.++[E1, RIn2, ROut1, ROut2](that)
+
+  @deprecated("Kept for binary compatibility", since = "1.0.19")
+  private[zio] final def and[E1 >: E, RIn2, ROut1 >: ROut, ROut2](
+    that: ZLayer[RIn2, E1, ROut2],
+    ev: Has.Union[ROut1, ROut2],
+    tagged: Tag[ROut2]
+  ): ZLayer[RIn with RIn2, E1, ROut1 with ROut2] =
+    and[E1, RIn2, ROut1, ROut2](that)(ev)
 
   /**
    * A named alias for `>+>`.
    */
   final def andTo[E1 >: E, RIn2 >: ROut, ROut1 >: ROut, ROut2](
     that: ZLayer[RIn2, E1, ROut2]
-  )(implicit ev: Has.Union[ROut1, ROut2], tagged: Tag[ROut2]): ZLayer[RIn, E1, ROut1 with ROut2] =
+  )(implicit ev: Has.Union[ROut1, ROut2]): ZLayer[RIn, E1, ROut1 with ROut2] =
     self.>+>[E1, RIn2, ROut1, ROut2](that)
+
+  @deprecated("Kept for binary compatibility", since = "1.0.19")
+  private[zio] final def andTo[E1 >: E, RIn2 >: ROut, ROut1 >: ROut, ROut2](
+    that: ZLayer[RIn2, E1, ROut2],
+    ev: Has.Union[ROut1, ROut2],
+    tagged: Tag[ROut2]
+  ): ZLayer[RIn, E1, ROut1 with ROut2] =
+    andTo[E1, RIn2, ROut1, ROut2](that)(ev)
 
   /**
    * Builds a layer into a managed value.
@@ -312,7 +344,7 @@ sealed abstract class ZLayer[-RIn, +E, +ROut] { self =>
       case ZLayer.Suspend(self) =>
          ZManaged.succeed(memoMap => memoMap.getOrElseMemoize(self()))
       case ZLayer.ZipWith(self, that, f) =>
-        ZManaged.succeed(memoMap => memoMap.getOrElseMemoize(self).zipWith(memoMap.getOrElseMemoize(that))(f))   
+        ZManaged.succeed(memoMap => memoMap.getOrElseMemoize(self).zipWith(memoMap.getOrElseMemoize(that))(f))
       case ZLayer.ZipWithPar(self, that, f) =>
         ZManaged.succeed(memoMap => memoMap.getOrElseMemoize(self).zipWithPar(memoMap.getOrElseMemoize(that))(f))
     }
