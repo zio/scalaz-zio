@@ -1626,7 +1626,7 @@ object ZIOSpec extends ZIOBaseSpec {
           isInterupted <- Promise.make[Nothing, Boolean]
           parent <- ZIO.never.onInterrupt {
                       for {
-                        child <- ZIO.never.interruptible.fork
+                        child <- ZIO.unit.fork
                         _     <- ZIO.sleep(10.millis)
                         _     <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
                         _     <- child.interrupt
