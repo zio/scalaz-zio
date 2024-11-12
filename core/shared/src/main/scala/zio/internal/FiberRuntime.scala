@@ -158,7 +158,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       if (isAlive()) {
         getChildren().add(child)
 
-        if (isInterrupted())
+        if (shouldInterrupt())
           child.tellInterrupt(getInterruptedCause())
       } else {
         child.tellInterrupt(getInterruptedCause())
@@ -170,7 +170,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     if (isAlive()) {
       val childs = getChildren()
 
-      if (isInterrupted()) {
+      if (shouldInterrupt()) {
         val cause = getInterruptedCause()
         while (iter.hasNext) {
           val child = iter.next()

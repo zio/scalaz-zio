@@ -2,9 +2,9 @@ package zio
 
 import zio.Cause._
 import zio.LatchOps._
-import zio.internal.Platform
+import zio.internal.{FiberRuntime, Platform}
 import zio.test.Assertion._
-import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only}
+import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, withLiveClock}
 import zio.test._
 
 import scala.annotation.tailrec
@@ -1620,7 +1620,23 @@ object ZIOSpec extends ZIOBaseSpec {
           _     <- latch.await
           exit  <- fiber.interrupt.map(_.mapErrorCauseExit((cause: Cause[Nothing]) => cause.untraced))
         } yield assert(exit)(isInterrupted)
-      } @@ exceptJS(nonFlaky)
+      } @@ exceptJS(nonFlaky),
+      test("child fibers can be created on interrupted parents within unininterruptible regions") {
+        for {
+          isInterupted <- Promise.make[Nothing, Boolean]
+          parent <- ZIO.never.onInterrupt {
+                      for {
+                        latch <- Promise.make[Nothing, Unit]
+                        child <- latch.await.fork
+                        _     <- ZIO.sleep(10.millis)
+                        _     <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
+                        _     <- latch.done(Exit.unit)
+                      } yield ()
+                    }.forkDaemon
+          _   <- parent.interrupt.delay(10.millis)
+          res <- isInterupted.await
+        } yield assertTrue(!res)
+      } @@ withLiveClock @@ exceptJS(nonFlaky(10)) @@ zioTag(interruption)
     ),
     suite("negate")(
       test("on true returns false") {
