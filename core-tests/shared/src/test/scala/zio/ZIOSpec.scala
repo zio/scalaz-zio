@@ -1626,10 +1626,11 @@ object ZIOSpec extends ZIOBaseSpec {
           isInterupted <- Promise.make[Nothing, Boolean]
           parent <- ZIO.never.onInterrupt {
                       for {
-                        child <- ZIO.unit.fork
+                        latch <- Promise.make[Nothing, Unit]
+                        child <- latch.await.fork
                         _     <- ZIO.sleep(10.millis)
                         _     <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
-                        _     <- child.interrupt
+                        _     <- latch.done(Exit.unit)
                       } yield ()
                     }.forkDaemon
           _   <- parent.interrupt.delay(10.millis)
