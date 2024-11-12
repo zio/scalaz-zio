@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkzio_site=self.webpackChunkzio_site||[]).push([[50911],{74920:(e,t,n)=>{n.r(t),n.d(t,{default:()=>r});var l=n(96540),c=n(44586),s=n(35435),i=n(21441);function r(){const{siteConfig:e}=(0,c.A)();return l.createElement(s.A,null,l.createElement("h2",null,"Site config"),l.createElement(i.A,{src:e,collapseDepth:3}))}}}]);
