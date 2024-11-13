@@ -16,12 +16,9 @@
 
 package zio
 
-import zio.internal.Platform
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import izumi.reflect.macrortti.LightTypeTagRef
 
-import java.util.{Map => JMap}
-import scala.collection.mutable
+import java.util.concurrent.ConcurrentHashMap
 
 private[zio] trait VersionSpecific {
 
@@ -59,8 +56,18 @@ private[zio] trait VersionSpecific {
 
   type LightTypeTag = izumi.reflect.macrortti.LightTypeTag
 
-  private[zio] def taggedIsSubtype(left: LightTypeTag, right: LightTypeTag): Boolean =
-    taggedSubtypes.computeIfAbsent((left, right), taggedIsSubtypeFn).value
+  private[zio] def taggedIsSubtype(left: LightTypeTag, right: LightTypeTag): Boolean = {
+    // NOTE: Prefer get/putIfAbsent pattern as it offers better read performance at the cost of
+    // potentially computing `<:<` multiple times during app warmup
+    val k = (left, right)
+    taggedSubtypes.get(k) match {
+      case null =>
+        val v = left <:< right
+        taggedSubtypes.putIfAbsent(k, v)
+        v
+      case v => v.booleanValue()
+    }
+  }
 
   private[zio] def taggedTagType[A](tagged: EnvironmentTag[A]): LightTypeTag =
     tagged.tag
@@ -72,25 +79,25 @@ private[zio] trait VersionSpecific {
    * `Tag[A with B]` should produce `Set(Tag[A], Tag[B])`
    */
   private[zio] def taggedGetServices[A](t: LightTypeTag): Set[LightTypeTag] =
-    taggedServices.computeIfAbsent(t, taggedServicesFn)
-
-  private val taggedSubtypes: JMap[(LightTypeTag, LightTypeTag), BoxedBool] =
-    Platform.newConcurrentMap()(Unsafe.unsafe)
-
-  private val taggedServices: JMap[LightTypeTag, Set[LightTypeTag]] =
-    Platform.newConcurrentMap()(Unsafe.unsafe)
-
-  private[this] val taggedIsSubtypeFn =
-    new java.util.function.Function[(LightTypeTag, LightTypeTag), BoxedBool] {
-      override def apply(tags: (LightTypeTag, LightTypeTag)): BoxedBool =
-        if (tags._1 <:< tags._2) BoxedBool.True else BoxedBool.False
+    // NOTE: See `taggedIsSubtype` for implementation notes
+    taggedServices.get(t) match {
+      case null =>
+        val v = t.decompose
+        taggedServices.putIfAbsent(t, v)
+        v
+      case v => v
     }
 
-  private[this] val taggedServicesFn =
-    new java.util.function.Function[LightTypeTag, Set[LightTypeTag]] {
-      override def apply(tag: LightTypeTag): Set[LightTypeTag] =
-        tag.decompose
-    }
+  private val taggedSubtypes: ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean] = {
+    /*
+     * '''NOTE''': Larger maps have lower chance of collision which offers better
+     * read performance and smaller chance of entering synchronized blocks during writes
+     */
+    new ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean](1024)
+  }
+
+  private val taggedServices: ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]] =
+    new ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]](256)
 
   private sealed trait BoxedBool { self =>
     final def value: Boolean = self eq BoxedBool.True
