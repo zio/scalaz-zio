@@ -1043,6 +1043,10 @@ sealed trait ZIO[-R, +E, +A]
   final def once(implicit trace: Trace): UIO[ZIO[R, E, Unit]] =
     Ref.make(true).map(ref => self.whenZIO(ref.getAndSet(false)).unit)
 
+  /**
+   * Executes the specified success or error callback depending on the result
+   * of this effect, synchronously completing the effect before returning.
+   */
   final def onDone[R1 <: R](
     error: E => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
@@ -1058,6 +1062,10 @@ sealed trait ZIO[-R, +E, +A]
           .unit
     }.catchAll(_ => ZIO.unit).as(())
 
+  /**
+   * Executes the specified success or cause-based error callback depending on
+   * the result of this effect, synchronously completing the effect before returning.
+   */
   final def onDoneCause[R1 <: R](
     error: Cause[E] => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
