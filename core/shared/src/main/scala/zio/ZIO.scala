@@ -1047,17 +1047,25 @@ sealed trait ZIO[-R, +E, +A]
     error: E => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
-    ZIO.uninterruptibleMask { restore =>
-      restore(self).foldZIO(e => restore(error(e)), s => restore(success(s))).unit
-    }
+    onExit {
+      case Exit.Success(value) => success(value).unit
+      case Exit.Failure(cause) =>
+        cause.failureOrCause
+          .fold(
+            error,
+            _ => ZIO.unit
+          )
+          .unit
+    }.catchAll(_ => ZIO.unit).as(())
 
   final def onDoneCause[R1 <: R](
     error: Cause[E] => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
-    ZIO.uninterruptibleMask { restore =>
-      restore(self).foldCauseZIO(e => restore(error(e)), s => restore(success(s))).unit
-    }
+    onExit {
+      case Exit.Success(value) => success(value).unit
+      case Exit.Failure(cause) => error(cause).unit
+    }.catchAll(_ => ZIO.unit).as(())
 
   /**
    * Runs the specified effect if this effect fails, providing the error to the
