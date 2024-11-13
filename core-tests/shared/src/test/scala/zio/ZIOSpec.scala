@@ -4,7 +4,7 @@ import zio.Cause._
 import zio.LatchOps._
 import zio.internal.{FiberRuntime, Platform}
 import zio.test.Assertion._
-import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, withLiveClock}
+import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
 import scala.annotation.tailrec
@@ -1623,20 +1623,22 @@ object ZIOSpec extends ZIOBaseSpec {
       } @@ exceptJS(nonFlaky),
       test("child fibers can be created on interrupted parents within unininterruptible regions") {
         for {
+          latch1       <- Promise.make[Nothing, Unit]
           isInterupted <- Promise.make[Nothing, Boolean]
-          parent <- ZIO.never.onInterrupt {
+          parent <- (latch1.succeed(()) *> ZIO.never).onInterrupt {
                       for {
-                        latch <- Promise.make[Nothing, Unit]
-                        child <- latch.await.fork
-                        _     <- ZIO.sleep(10.millis)
-                        _     <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
-                        _     <- latch.done(Exit.unit)
+                        latch2 <- Promise.make[Nothing, Unit]
+                        child  <- latch2.await.fork
+                        _      <- ZIO.sleep(5.millis)
+                        _      <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
+                        _      <- latch2.succeed(())
                       } yield ()
                     }.forkDaemon
-          _   <- parent.interrupt.delay(10.millis)
+          _   <- latch1.await
+          _   <- parent.interrupt
           res <- isInterupted.await
         } yield assertTrue(!res)
-      } @@ withLiveClock @@ exceptJS(nonFlaky(10)) @@ zioTag(interruption)
+      } @@ withLiveClock @@ exceptJS(nonFlaky) @@ timeout(20.seconds) @@ zioTag(interruption)
     ),
     suite("negate")(
       test("on true returns false") {
@@ -4188,6 +4190,48 @@ object ZIOSpec extends ZIOBaseSpec {
         )
       }
     ),
+    suite("onDone and onDoneCause")(
+      test("onDone - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDone(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDone - should execute error callback synchronously on failure") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDone(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDoneCause(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute error callback synchronously on failure with cause") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDoneCause(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      }
+    ),
     suite("when")(
       test("executes correct branch only") {
         for {
@@ -4479,48 +4523,6 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield {
           assert(value)(equalTo("Controlling unit side-effect"))
         }
-      }
-    ),
-    suite("onDone and onDoneCause")(
-      test("onDone - should execute success callback synchronously on success") {
-        for {
-          ref    <- Ref.make(false)
-          latch  <- Promise.make[Nothing, Unit]
-          _      <- ZIO.succeed(42).onDone(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
-          _      <- latch.await
-          result <- ref.get
-        } yield assert(result)(isTrue)
-      },
-      test("onDone - should execute error callback synchronously on failure") {
-        for {
-          ref   <- Ref.make(false)
-          latch <- Promise.make[Nothing, Unit]
-          _ <- ZIO
-                 .fail("Error")
-                 .onDone(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
-          _      <- latch.await
-          result <- ref.get
-        } yield assert(result)(isTrue)
-      },
-      test("onDoneCause - should execute success callback synchronously on success") {
-        for {
-          ref    <- Ref.make(false)
-          latch  <- Promise.make[Nothing, Unit]
-          _      <- ZIO.succeed(42).onDoneCause(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
-          _      <- latch.await
-          result <- ref.get
-        } yield assert(result)(isTrue)
-      },
-      test("onDoneCause - should execute error callback synchronously on failure with cause") {
-        for {
-          ref   <- Ref.make(false)
-          latch <- Promise.make[Nothing, Unit]
-          _ <- ZIO
-                 .fail("Error")
-                 .onDoneCause(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
-          _      <- latch.await
-          result <- ref.get
-        } yield assert(result)(isTrue)
       }
     ),
     suite("promises")(
