@@ -52,7 +52,7 @@
     "@zio.dev/zio-kafka": "2.8.3",
     "@zio.dev/zio-keeper": "0.0.0--215-0a9dd0ea-SNAPSHOT",
     "@zio.dev/zio-lambda": "1.0.5",
-    "@zio.dev/zio-logging": "2.3.2",
+    "@zio.dev/zio-logging": "2.4.0",
     "@zio.dev/zio-memberlist": "0.0.0--40-a85dc5a1--20221121-1416-SNAPSHOT",
     "@zio.dev/zio-meta": "0.0.0--21-54bc2e8b-SNAPSHOT",
     "@zio.dev/zio-metrics-connectors": "2.3.1",
