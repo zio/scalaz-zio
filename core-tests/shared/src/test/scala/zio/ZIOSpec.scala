@@ -4,7 +4,7 @@ import zio.Cause._
 import zio.LatchOps._
 import zio.internal.{FiberRuntime, Platform}
 import zio.test.Assertion._
-import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, withLiveClock}
+import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
 import scala.annotation.tailrec
@@ -1623,20 +1623,22 @@ object ZIOSpec extends ZIOBaseSpec {
       } @@ exceptJS(nonFlaky),
       test("child fibers can be created on interrupted parents within unininterruptible regions") {
         for {
+          latch1       <- Promise.make[Nothing, Unit]
           isInterupted <- Promise.make[Nothing, Boolean]
-          parent <- ZIO.never.onInterrupt {
+          parent <- (latch1.succeed(()) *> ZIO.never).onInterrupt {
                       for {
-                        latch <- Promise.make[Nothing, Unit]
-                        child <- latch.await.fork
-                        _     <- ZIO.sleep(10.millis)
-                        _     <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
-                        _     <- latch.done(Exit.unit)
+                        latch2 <- Promise.make[Nothing, Unit]
+                        child  <- latch2.await.fork
+                        _      <- ZIO.sleep(5.millis)
+                        _      <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
+                        _      <- latch2.succeed(())
                       } yield ()
                     }.forkDaemon
-          _   <- parent.interrupt.delay(10.millis)
+          _   <- latch1.await
+          _   <- parent.interrupt
           res <- isInterupted.await
         } yield assertTrue(!res)
-      } @@ withLiveClock @@ exceptJS(nonFlaky(10)) @@ zioTag(interruption)
+      } @@ withLiveClock @@ exceptJS(nonFlaky) @@ timeout(20.seconds) @@ zioTag(interruption)
     ),
     suite("negate")(
       test("on true returns false") {
