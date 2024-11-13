@@ -1044,8 +1044,8 @@ sealed trait ZIO[-R, +E, +A]
     Ref.make(true).map(ref => self.whenZIO(ref.getAndSet(false)).unit)
 
   /**
-   * Executes the specified success or error callback depending on the result
-   * of this effect, synchronously completing the effect before returning.
+   * Executes the specified success or error callback depending on the result of
+   * this effect, synchronously completing the effect before returning.
    */
   final def onDone[R1 <: R](
     error: E => ZIO[R1, Nothing, Any],
@@ -1064,7 +1064,8 @@ sealed trait ZIO[-R, +E, +A]
 
   /**
    * Executes the specified success or cause-based error callback depending on
-   * the result of this effect, synchronously completing the effect before returning.
+   * the result of this effect, synchronously completing the effect before
+   * returning.
    */
   final def onDoneCause[R1 <: R](
     error: Cause[E] => ZIO[R1, Nothing, Any],
@@ -1390,7 +1391,16 @@ sealed trait ZIO[-R, +E, +A]
   final def raceFirst[R1 <: R, E1 >: E, A1 >: A](that: => ZIO[R1, E1, A1])(implicit
     trace: Trace
   ): ZIO[R1, E1, A1] =
-    (self.exit race that.exit).unexit
+    ZIO.scoped[R1] {
+      (self.exit race that.exit).flatMap { exitResult =>
+        exitResult match {
+          case Exit.Success(winningValue) =>
+            ZIO.succeed(winningValue) // Ensure success propagates directly
+          case Exit.Failure(failureCause) =>
+            ZIO.failCause(failureCause) // Ensure failure propagates directly
+        }
+      }
+    }
 
   @deprecated("use raceFirst", "2.0.7")
   final def raceFirstAwait[R1 <: R, E1 >: E, A1 >: A](that: => ZIO[R1, E1, A1])(implicit
