@@ -1051,16 +1051,10 @@ sealed trait ZIO[-R, +E, +A]
     error: E => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
-    onExit {
-      case Exit.Success(value) => success(value).unit
-      case Exit.Failure(cause) =>
-        cause.failureOrCause
-          .fold(
-            error,
-            _ => ZIO.unit
-          )
-          .unit
-    }.catchAll(_ => ZIO.unit).as(())
+    onDoneCause(
+      _.failureOrCause.fold(error, Exit.failCause(_)),
+      success
+    )
 
   /**
    * Executes the specified success or cause-based error callback depending on
