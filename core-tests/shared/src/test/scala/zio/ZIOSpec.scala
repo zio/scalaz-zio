@@ -7,6 +7,8 @@ import zio.test.Assertion._
 import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
