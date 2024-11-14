@@ -283,7 +283,7 @@ final class ZEnvironment[+R] private (
         else value
       }
 
-      private[this] def getUnsafe[A](tag: LightTypeTag)(implicit unsafe: Unsafe): A = {
+      private[this] def getUnsafe[A](tag: LightTypeTag): A = {
         val fromCache = self.cache.get(tag)
         if (fromCache != null)
           fromCache.asInstanceOf[A]
@@ -301,7 +301,7 @@ final class ZEnvironment[+R] private (
             }
           }
           if (service != null) {
-            self.cache.put(tag, service)
+            self.cache.putIfAbsent(tag, service)
           }
           service
         }
