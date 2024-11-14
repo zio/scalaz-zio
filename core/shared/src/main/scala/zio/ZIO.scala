@@ -1068,7 +1068,7 @@ sealed trait ZIO[-R, +E, +A]
     onExit {
       case Exit.Success(value) => success(value).unit
       case Exit.Failure(cause) => error(cause).unit
-    }
+    }.catchAll(_ => ZIO.unit).as(())
 
   /**
    * Runs the specified effect if this effect fails, providing the error to the
