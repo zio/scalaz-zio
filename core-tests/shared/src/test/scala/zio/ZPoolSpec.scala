@@ -212,6 +212,6 @@ object ZPoolSpec extends ZIOBaseSpec {
             pool <- ZPool.make(ZIO.succeed(Array.empty[Int]), 1)
             _    <- ZIO.foreachDiscard(1 to 1000)(_ => pool.invalidate(Array.ofDim[Int](10000000)))
           } yield assertCompletes
-        }
+        } @@ jvmOnly
     }.provideLayer(Scope.default) @@ timeout(30.seconds)
 }

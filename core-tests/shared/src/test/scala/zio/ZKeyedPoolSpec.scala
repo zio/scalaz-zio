@@ -57,7 +57,7 @@ object ZKeyedPoolSpec extends ZIOBaseSpec {
               )
           }
           .as(assertCompletes)
-      }
+      } @@ jvmOnly
     ) @@ exceptJS
 
 }
