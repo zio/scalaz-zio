@@ -40,6 +40,24 @@ object ZKeyedPoolSpec extends ZIOBaseSpec {
           _ <- TestClock.adjust((15 * 400).millis)
           _ <- fiber.join
         } yield assertCompletes
+      },
+      test("invalidate does not cause memory leaks (i9306)") {
+        ZKeyedPool
+          .make[String, Any, Nothing, Array[Int]]((_: String) => ZIO.succeed(Array.ofDim[Int](1000000)), size = 1)
+          .flatMap { pool =>
+            ZIO
+              .foreachDiscard(1 to 10000)(_ =>
+                ZIO.scoped {
+                  for {
+                    item1 <- pool.get("key0")
+                    _     <- ZIO.foreachDiscard(1 to 5)(i => pool.get(s"key$i"))
+                    _     <- pool.invalidate(item1)
+                  } yield ()
+                }
+              )
+          }
+          .as(assertCompletes)
       }
     ) @@ exceptJS
+
 }
