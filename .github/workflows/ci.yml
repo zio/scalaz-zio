@@ -216,6 +216,9 @@ jobs:
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v4.1.1
+      - name: Install Boehm GC
+        if: ${{ startsWith(matrix.platform, 'Native') }}
+        run: sudo apt-get update && sudo apt-get install -y libgc-dev
       - name: Setup Java
         uses: actions/setup-java@v4.2.1
         with:
