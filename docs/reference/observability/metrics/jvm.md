@@ -71,7 +71,7 @@ All of these services are available in the `zio.metrics.jvm` package. Each servi
 
 ZIO JVM metrics have built-in applications that collect the JVM metrics. They can be composed with other ZIO applications as a _sidecar_. By doing so, we are able to collect JVM metrics without modifying our main ZIO application. They will be executed as a daemon alongside the main app:
 
-```scala mdoc:compile-only
+```scala mdoc:passthrough
 import utils._
 
 printSource("examples/jvm/src/main/scala/zio/examples/metrics/JvmMetricAppExample.scala")
