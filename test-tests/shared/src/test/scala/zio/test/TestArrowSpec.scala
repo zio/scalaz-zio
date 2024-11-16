@@ -133,6 +133,32 @@ object TestArrowSpec extends ZIOBaseSpec {
             meta.meta(genFailureDetails = genFailureDetails2).asInstanceOf[Meta[Any, Nothing]].genFailureDetails
           assertTrue(res1.map(_.iterations == 1).getOrElse(false) && res2.map(_.iterations == 2).getOrElse(false))
         }
+      ),
+      suite("Span substring bounds")(
+        test("correctly handles valid span bounds within string length") {
+          val span = Span(0, 3)
+          assertTrue(span.substring("foo bar baz") == "foo")
+        },
+        test("clamps start when it is out of bounds") {
+          val span = Span(-3, 3)
+          assertTrue(span.substring("foo bar baz") == "foo")
+        },
+        test("clamps end when it exceeds string length") {
+          val span = Span(0, 10)
+          assertTrue(span.substring("foo") == "foo")
+        },
+        test("clamps both start and end when both are out of bounds") {
+          val span = Span(-5, 10)
+          assertTrue(span.substring("baz") == "baz")
+        },
+        test("returns empty string when start equals end") {
+          val span = Span(3, 3)
+          assertTrue(span.substring("foo bar baz") == "")
+        },
+        test("returns empty string when start is greater than end") {
+          val span = Span(4, 2)
+          assertTrue(span.substring("foo bar baz") == "")
+        }
       )
     )
 
