@@ -15,20 +15,6 @@ object Dependencies {
   val ScalaSecureRandomVersion     = "1.0.0"
   val ScalaJsDomVersion            = "2.8.0"
 
-  // Test dependencies
-  val TestJunitDependencies = Seq(
-    "junit"                     % "junit"                          % "4.13.2",
-    "org.scala-lang.modules"   %% "scala-xml"                      % "2.3.0",
-    "org.apache.maven"          % "maven-embedder"                 % "3.9.9",
-    "org.apache.maven"          % "maven-compat"                   % "3.9.9",
-    "com.google.inject"         % "guice"                          % "6.0.0",
-    "org.eclipse.sisu"          % "org.eclipse.sisu.inject"        % "0.3.5",
-    "org.apache.maven.resolver" % "maven-resolver-connector-basic" % "1.9.22",
-    "org.apache.maven.resolver" % "maven-resolver-transport-http"  % "1.9.22",
-    "org.codehaus.plexus"       % "plexus-component-annotations"   % "2.2.0",
-    "org.slf4j"                 % "slf4j-simple"                   % "2.0.16"
-  ).map(_ % Test)
-
   // Documentations and example dependencies
   val CatsEffectVersion = "3.5.5"
   val DoobieVersion     = "1.0.0-RC5"

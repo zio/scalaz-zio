@@ -50,14 +50,6 @@ addCommandAlias(
   ";coreTestsJVM/test;stacktracerJVM/test;streamsTestsJVM/test;testTestsJVM/test;testMagnoliaTestsJVM/test;testRefinedJVM/Test/compile;testRunnerJVM/Test/run;examplesJVM/Test/compile;concurrentJVM/test;managedTestsJVM/test"
 )
 addCommandAlias(
-  "testJVM3",
-  ";coreTestsJVM/test;stacktracerJVM/Test/compile;streamsTestsJVM/test;testTestsJVM/test;testMagnoliaTestsJVM/test;testRefinedJVM/test;testRunnerJVM/Test/run;examplesJVM/Test/compile;concurrentJVM/test;managedTestsJVM/test"
-)
-addCommandAlias(
-  "testJS3",
-  ";coreTestsJS/test;stacktracerJS/test;streamsTestsJS/test;testTestsJS/test;testMagnoliaTestsJS/test;testRefinedJS/test;examplesJS/Test/compile;concurrentJS/test"
-)
-addCommandAlias(
   "testJS",
   ";coreTestsJS/test;stacktracerJS/test;streamsTestsJS/test;testTestsJS/test;testMagnoliaTestsJS/test;testRefinedJS/test;examplesJS/Test/compile;macrosTestsJS/test;concurrentJS/test"
 )
@@ -115,7 +107,7 @@ lazy val rootJVM3 = project
     List[ProjectReference](
       testJunitRunner,
       testJunitEngine,
-//      testJunitRunnerTests, TODO: fix test
+      testJunitRunnerTests,
       testJunitEngineTests,
       testMagnolia.jvm,
       testMagnoliaTests.jvm,
@@ -530,24 +522,34 @@ lazy val testJunitRunner = project.module
   .settings(libraryDependencies ++= Seq("junit" % "junit" % JunitVersion))
   .dependsOn(tests.jvm)
 
+lazy val commonJunitTestSettings = Seq(
+  Test / fork    := true,
+  publish / skip := true,
+  Test / javaOptions ++= Seq(
+    s"-Dproject.dir=${baseDirectory.value}",
+    s"-Dproject.version=${version.value}",
+    s"-Dscala.version=${scalaVersion.value}",
+    s"-Dscala.compat.version=${scalaBinaryVersion.value}"
+  ),
+  libraryDependencies ++= Seq(
+    "junit"                     % "junit"                          % "4.13.2" % Test,
+    "org.scala-lang.modules"   %% "scala-xml"                      % "2.3.0"  % Test,
+    "org.apache.maven"          % "maven-embedder"                 % "3.9.9"  % Test,
+    "org.apache.maven"          % "maven-compat"                   % "3.9.9"  % Test,
+    "com.google.inject"         % "guice"                          % "6.0.0"  % Test,
+    "org.eclipse.sisu"          % "org.eclipse.sisu.inject"        % "0.3.5"  % Test,
+    "org.apache.maven.resolver" % "maven-resolver-connector-basic" % "1.9.22" % Test,
+    "org.apache.maven.resolver" % "maven-resolver-transport-http"  % "1.9.22" % Test,
+    "org.codehaus.plexus"       % "plexus-component-annotations"   % "2.2.0"  % Test,
+    "org.slf4j"                 % "slf4j-simple"                   % "2.0.16" % Test
+  )
+)
+
 lazy val testJunitRunnerTests = project.module
   .in(file("test-junit-tests"))
   .settings(stdSettings("test-junit-tests"))
-  .settings(Test / fork := true)
-  .settings(Test / javaOptions ++= {
-    Seq(
-      s"-Dproject.dir=${baseDirectory.value}",
-      s"-Dproject.version=${version.value}",
-      s"-Dscala.version=${scalaVersion.value}",
-      s"-Dscala.compat.version=${scalaBinaryVersion.value}"
-    )
-  })
-  .settings(publish / skip := true)
-  .settings(libraryDependencies ++= TestJunitDependencies)
-  .dependsOn(
-    tests.jvm,
-    testRunner.jvm
-  )
+  .settings(commonJunitTestSettings)
+  .dependsOn(tests.jvm, testRunner.jvm)
   // publish locally so embedded maven runs against locally compiled zio
   .settings(
     Test / Keys.test :=
@@ -577,21 +579,8 @@ lazy val testJunitEngine = project.module
 lazy val testJunitEngineTests = project.module
   .in(file("test-junit-engine-tests"))
   .settings(stdSettings("test-junit-engine-tests"))
-  .settings(Test / fork := true)
-  .settings(Test / javaOptions ++= {
-    Seq(
-      s"-Dproject.dir=${baseDirectory.value}",
-      s"-Dproject.version=${version.value}",
-      s"-Dscala.version=${scalaVersion.value}",
-      s"-Dscala.compat.version=${scalaBinaryVersion.value}"
-    )
-  })
-  .settings(publish / skip := true)
-  .settings(libraryDependencies ++= TestJunitDependencies)
-  .dependsOn(
-    tests.jvm,
-    testRunner.jvm
-  )
+  .settings(commonJunitTestSettings)
+  .dependsOn(tests.jvm, testRunner.jvm)
   // publish locally so embedded maven runs against locally compiled zio
   .settings(
     Test / Keys.test :=
@@ -655,23 +644,29 @@ lazy val benchmarks = project.module
   .enablePlugins(JmhPlugin)
   .settings(replSettings)
   .settings(
-    crossScalaVersions --= List(Scala3),
+    crossScalaVersions --= List(Scala212),
     publish / skip := true,
-    libraryDependencies ++=
+    libraryDependencies ++= {
+      val nyanaVersion = if (scalaVersion.value == Scala212) "0.10.0" else "1.1.0"
       Seq(
         "co.fs2"                    %% "fs2-core"      % Fs2Version,
         "com.twitter"               %% "util-core"     % "24.2.0",
-        "com.typesafe.akka"         %% "akka-stream"   % "2.8.5",
-        "io.github.timwspence"      %% "cats-stm"      % "0.13.5",
+        "com.typesafe.akka"         %% "akka-stream"   % "2.8.8",
+        "io.github.timwspence"      %% "cats-stm"      % "0.13.4",
         "io.projectreactor"          % "reactor-core"  % "3.7.0",
         "io.reactivex.rxjava2"       % "rxjava"        % "2.2.21",
         "org.jctools"                % "jctools-core"  % "4.0.5",
         "org.typelevel"             %% "cats-effect"   % CatsEffectVersion,
         "org.scalacheck"            %% "scalacheck"    % ScalaCheckVersion,
         "qa.hedgehog"               %% "hedgehog-core" % "0.11.0",
-        "com.github.japgolly.nyaya" %% "nyaya-gen"     % "1.1.0",
+        "com.github.japgolly.nyaya" %% "nyaya-gen"     % nyanaVersion,
         "org.springframework"        % "spring-core"   % "6.2.0"
-      ),
+      )
+    },
+    excludeDependencies ++= {
+      if (scalaVersion.value == Scala3) List(ExclusionRule("org.scala-lang.modules", "scala-collection-compat_2.13"))
+      else Nil
+    },
     Compile / console / scalacOptions := Seq(
       "-language:higherKinds",
       "-language:existentials",
