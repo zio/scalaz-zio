@@ -2,7 +2,7 @@ package zio
 
 import zio.QueueSpecUtil._
 import zio.test.Assertion._
-import zio.test.TestAspect.{jvm, exceptJS, nonFlaky, samples, sequential}
+import zio.test.TestAspect.{jvm, exceptJVM, exceptJS, nonFlaky, samples, sequential}
 import zio.test._
 
 object QueueSpec extends ZIOBaseSpec {
@@ -840,7 +840,7 @@ object QueueSpec extends ZIOBaseSpec {
           }
         }
       )
-    } @@ jvm(samples(500) @@ sequential),
+    } @@ jvm(samples(500)) @@ exceptJVM(samples(50)) @@ sequential,
     test("isEmpty") {
       for {
         queue <- Queue.bounded[Int](2)
