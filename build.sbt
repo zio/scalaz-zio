@@ -644,7 +644,6 @@ lazy val benchmarks = project.module
   .enablePlugins(JmhPlugin)
   .settings(replSettings)
   .settings(
-    crossScalaVersions --= List(Scala212),
     publish / skip := true,
     libraryDependencies ++= {
       val nyanaVersion = if (scalaVersion.value == Scala212) "0.10.0" else "1.1.0"
