@@ -253,6 +253,34 @@ object CauseSpec extends ZIOBaseSpec {
             assert(filt)(Assertion.equalTo(f1))
           }
         )
+      },
+      test("traversal") {
+        val c1   = Cause.fail("foo")
+        val c2   = Cause.fail("bar")
+        val c3   = Cause.fail("baz")
+        val c23  = Cause.Both(c2, c3)
+        val c123 = Cause.Both(c1, c23)
+
+        val bldr = Seq.newBuilder[(Seq[String], Boolean)]
+        val c = c123.filter { c =>
+          val res = !c.isInstanceOf[Cause.Both[?]]
+          println(s"applying filter on: ${c.failures} -> $res")
+          bldr += (c.failures -> res)
+          res
+        }
+
+        println(s"\nfiltered cause: $c")
+        zio.test.assert(c)(Assertion.equalTo(c1)) &&
+        zio.test.assert(bldr.result()) {
+          equalTo {
+            Seq(
+              Seq("foo")        -> true,
+              Seq("bar")        -> true,
+              Seq("baz")        -> true,
+              Seq("bar", "baz") -> false
+            )
+          }
+        }
       }
     )
   ) @@ samples(10)

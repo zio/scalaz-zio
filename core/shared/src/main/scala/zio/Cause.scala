@@ -850,21 +850,35 @@ object Cause extends Serializable {
         (left, right) match {
           case (Cause.Empty, _) => right
           case (_, Cause.Empty) => left
-          case _                => Both(left, right)
+          case _ =>
+            val both = Both(left, right)
+            if (p(both))
+              both
+            else
+              Cause.Empty
         }
 
       def thenCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
         (left, right) match {
           case (Cause.Empty, _) => right
           case (_, Cause.Empty) => left
-          case _                => Then(left, right)
+          case _ =>
+            val then_ = Then(left, right)
+            if (p(then_))
+              then_
+            else
+              Cause.Empty
         }
 
       def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] =
         value match {
           case Cause.Empty => value
           case _ =>
-            Stackless(value, stackless)
+            val stackless2 = Stackless(value, stackless)
+            if (p(stackless2))
+              stackless2
+            else
+              Cause.Empty
         }
     }
   }
