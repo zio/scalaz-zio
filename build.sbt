@@ -152,7 +152,7 @@ lazy val root212 = project.in(file("target/root212")).settings(publish / skip :=
 lazy val root213 = project
   .in(file("target/root213"))
   .settings(publish / skip := true)
-  .aggregate(projectsCommon.flatMap(p => List[ProjectReference](p.jvm, p.js, p.native))*)
+  .aggregate(projectsCommon.flatMap(p => List[ProjectReference](p.jvm, p.js, p.native)) *)
   .aggregate(
     List(
       testScalaCheck
@@ -474,7 +474,9 @@ lazy val testRefined = crossProject(JVMPlatform, JSPlatform)
   .settings(stdSettings("zio-test-refined"))
   .settings(crossProjectSettings)
   .settings(macroDefinitionSettings)
-  .settings(libraryDependencies += "eu.timepit" %% "refined" % RefinedVersion)
+  .settings(
+    libraryDependencies += "eu.timepit" %% "refined" % RefinedVersion cross CrossVersion.for3Use2_13
+  )
   .jsSettings(jsSettings)
 
 lazy val testScalaCheck = crossProject(JSPlatform, JVMPlatform, NativePlatform)
