@@ -85,6 +85,7 @@ object Has {
   abstract class Union[R, R1] {
     def union(r: R, r1: R1): R with R1
   }
+
   object Union extends LowPriorityUnionImplicits {
     implicit def HasHasUnion[R <: Has[_], R1 <: Has[_]: Tag]: Union[R, R1] =
       new Union[R, R1] {
@@ -92,27 +93,21 @@ object Has {
           r.union[R1](r1)
       }
   }
+
   abstract class LowPriorityUnionImplicits {
     implicit def HasAnyUnion[R <: Has[_]]: Union[R, Any] =
       new Union[R, Any] {
-        def union(r: R, r1: Any): R = {
-          val _ = r1
-          r
-        }
+        def union(r: R, r1: Any): R = r
       }
+
     implicit def AnyHasUnion[R1 <: Has[_]]: Union[Any, R1] =
       new Union[Any, R1] {
-        def union(r: Any, r1: R1): R1 = {
-          val _ = r
-          r1
-        }
+        def union(r: Any, r1: R1): R1 = r1
       }
+
     implicit val AnyAnyUnion: Union[Any, Any] =
       new Union[Any, Any] {
-        def union(r: Any, r1: Any): Any = {
-          val _ = (r, r1)
-          ()
-        }
+        def union(r: Any, r1: Any): Any = ()
       }
   }
 
@@ -126,34 +121,36 @@ object Has {
   abstract class UnionAll[R, R1] {
     def unionAll(r: R, r1: R1): R with R1
   }
+
   object UnionAll extends LowPriorityUnionAllImplicits {
-    implicit def HasHasUnionAll[R <: Has[_], R1 <: Has[_]: Tag]: UnionAll[R, R1] =
+    implicit def HasHasUnionAll[R <: Has[_], R1 <: Has[_]]: UnionAll[R, R1] =
+      new UnionAll[R, R1] {
+        def unionAll(r: R, r1: R1): R with R1 =
+          r.unionAll[R1](r1)
+      }
+
+    @deprecated("Kept for binary compatibility", since = "1.0.19")
+    private[zio] def HasHasUnionAll[R <: Has[_], R1 <: Has[_]: Tag]: UnionAll[R, R1] =
       new UnionAll[R, R1] {
         def unionAll(r: R, r1: R1): R with R1 =
           r.unionAll[R1](r1)
       }
   }
+
   abstract class LowPriorityUnionAllImplicits {
-   implicit def HasAnyUnionAll[R <: Has[_]]: UnionAll[R, Any] =
+    implicit def HasAnyUnionAll[R <: Has[_]]: UnionAll[R, Any] =
       new UnionAll[R, Any] {
-        def unionAll(r: R, r1: Any): R = {
-          val _ = r1
-          r
-        }
+        def unionAll(r: R, r1: Any): R = r
       }
+
     implicit def AnyHasUnionAll[R1 <: Has[_]]: UnionAll[Any, R1] =
       new UnionAll[Any, R1] {
-        def unionAll(r: Any, r1: R1): R1 = {
-          val _ = r
-          r1
-        }
+        def unionAll(r: Any, r1: R1): R1 = r1
       }
+
     implicit val AnyAnyUnionAll: UnionAll[Any, Any] =
       new UnionAll[Any, Any] {
-        def unionAll(r: Any, r1: Any): Any = {
-          val _ = (r, r1)
-          ()
-        }
+        def unionAll(r: Any, r1: Any): Any = ()
       }
   }
 
