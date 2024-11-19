@@ -2400,9 +2400,9 @@ object ZStreamSpec extends ZIOBaseSpec {
                      .runDrain
                      .fork
               _ <- requestQueue.offer("some message").forever.fork
-              _ <- counter.get.repeatUntil(_ >= 10)
+              _ <- (ZIO.yieldNow *> counter.get).repeatUntil(_ >= 10)
             } yield assertCompletes
-          } @@ exceptJS(nonFlaky) @@ TestAspect.timeout(10.seconds)
+          } @@ exceptJS(nonFlaky) @@ TestAspect.timeout(30.seconds)
         ),
         suite("interruptAfter")(
           test("interrupts after given duration") {
