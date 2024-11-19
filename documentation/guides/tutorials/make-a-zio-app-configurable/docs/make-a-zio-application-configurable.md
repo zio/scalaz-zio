@@ -92,17 +92,22 @@ Let's run the above workflow and see the output:
 
 ```
 
-```scala mdoc:fail
+```scala mdoc
 import zio._
+import zio.config.magnolia._
 
 import java.io.IOException
 
 case class HttpServerConfig(host: String, port: Int)
 
+object HttpServerConfig {
+  implicit val config: Config[HttpServerConfig] = deriveConfig[HttpServerConfig].nested("HttpServerConfig")
+}
+
 object MainApp extends ZIOAppDefault {
 
-  val workflow: ZIO[Any, IOException, Unit] =
-    ZIO.service[HttpServerConfig].flatMap { config =>
+  val workflow: Task[Unit] =
+    ZIO.config[HttpServerConfig].flatMap { config =>
       Console.printLine(
         "Application started with following configuration:\n" +
           s"\thost: ${config.host}\n" +
