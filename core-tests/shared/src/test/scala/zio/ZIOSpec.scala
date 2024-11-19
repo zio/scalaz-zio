@@ -7,6 +7,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
@@ -1959,7 +1960,17 @@ object ZIOSpec extends ZIOBaseSpec {
       } @@ flaky @@ zioTag(errors),
       test("returns success when it happens after failure") {
         assertZIO(ZIO.fail(42).raceAll(List(ZIO.succeed(24) <* Live.live(ZIO.sleep(100.millis)))))(equalTo(24))
-      } @@ zioTag(errors)
+      } @@ zioTag(errors),
+      test("always calls finalizers") {
+        for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- ZIO.raceAll(eff, Nil)
+        } yield assertCompletes
+      } @@ timeout(3.seconds)
     ),
     suite("reduceAllPar")(
       test("return zero element on empty input") {

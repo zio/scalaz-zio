@@ -1341,23 +1341,25 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    (for {
-      done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
-      fails <- Ref.make[Int](ios.size)
-      c <- ZIO.uninterruptibleMask { restore =>
-             for {
-               fs <- ZIO.foreach(self :: ios.toList)(io => ZIO.interruptible(io).fork)
-               _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
-                      io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
-                    }
+    ZIO.transplant(graft =>
+      for {
+        done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
+        fails <- Ref.make[Int](ios.size)
+        c <- ZIO.uninterruptibleMask { restore =>
+               for {
+                 fs <- ZIO.foreach(self :: ios.toList)(io => graft(ZIO.interruptible(io).fork))
+                 _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
+                        io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
+                      }
 
-               inheritAll = { (res: (A1, Fiber[E1, A1])) => res._2.inheritAll.as(res._1) }
+                 inheritAll = { (res: (A1, Fiber[E1, A1])) => res._2.inheritAll.as(res._1) }
 
-               c <- restore(done.await.flatMap(inheritAll))
-                      .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
-             } yield c
-           }
-    } yield c)
+                 c <- restore(done.await.flatMap(inheritAll))
+                        .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
+               } yield c
+             }
+      } yield c
+    )
   }
 
   /**
