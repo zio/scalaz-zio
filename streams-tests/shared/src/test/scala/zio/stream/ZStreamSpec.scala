@@ -2725,7 +2725,7 @@ object ZStreamSpec extends ZIOBaseSpec {
               count <- latch.count
               _     <- f.join
             } yield assertTrue(count == 0)
-          } @@ TestAspect.jvmOnly @@ nonFlaky(5),
+          } @@ TestAspect.jvmOnly @@ nonFlaky,
           test("accumulates parallel errors") {
             sealed abstract class DbError extends Product with Serializable
             case object Missing           extends DbError
