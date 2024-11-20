@@ -42,7 +42,7 @@ addCommandAlias(
 )
 addCommandAlias(
   "testJVM",
-  ";coreTestsJVM/test;stacktracerJVM/test;streamsTestsJVM/test;testTestsJVM/test;testMagnoliaTestsJVM/test;testRefinedJVM/test;testRunnerJVM/test;testRunnerJVM/Test/run;examplesJVM/Test/compile;benchmarks/Test/compile;macrosTestsJVM/test;testJunitRunnerTests/test;testJunitEngineTests/test;concurrentJVM/test;managedTestsJVM/test"
+  ";coreTestsJVM/test;stacktracerJVM/test;streamsTestsJVM/test;testTestsJVM/test;testMagnoliaTestsJVM/test;testRefinedJVM/test;testRunnerJVM/test;testRunnerJVM/Test/run;examplesJVM/Test/compile;benchmarks/Test/compile;macrosTestsJVM/test;concurrentJVM/test;managedTestsJVM/test;set ThisBuild/isSnapshot:=true;testJunitRunnerTests/test;testJunitEngineTests/test;reload"
 )
 addCommandAlias(
   "testJVMNoBenchmarks",
@@ -114,7 +114,7 @@ lazy val rootJVM3 = project
     List[ProjectReference](
       testJunitRunner,
       testJunitEngine,
-//      testJunitRunnerTests, TODO: fix test
+      //      testJunitRunnerTests, TODO: fix test
       testJunitEngineTests,
       testMagnolia.jvm,
       testMagnoliaTests.jvm,
@@ -908,10 +908,10 @@ lazy val docs = project.module
       "io.github.gaelrenoux"  %% "tranzactio"                % "4.2.0",
       "io.github.neurodyne"   %% "zio-arrow"                 % "0.2.1",
       "nl.vroste"             %% "zio-amqp"                  % "0.5.0",
-//      "dev.zio"                       %% "zio-aws-core"                  % "5.17.102.7",
-//      "dev.zio"                       %% "zio-aws-ec2"                   % "5.17.102.7",
-//      "dev.zio"                       %% "zio-aws-elasticbeanstalk"      % "5.17.102.7",
-//      "dev.zio"                       %% "zio-aws-netty"                 % "5.17.102.7",
+      //      "dev.zio"                       %% "zio-aws-core"                  % "5.17.102.7",
+      //      "dev.zio"                       %% "zio-aws-ec2"                   % "5.17.102.7",
+      //      "dev.zio"                       %% "zio-aws-elasticbeanstalk"      % "5.17.102.7",
+      //      "dev.zio"                       %% "zio-aws-netty"                 % "5.17.102.7",
       "io.github.neurodyne"           %% "zio-aws-s3"                    % "0.4.13",
       "com.coralogix"                 %% "zio-k8s-client"                % "3.0.0",
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % "3.9.7",
