@@ -1043,21 +1043,32 @@ sealed trait ZIO[-R, +E, +A]
   final def once(implicit trace: Trace): UIO[ZIO[R, E, Unit]] =
     Ref.make(true).map(ref => self.whenZIO(ref.getAndSet(false)).unit)
 
+  /**
+   * Executes the specified success or error callback depending on the result of
+   * this effect, synchronously completing the effect before returning.
+   */
   final def onDone[R1 <: R](
     error: E => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
-    ZIO.uninterruptibleMask { restore =>
-      restore(self).foldZIO(e => restore(error(e)), s => restore(success(s))).forkDaemon.unit
-    }
+    onDoneCause(
+      _.failureOrCause.fold(error, Exit.failCause(_)),
+      success
+    )
 
+  /**
+   * Executes the specified success or cause-based error callback depending on
+   * the result of this effect, synchronously completing the effect before
+   * returning.
+   */
   final def onDoneCause[R1 <: R](
     error: Cause[E] => ZIO[R1, Nothing, Any],
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
-    ZIO.uninterruptibleMask { restore =>
-      restore(self).foldCauseZIO(e => restore(error(e)), s => restore(success(s))).forkDaemon.unit
-    }
+    onExit {
+      case Exit.Success(value) => success(value)
+      case Exit.Failure(cause) => error(cause)
+    }.ignore
 
   /**
    * Runs the specified effect if this effect fails, providing the error to the
