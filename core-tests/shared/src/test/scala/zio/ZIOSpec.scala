@@ -4190,6 +4190,48 @@ object ZIOSpec extends ZIOBaseSpec {
         )
       }
     ),
+    suite("onDone and onDoneCause")(
+      test("onDone - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDone(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDone - should execute error callback synchronously on failure") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDone(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDoneCause(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute error callback synchronously on failure with cause") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDoneCause(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      }
+    ),
     suite("when")(
       test("executes correct branch only") {
         for {
