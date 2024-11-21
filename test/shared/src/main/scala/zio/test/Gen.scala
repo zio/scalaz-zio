@@ -443,7 +443,12 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     as: Iterable[A],
     shrinker: A => ZStream[R, Nothing, A] = defaultShrinker
   )(implicit trace: Trace): Gen[R, A] =
-    Gen(ZStream.fromIterable(as).map(a => Sample.unfold(a)(a => (a, shrinker(a)))))
+    Gen {
+      // Add randomization for consistent behavior when combined with random generators
+      ZStream.fromZIO(Random.nextInt).flatMap { _ =>
+        ZStream.fromIterable(as).map(a => Sample.unfold(a)(a => (a, shrinker(a))))
+      }
+    }
 
   /**
    * Constructs a generator from a function that uses randomness. The returned
