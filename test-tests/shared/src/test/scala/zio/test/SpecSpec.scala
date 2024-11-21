@@ -78,6 +78,24 @@ object SpecSpec extends ZIOBaseSpec {
         for {
           summary <- execute(spec)
         } yield assertTrue(summary.success == 1)
+      },
+      test("propagates the scope to multiple tests") {
+        def assertion = ZIO.scoped {
+          for {
+            value <- Random.nextInt
+          } yield assertTrue(value != -1295463240) // TestRandom.deterministic produces -1295463240
+        }
+        val spec = suite("suite")(
+          test("test1") {
+            assertion
+          },
+          test("test2") {
+            assertion
+          }
+        ).provideLayerShared(ZLayer.scoped(ZIO.withRandomScoped(Random.RandomLive)))
+        for {
+          summary <- execute(spec)
+        } yield assertTrue(summary.success == 2)
       }
     ),
     suite("provideSomeLayerShared")(

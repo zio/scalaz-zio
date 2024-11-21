@@ -342,7 +342,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
         )
       case MultipleCase(specs) =>
         Spec.scoped[R0](
-          layer.mapError(TestFailure.fail).build.map(r => Spec.multiple(specs.map(_.provideEnvironment(r))))
+          layer.memoize.map(layer => Spec.multiple(specs.map(_.provideLayer(layer))))
         )
       case TestCase(test, annotations) => Spec.test(test.provideLayer(layer.mapError(TestFailure.fail)), annotations)
     }
