@@ -116,6 +116,6 @@
     "@types/react-router-dom": "5.3.3",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "0.6.9",
-    "typescript": "5.5.4"
+    "typescript": "5.7.2"
   }
 }
