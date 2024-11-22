@@ -303,6 +303,23 @@ trait FiberRef[A] extends Serializable { self =>
         override def initialValue(): A = initial
       }
     }
+
+  /**
+   * Flag used to determine whether Patch created by the fork method creates an
+   * empty Patch that doesn't modify the value.
+   *
+   * '''NOTE FOR ZIO LIBRARIES''' This method is package-private only so that it
+   * can be accessed from `FiberRefs`. Do not use it
+   */
+  private[zio] def hasIdentityFork: Boolean = false
+
+  /**
+   * Flag used to determine whether join method returns
+   *
+   * '''NOTE FOR ZIO LIBRARIES''' This method is package-private only so that it
+   * can be accessed from `FiberRefs`. Do not use it
+   */
+  private[zio] def hasSecondFnJoin: Boolean = false
 }
 
 object FiberRef {
@@ -326,6 +343,10 @@ object FiberRef {
     override def fork: Patch = delegate.fork
 
     override def join(oldValue: Value, newValue: Value): Value = delegate.join(oldValue, newValue)
+
+    override def hasIdentityFork: Boolean = delegate.hasIdentityFork
+
+    override def hasSecondFnJoin: Boolean = delegate.hasSecondFnJoin
   }
 
   type WithPatch[Value0, Patch0] = FiberRef[Value0] { type Patch = Patch0 }
@@ -509,6 +530,9 @@ object FiberRef {
         // Store the hash code in a val to avoid recomputing it on every access of the FiberRefs map
         // Ideally we'd do that in `FiberRef` itself, but that's not binary compatible
         final override val hashCode: Int = super.hashCode()
+
+        final override private[zio] val hasIdentityFork: Boolean = fork0 == differ.empty
+        final override private[zio] val hasSecondFnJoin: Boolean = join0 == ZIO.secondFn[Value0]
       }
 
     def makeRuntimeFlags(

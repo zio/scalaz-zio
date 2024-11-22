@@ -56,15 +56,15 @@ final class FiberRefs private (
    * invocation of [[forkAs]] when we already know that the map will not be
    * transformed
    */
-  private var needsTransformWhenForked: Boolean = true
+  private[this] lazy val needsTransformWhenForked: Boolean =
+    !fiberRefLocals.keysIterator.forall(_.hasIdentityFork)
 
   /**
    * Boolean flag which indicates whether this FiberRefs requires a transform on
    * the values when joining with its own self (as determined by `eq`).
-   *
-   * Note that this should the case with all ZIO-provided `FiberRef`.
    */
-  private[this] var needsTransformWhenJoinEq: Boolean = true
+  private[this] lazy val needsTransformWhenJoinEq: Boolean =
+    !fiberRefLocals.keysIterator.forall(_.hasSecondFnJoin)
 
   /**
    * Forks this collection of fiber refs as the specified child fiber id. This
@@ -74,15 +74,14 @@ final class FiberRefs private (
   def forkAs(childId: FiberId.Runtime): FiberRefs =
     if (needsTransformWhenForked) {
       val childMap = fiberRefLocals.transform { (fiberRef, entry) =>
-        val fork = fiberRef.fork
-        if (fork.asInstanceOf[AnyRef] eq ZIO.identityFn[Any]) {
+        if (fiberRef.hasIdentityFork) {
           entry
         } else {
           import entry.{depth, stack}
 
           type T = fiberRef.Value & AnyRef
           val oldValue = stack.head.value.asInstanceOf[T]
-          val newValue = fiberRef.patch(fork)(oldValue).asInstanceOf[T]
+          val newValue = fiberRef.patch(fiberRef.fork)(oldValue).asInstanceOf[T]
           if (eqWithBoxedNumericEquality(oldValue, newValue)) entry
           else {
 
@@ -101,10 +100,7 @@ final class FiberRefs private (
       }
 
       if (childMap ne fiberRefLocals) FiberRefs(childMap)
-      else {
-        needsTransformWhenForked = false
-        self
-      }
+      else self
     } else self
 
   /**
@@ -152,15 +148,13 @@ final class FiberRefs private (
    * preservation of maximum information from both child and parent refs.
    */
   def joinAs(fiberId: FiberId.Runtime)(that: FiberRefs): FiberRefs = {
-    val areEqual = self eq that
-
-    // First attempt at shortcut when the two objects are the same, and we already know that we don't need to transform
-    if (areEqual && !needsTransformWhenJoinEq) {
-      return self
-    }
-
     val childFiberRefs  = that.fiberRefLocals
     var fiberRefLocals0 = self.fiberRefLocals
+
+    // First attempt at shortcut when the two objects are the same, and we already know that we don't need to transform
+    if ((childFiberRefs eq fiberRefLocals0) && !needsTransformWhenJoinEq) {
+      return self
+    }
 
     val it = childFiberRefs.asInstanceOf[Map[FiberRef[AnyRef], Value]].iterator
     while (it.hasNext) {
@@ -178,7 +172,7 @@ final class FiberRefs private (
           val newValue = ref.join(initial, childValue)
           // Attempt to shortcut in case that the value after the join is the same as the initial one
           if (!eqWithBoxedNumericEquality(newValue, initial)) {
-            val v = Value(::(StackEntry(fiberId, newValue, 0), List.empty), 1)
+            val v = Value(::(StackEntry(fiberId, newValue, 0), Nil), 1)
             fiberRefLocals0 = fiberRefLocals0.updated(ref, v)
           }
         } else {
@@ -217,10 +211,8 @@ final class FiberRefs private (
       }
     }
 
-    if (self.fiberRefLocals eq fiberRefLocals0) {
-      if (areEqual) needsTransformWhenJoinEq = false
-      self
-    } else FiberRefs(fiberRefLocals0)
+    if (self.fiberRefLocals eq fiberRefLocals0) self
+    else FiberRefs(fiberRefLocals0)
   }
 
   @tailrec
@@ -269,7 +261,7 @@ final class FiberRefs private (
     val oldEntry = fiberRefLocals.getOrElse(fiberRef, null)
     val newEntry =
       if (oldEntry eq null) {
-        Value(::(StackEntry(fiberId, value, 0), List.empty), 1)
+        Value(::(StackEntry(fiberId, value, 0), Nil), 1)
       } else {
         val oldStack = oldEntry.stack.asInstanceOf[::[StackEntry[A]]]
         val oldDepth = oldEntry.depth
@@ -303,7 +295,7 @@ final class FiberRefs private (
     val oldEntry = fiberRefLocals.getOrElse(currentRuntimeFlags, null)
     val newEntry =
       if (oldEntry eq null)
-        Value(::(StackEntry(fiberId, value, 0), List.empty), 1)
+        Value(::(StackEntry(fiberId, value, 0), Nil), 1)
       else {
         val oldStack = oldEntry.stack.asInstanceOf[::[StackEntry[Int]]]
         val oldDepth = oldEntry.depth
