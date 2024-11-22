@@ -57,7 +57,18 @@ object ZKeyedPoolSpec extends ZIOBaseSpec {
               )
           }
           .as(assertCompletes)
-      } @@ jvmOnly
+      } @@ jvmOnly,
+      test("finalizers of a resource don't leak to the pool's scope") {
+        ZIO.scoped(
+          ZKeyedPool
+            .make[String, Scope, Nothing, Unit](_ => Scope.addFinalizer(ZIO.unit).as(()), size = 1)
+            .flatMap { pool =>
+              ZIO.scoped(pool.get("key0").flatMap(pool.invalidate(_))).replicateZIODiscard(1000)
+            }
+            .flatMap(_ => ZIO.scope.map(_.size))
+            .map(v => assertTrue(v <= 10L)) // We expect a few finalizers managing the pool itself but not too many
+        )
+      }
     ) @@ exceptJS
 
 }

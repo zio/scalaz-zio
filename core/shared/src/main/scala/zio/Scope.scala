@@ -72,6 +72,12 @@ trait Scope extends Serializable { self =>
    */
   final def fork(implicit trace: Trace): UIO[Scope.Closeable] =
     forkWith(executionStrategy)
+
+  /**
+   * Returns the number of finalizers that have been added to this scope and not
+   * yet finalized.
+   */
+  def size: Int
 }
 
 object Scope {
@@ -135,6 +141,7 @@ object Scope {
         ZIO.unit
       def forkWith(executionStrategy: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
         makeWith(executionStrategy)
+      def size: Int = 0
     }
 
   /**
@@ -166,6 +173,8 @@ object Scope {
               _         <- scope.addFinalizerExit(finalizer)
             } yield scope
           }
+        def size: Int =
+          releaseMap.size
       }
     }
 
@@ -258,10 +267,16 @@ object Scope {
     def replace(key: Key, finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Finalizer]]
 
     /**
+     * Number of finalizers that have not yet been run
+     */
+    def size: Int
+
+    /**
      * Updates the finalizers associated with this scope using the specified
      * function.
      */
     def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit]
+
   }
 
   private object ReleaseMap {
@@ -290,8 +305,8 @@ object Scope {
           else if (l == Long.MinValue) Long.MaxValue
           else l - 1
 
-        val ref: Ref[State] =
-          Ref.unsafe.make(Running(initialKey, LongMap.empty, identity))
+        val ref =
+          Ref.unsafe.make[State](Running(initialKey, LongMap.empty, identity))
 
         new ReleaseMap {
           type Key = Long
@@ -377,6 +392,12 @@ object Scope {
               case Running(nk, fins, update) =>
                 (ZIO.succeed(fins get key), Running(nk, fins.updated(key, finalizer), update))
             }.flatten
+
+          def size: Int =
+            ref.unsafe.get match {
+              case Exited(_, _, _)     => 0
+              case Running(_, fins, _) => fins.size
+            }
 
           def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit] =
             ref.update {
