@@ -7,6 +7,33 @@ import sbt.Keys
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
+// Add zioVersion definition near the top of the file
+val zioVersion = "2.0.21" // Use the appropriate version
+
+// Define the http project if not already defined
+lazy val http = crossProject(JSPlatform, JVMPlatform)
+  .in(file("http"))
+  .settings(
+    stdSettings("zio-http"),
+    libraryDependencies ++= Seq(
+      "dev.zio" %%% "zio" % zioVersion,
+      "dev.zio" %%% "zio-streams" % zioVersion
+    )
+  )
+
+// Update http-tests project definition
+lazy val httpTests = crossProject(JSPlatform, JVMPlatform)
+  .in(file("http-tests"))
+  .settings(
+    stdSettings("zio-http-tests"),
+    libraryDependencies ++= Seq(
+      "dev.zio" %%% "zio-test"     % zioVersion % Test,
+      "dev.zio" %%% "zio-test-sbt" % zioVersion % Test
+    ),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+  )
+  .dependsOn(http)
+
 inThisBuild(
   List(
     organization := "dev.zio",

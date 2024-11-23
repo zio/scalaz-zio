@@ -1,0 +1,28 @@
+name: HTTP Conformance Tests
+
+on:
+  push:
+    branches: [ main, series/2.x ]
+    paths:
+      - 'http/**'
+      - 'http-tests/**'
+  pull_request:
+    paths:
+      - 'http/**'
+      - 'http-tests/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.1
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4.2.1
+        with:
+          distribution: temurin
+          java-version: 17
+          check-latest: true
+          
+      - name: Run HTTP Conformance Tests
+        run: sbt "http-tests/test"
