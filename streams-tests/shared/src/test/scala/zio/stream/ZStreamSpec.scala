@@ -2496,6 +2496,39 @@ object ZStreamSpec extends ZIOBaseSpec {
               value <- ref.get
             } yield assert(exit)(dies(hasMessage(equalTo("Die")))) &&
               assert(value)(equalTo(Chunk("Acquiring A", "Acquiring B", "Acquiring C", "Releasing B", "Releasing A")))
+          },
+          test("complex scope propagation (i9316)") {
+            def resource(ref: Ref[List[String]])(i: Int) =
+              ZIO.acquireRelease(ref.update(s"acquire $i" :: _).as(i))(_ => ref.update(s"release $i" :: _))
+            for {
+              ref <- Ref.make[List[String]](Nil)
+              _ <- ZIO.scoped(
+                     ZStream
+                       .fromIterable(0 until 3)
+                       .mapZIO(resource(ref))
+                       .mapZIO { i =>
+                         ZIO.scoped {
+                           ZStream
+                             .scoped(ZIO.blocking(ref.update(s"process $i" :: _)))
+                             .runScoped(ZSink.collectAll)
+                         }
+                       }
+                       .runDrain
+                   )
+              out <- ref.get.map(_.reverse)
+            } yield assertTrue(
+              out == List(
+                "acquire 0",
+                "process 0",
+                "acquire 1",
+                "process 1",
+                "acquire 2",
+                "process 2",
+                "release 2",
+                "release 1",
+                "release 0"
+              )
+            )
           }
         ),
         test("map")(check(pureStreamOfInts, Gen.function(Gen.int)) { (s, f) =>
