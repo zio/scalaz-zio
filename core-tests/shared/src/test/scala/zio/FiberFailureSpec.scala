@@ -228,7 +228,7 @@ object FiberFailureSpec extends ZIOBaseSpec {
       val result = ZIO.attempt(call()).catchAll {
         case ff: FiberFailure =>
           val getStackTrace = ff.getStackTrace.mkString("\n")
-          val toString = ff.toString
+          val toString      = ff.toString
           val printStackTrace = {
             val sw = new java.io.StringWriter()
             ff.printStackTrace(new java.io.PrintWriter(sw))
@@ -244,11 +244,11 @@ object FiberFailureSpec extends ZIOBaseSpec {
           // Verify methods produce consistent output
           normalizeTrace(toString) == normalizeTrace(printStackTrace),
           normalizeTrace(getStackTrace) == normalizeTrace(toString),
-          
+
           // Verify user methods are included
           toString.contains("call"),
           toString.contains("subcall"),
-          
+
           // Verify internal methods are excluded
           !toString.contains("runLoop"),
           !toString.contains("zio.internal")
@@ -257,8 +257,8 @@ object FiberFailureSpec extends ZIOBaseSpec {
     },
     test("stack trace properly separates Java and ZIO traces") {
       def deepCall(): Unit = subcall()
-      def midCall(): Unit = deepCall()
-      def call(): Unit = midCall()
+      def midCall(): Unit  = deepCall()
+      def call(): Unit     = midCall()
       def subcall(): Unit =
         Unsafe.unsafe { implicit unsafe =>
           Runtime.default.unsafe.run(ZIO.fail("boom")).getOrThrowFiberFailure()
@@ -275,13 +275,13 @@ object FiberFailureSpec extends ZIOBaseSpec {
       result.map { trace =>
         assertTrue(
           // Verify full call chain is present
-          trace.contains("deepCall") && 
-          trace.contains("midCall") && 
-          trace.contains("call"),
-          
+          trace.contains("deepCall") &&
+            trace.contains("midCall") &&
+            trace.contains("call"),
+
           // Verify proper ordering - Java traces should come before ZIO traces
           trace.indexOf("call") < trace.indexOf("zio."),
-          
+
           // Verify internal ZIO methods are excluded
           !trace.contains("runLoop"),
           !trace.contains("zio.internal")

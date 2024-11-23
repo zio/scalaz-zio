@@ -32,10 +32,10 @@ final case class FiberFailure(cause: Cause[Any]) extends Throwable(null, null, t
     val javaTrace = super.getStackTrace()
     // Use cause.unified to get the already filtered ZIO traces
     val zioTrace = cause.unified.headOption.fold[Chunk[StackTraceElement]](Chunk.empty)(_.trace)
-    
+
     // Find the ZIO boundary using the first ZIO method
     val (userTrace, _) = javaTrace.span(!_.getClassName.startsWith("zio."))
-    
+
     // Combine traces
     (Chunk.fromArray(userTrace) ++ zioTrace).toArray
   }
