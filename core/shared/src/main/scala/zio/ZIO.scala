@@ -1336,17 +1336,22 @@ sealed trait ZIO[-R, +E, +A]
   )(implicit trace: Trace): ZIO[R1, E1, A1] =
     ZIO.scopedWith { scope =>
       ZIO.uninterruptibleMask { restore =>
-      val ios = ios0
-      for {
-        done <- Promise.make[E1, (Int, A1)]
-        failure <- Ref.make(1 + ios.size)
-        fs <- ZIO.foreach((self +: ios.to(Vector)).zipWithIndex) { case (io, i) => 
-          restore(io).foldCauseZIO[R1, Nothing, Any](c => failure.updateAndGet(_ - 1).flatMap { case 0 => done.failCause(c); case _ => ZIO.unit }, x => done.succeed((i, x))).forkIn(scope)
-        }
-        res <- done.await
-        _ <- fs(res._1).inheritAll
-      } yield res._2
-    }
+        val ios = ios0
+        for {
+          done    <- Promise.make[E1, (Int, A1)]
+          failure <- Ref.make(1 + ios.size)
+          fs <- ZIO.foreach((self +: ios.to(Vector)).zipWithIndex) { case (io, i) =>
+                  restore(io)
+                    .foldCauseZIO[R1, Nothing, Any](
+                      c => failure.updateAndGet(_ - 1).flatMap { case 0 => done.failCause(c); case _ => ZIO.unit },
+                      x => done.succeed((i, x))
+                    )
+                    .forkIn(scope)
+                }
+          res <- done.await
+          _   <- fs(res._1).inheritAll
+        } yield res._2
+      }
     }
 
   /**
