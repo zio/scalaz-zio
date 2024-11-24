@@ -1343,7 +1343,7 @@ sealed trait ZIO[-R, +E, +A]
           fs <- ZIO.foreach((self +: ios.to(Vector)).zipWithIndex) { case (io, i) =>
                   restore(io)
                     .foldCauseZIO[R1, Nothing, Any](
-                      c => failure.updateAndGet(_ - 1).flatMap { case 0 => done.failCause(c); case _ => ZIO.unit },
+                      c => failure.modify { case 1 => (done.failCause(c), 0); case n => (ZIO.unit, n - 1) }.flatten,
                       x => done.succeed((i, x))
                     )
                     .forkIn(scope)
