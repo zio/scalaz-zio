@@ -72,12 +72,6 @@ trait Scope extends Serializable { self =>
    */
   final def fork(implicit trace: Trace): UIO[Scope.Closeable] =
     forkWith(executionStrategy)
-
-  /**
-   * Returns the number of finalizers that have been added to this scope and not
-   * yet finalized.
-   */
-  def size: Int
 }
 
 object Scope {
@@ -89,6 +83,12 @@ object Scope {
      * have been added to the scope.
      */
     def close(exit: => Exit[Any, Any])(implicit trace: Trace): UIO[Unit]
+
+    /**
+     * Returns the number of finalizers that have been added to this scope and
+     * not yet finalized.
+     */
+    def size: Int
 
     /**
      * Uses the scope by providing it to a `ZIO` workflow that needs a scope,
