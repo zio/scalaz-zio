@@ -1340,7 +1340,7 @@ sealed trait ZIO[-R, +E, +A]
         for {
           done    <- Promise.make[E1, (Int, A1)]
           failure <- Ref.make(1 + ios.size)
-          fs <- ZIO.foreach((self +: ios.to(Vector)).zipWithIndex) { case (io, i) =>
+          fs <- ZIO.foreach((self +: ios.toVector).zipWithIndex) { case (io, i) =>
                   restore(io)
                     .foldCauseZIO[R1, Nothing, Any](
                       c => failure.modify { case 1 => (done.failCause(c), 0); case n => (ZIO.unit, n - 1) }.flatten,
