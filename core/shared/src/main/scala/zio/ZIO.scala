@@ -1333,44 +1333,21 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def raceAll[R1 <: R, E1 >: E, A1 >: A](
     ios0: => Iterable[ZIO[R1, E1, A1]]
-  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.suspendSucceed {
-    val ios = ios0
-
-    def arbiter[E1, A1](
-      fibers: List[Fiber[E1, A1]],
-      winner: Fiber[E1, A1],
-      promise: Promise[E1, (A1, Fiber[E1, A1])],
-      fails: Ref[Int]
-    )(res: Exit[E1, A1]): URIO[R1, Any] =
-      res.foldExitZIO[R1, Nothing, Unit](
-        e => ZIO.flatten(fails.modify((c: Int) => (if (c == 0) promise.failCause(e).unit else Exit.unit) -> (c - 1))),
-        a =>
-          promise
-            .succeed(a -> winner)
-            .flatMap(set =>
-              if (set) fibers.foldLeft(ZIO.unit)((io, f) => if (f eq winner) io else io <* f.interrupt)
-              else ZIO.unit
-            )
-      )
-
-    (for {
-      done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
-      fails <- Ref.make[Int](ios.size)
-      c <- ZIO.uninterruptibleMask { restore =>
-             for {
-               fs <- ZIO.foreach(self :: ios.toList)(io => ZIO.interruptible(io).fork)
-               _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
-                      io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
-                    }
-
-               inheritAll = { (res: (A1, Fiber[E1, A1])) => res._2.inheritAll.as(res._1) }
-
-               c <- restore(done.await.flatMap(inheritAll))
-                      .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
-             } yield c
-           }
-    } yield c)
-  }
+  )(implicit trace: Trace): ZIO[R1, E1, A1] =
+    ZIO.scopedWith { scope =>
+      ZIO.uninterruptibleMask { restore =>
+      val ios = ios0
+      for {
+        done <- Promise.make[E1, (Int, A1)]
+        failure <- Ref.make(1 + ios.size)
+        fs <- ZIO.foreach((self +: ios.to(Vector)).zipWithIndex) { case (io, i) => 
+          restore(io).foldCauseZIO[R1, Nothing, Any](c => failure.updateAndGet(_ - 1).flatMap { case 0 => done.failCause(c); case _ => ZIO.unit }, x => done.succeed((i, x))).forkIn(scope)
+        }
+        res <- done.await
+        _ <- fs(res._1).inheritAll
+      } yield res._2
+    }
+    }
 
   /**
    * Returns an effect that races this effect with the specified effect,
@@ -2350,7 +2327,7 @@ sealed trait ZIO[-R, +E, +A]
     new ZIO.UpdateServiceAt[R, E, A, Service](self)
 
   final def unexit[E1 >: E, A2](implicit ev: A <:< Exit[E1, A2], trace: Trace): ZIO[R, E1, A2] =
-    self.flatMap(exit => exit)
+    self.flatMap(ev)
 
   /**
    * The inverse operation to `sandbox`. Submerges the full cause of failure.
