@@ -64,7 +64,7 @@
     "@zio.dev/zio-process": "0.7.2",
     "@zio.dev/zio-profiling": "0.3.2",
     "@zio.dev/zio-query": "0.7.6",
-    "@zio.dev/zio-quill": "4.8.4",
+    "@zio.dev/zio-quill": "4.8.5",
     "@zio.dev/zio-redis": "1.0.0",
     "@zio.dev/zio-rocksdb": "0.4.2",
     "@zio.dev/zio-s3": "2022.11.21-367e7009c0f5",
