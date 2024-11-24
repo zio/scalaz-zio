@@ -6194,6 +6194,51 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   private[zio] val someDebug   = Some(LogLevel.Debug)
   private[zio] val someTrace   = Some(LogLevel.Trace)
 
+  private[zio] def render(effect: ZIO.Erased): String = {
+
+    def renderNameWithReference(effect: ZIO.Erased): String =
+      s"${effect.getClass.getName}@${Integer.toHexString(effect.hashCode())}"
+
+    val renderedParams =
+      effect match {
+        case FlatMap(_, first, successK) =>
+          s"(first = ${renderNameWithReference(first)}, success = $successK)"
+        case FoldZIO(_, first, successK, failureK) =>
+          s"(first = ${renderNameWithReference(first)}, successK = $successK, failureK = $failureK)"
+        case Sync(_, eval) =>
+          s"(eval = $eval)"
+        case Async(_, registerCallback, blockingOn) =>
+          s"(registerCallback = $registerCallback, blockingOn = $blockingOn)"
+        case UpdateRuntimeFlags(_, update) =>
+          s"(update = $update)"
+        case updateFlagsWithin: UpdateRuntimeFlagsWithin[_, _, _] =>
+          updateFlagsWithin match {
+            case UpdateRuntimeFlagsWithin.Interruptible(_, effect) =>
+              s"(effect = $effect)"
+            case UpdateRuntimeFlagsWithin.Uninterruptible(_, effect) =>
+              s"(effect = $effect)"
+            case UpdateRuntimeFlagsWithin.Dynamic(_, update, f) =>
+              s"(update = ${RuntimeFlags.Patch.render(update)}, f = $f)"
+            case UpdateRuntimeFlagsWithin.DynamicNoBox(_, update, f) =>
+              s"(update = ${RuntimeFlags.Patch.render(update)}, f = $f)"
+          }
+        case _: GenerateStackTrace => ""
+        case zio.ZIO.Stateful(_, onState) =>
+          s"(onState = $onState)"
+        case WhileLoop(_, check, body, process) =>
+          s"(check = $check, body = $body, process = $process)"
+        case YieldNow(_, forceAsync) =>
+          s"(forceAsync = $forceAsync)"
+        case exit: zio.Exit[_, _] =>
+          exit match {
+            case Exit.Success(value) => s"(value = $value)"
+            case Exit.Failure(cause) => s"(cause = $cause)"
+          }
+      }
+
+    s"${renderNameWithReference(effect)} $renderedParams"
+  }
+
   @deprecated("use succeed", "2.0.9")
   private[zio] def succeedNow[A](a: A): UIO[A] =
     succeed(a)(Trace.empty)

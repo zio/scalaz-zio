@@ -987,6 +987,16 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       ops += 1
 
+      if (RuntimeFlags.opLog(_runtimeFlags)) {
+        val message = ZIO.render(cur)
+        log(
+          message = () => message,
+          cause = Cause.empty,
+          overrideLogLevel = Some(LogLevel.Info),
+          trace = cur.trace
+        )
+      }
+
       if (ops > FiberRuntime.MaxOperationsBeforeYield && RuntimeFlags.cooperativeYielding(_runtimeFlags)) {
         updateLastTrace(cur.trace)
         inbox.add(FiberMessage.Resume(cur))
