@@ -19,7 +19,7 @@ package zio
 import zio.internal.SpecializationHelpers.SpecializeInt
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import scala.annotation.tailrec
+import scala.annotation.{switch, tailrec}
 import scala.runtime.BoxesRunTime
 
 /**
@@ -32,6 +32,9 @@ final class FiberRefs private (
 ) { self =>
   import FiberRef.currentRuntimeFlags
   import zio.FiberRefs.{StackEntry, Value, eqWithBoxedNumericEquality}
+
+  private[this] var _needsTransformWhenForked: Int = -1
+  private[this] var _needsTransformWhenJoinEq: Int = -1
 
   /**
    * Returns a new fiber refs with the specified ref deleted from it.
@@ -56,15 +59,43 @@ final class FiberRefs private (
    * invocation of [[forkAs]] when we already know that the map will not be
    * transformed
    */
-  private[this] lazy val needsTransformWhenForked: Boolean =
-    !fiberRefLocals.keysIterator.forall(_.hasIdentityFork)
+  private[this] def needsTransformWhenForked: Boolean =
+    (_needsTransformWhenForked: @switch) match {
+      case 0 => false
+      case 1 => true
+      case _ =>
+        var res = true
+        val it  = fiberRefLocals.keysIterator
+        while (it.hasNext && res) res = it.next().hasIdentityFork
+        if (res) {
+          _needsTransformWhenForked = 0
+          false
+        } else {
+          _needsTransformWhenForked = 1
+          true
+        }
+    }
 
   /**
    * Boolean flag which indicates whether this FiberRefs requires a transform on
    * the values when joining with its own self (as determined by `eq`).
    */
-  private[this] lazy val needsTransformWhenJoinEq: Boolean =
-    !fiberRefLocals.keysIterator.forall(_.hasSecondFnJoin)
+  private[this] def needsTransformWhenJoinEq: Boolean =
+    (_needsTransformWhenJoinEq: @switch) match {
+      case 0 => false
+      case 1 => true
+      case _ =>
+        var res = true
+        val it  = fiberRefLocals.keysIterator
+        while (it.hasNext && res) res = it.next().hasSecondFnJoin
+        if (res) {
+          _needsTransformWhenJoinEq = 0
+          false
+        } else {
+          _needsTransformWhenJoinEq = 1
+          true
+        }
+    }
 
   /**
    * Forks this collection of fiber refs as the specified child fiber id. This
