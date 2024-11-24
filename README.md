@@ -192,10 +192,6 @@ Want to see your company here? [Submit a PR](https://github.com/zio/zio/edit/ser
 
 [Ziverge][Link-Ziverge] is a leading contributor to ZIO.
 
-[![Scalac][Image-Scalac]][Link-Scalac]
-
-[Scalac][Link-Scalac] sponsors ZIO Hackathons and contributes work to multiple projects in ZIO ecosystem.
-
 [![Septimal Mind][Image-SeptimalMind]][Link-SeptimalMind]
 
 [Septimal Mind][Link-SeptimalMind] sponsors work on ZIO Tracing and continuous maintenance.
@@ -252,6 +248,5 @@ Copyright 2017 - 2024 John A. De Goes and the ZIO Contributors. All rights reser
 [Badge-Stage-Page]: https://github.com/zio/zio/wiki/Project-Stages
 
 [Image-Ziverge]: ./website/static/img/ziverge.png "Ziverge"
-[Image-Scalac]: ./website/static/img/scalac.svg "Scalac"
 [Image-SeptimalMind]: ./website/static/img/septimal_mind.svg "Septimal Mind"
 [Image-YourKit]: ./website/static/img/yourkit.png "YourKit"

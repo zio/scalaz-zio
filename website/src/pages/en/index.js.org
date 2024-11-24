@@ -106,14 +106,6 @@ class Index extends React.Component {
                 },
                 {
                   title: '',
-                  image: `${baseUrl}img/scalac.svg`,
-                  imageAlt: 'Scalac',
-                  imageLink: 'https://scalac.io/',
-                  imageAlign: 'top',
-                  content: 'Scale fast with Scala'
-                },
-                {
-                  title: '',
                   image: `${baseUrl}img/septimal_mind.svg`,
                   imageAlt: 'Septimal Mind',
                   imageLink: 'https://7mind.io/',
