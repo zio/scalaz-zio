@@ -1348,7 +1348,7 @@ sealed trait ZIO[-R, +E, +A]
                     )
                     .forkIn(scope)
                 }
-          res <- done.await
+          res <- restore(done.await)
           _   <- fs(res._1).inheritAll
         } yield res._2
       }
