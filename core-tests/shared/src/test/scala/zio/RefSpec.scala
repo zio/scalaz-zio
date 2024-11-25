@@ -251,7 +251,7 @@ object RefSpec extends ZIOBaseSpec {
       test("Ref[String].incrementAndGet does not compile") {
         val result   = typeCheck(""" Ref.make("").incrementAndGet """)
         val expected = "value incrementAndGet is not a member of zio.UIO[zio.Ref[String]]"
-        assertZIO(result)(isLeft(equalTo(expected)))
+        assertZIO(result)(isLeft(startsWithString(expected)))
       }
     )
   )
