@@ -2400,9 +2400,9 @@ object ZStreamSpec extends ZIOBaseSpec {
                      .runDrain
                      .fork
               _ <- requestQueue.offer("some message").forever.fork
-              _ <- counter.get.repeatUntil(_ >= 10)
+              _ <- (ZIO.yieldNow *> counter.get).repeatUntil(_ >= 10)
             } yield assertCompletes
-          } @@ exceptJS(nonFlaky) @@ TestAspect.timeout(10.seconds)
+          } @@ exceptJS(nonFlaky) @@ TestAspect.timeout(30.seconds)
         ),
         suite("interruptAfter")(
           test("interrupts after given duration") {
@@ -2496,6 +2496,39 @@ object ZStreamSpec extends ZIOBaseSpec {
               value <- ref.get
             } yield assert(exit)(dies(hasMessage(equalTo("Die")))) &&
               assert(value)(equalTo(Chunk("Acquiring A", "Acquiring B", "Acquiring C", "Releasing B", "Releasing A")))
+          },
+          test("complex scope propagation (i9316)") {
+            def resource(ref: Ref[List[String]])(i: Int) =
+              ZIO.acquireRelease(ref.update(s"acquire $i" :: _).as(i))(_ => ref.update(s"release $i" :: _))
+            for {
+              ref <- Ref.make[List[String]](Nil)
+              _ <- ZIO.scoped(
+                     ZStream
+                       .fromIterable(0 until 3)
+                       .mapZIO(resource(ref))
+                       .mapZIO { i =>
+                         ZIO.scoped {
+                           ZStream
+                             .scoped(ZIO.blocking(ref.update(s"process $i" :: _)))
+                             .runScoped(ZSink.collectAll)
+                         }
+                       }
+                       .runDrain
+                   )
+              out <- ref.get.map(_.reverse)
+            } yield assertTrue(
+              out == List(
+                "acquire 0",
+                "process 0",
+                "acquire 1",
+                "process 1",
+                "acquire 2",
+                "process 2",
+                "release 2",
+                "release 1",
+                "release 0"
+              )
+            )
           }
         ),
         test("map")(check(pureStreamOfInts, Gen.function(Gen.int)) { (s, f) =>
@@ -2725,7 +2758,7 @@ object ZStreamSpec extends ZIOBaseSpec {
               count <- latch.count
               _     <- f.join
             } yield assertTrue(count == 0)
-          } @@ TestAspect.jvmOnly @@ nonFlaky(5),
+          } @@ TestAspect.jvmOnly @@ nonFlaky,
           test("accumulates parallel errors") {
             sealed abstract class DbError extends Product with Serializable
             case object Missing           extends DbError

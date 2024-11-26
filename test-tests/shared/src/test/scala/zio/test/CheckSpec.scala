@@ -1,7 +1,7 @@
 package zio.test
 
 import zio.test.Assertion._
-import zio.test.TestAspect.failing
+import zio.test.TestAspect._
 import zio.{Chunk, Random, Ref, ZIO}
 
 object CheckSpec extends ZIOBaseSpec {
@@ -88,6 +88,9 @@ object CheckSpec extends ZIOBaseSpec {
       checkAllPar(Gen.int, 2) { _ =>
         assertZIO(ZIO.unit)(equalTo(()))
       }
-    }
+    },
+    test("i9303") {
+      checkAllPar(Gen.int, 4)(_ => assertCompletes)
+    } @@ jvm(nonFlaky(1000))
   )
 }

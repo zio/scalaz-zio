@@ -158,7 +158,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       if (isAlive()) {
         getChildren().add(child)
 
-        if (isInterrupted())
+        if (shouldInterrupt())
           child.tellInterrupt(getInterruptedCause())
       } else {
         child.tellInterrupt(getInterruptedCause())
@@ -170,7 +170,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     if (isAlive()) {
       val childs = getChildren()
 
-      if (isInterrupted()) {
+      if (shouldInterrupt()) {
         val cause = getInterruptedCause()
         while (iter.hasNext) {
           val child = iter.next()
@@ -410,7 +410,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           }
 
           val exit =
-            runLoop(effect, 0, _stackSize, initialDepth).asInstanceOf[Exit[E, A]]
+            runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
           if (null eq exit) {
             // Terminate this evaluation, async resumption will continue evaluation:
@@ -962,13 +962,14 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     effect: ZIO.Erased,
     minStackIndex: Int,
     startStackIndex: Int,
-    currentDepth: Int
+    currentDepth: Int,
+    currentOps: Int
   ): Exit[Any, Any] = {
     assert(DisableAssertions || running.get)
 
     // Note that assigning `cur` as the result of `try` or `if` can cause Scalac to box local variables.
     var cur        = effect
-    var ops        = 0
+    var ops        = currentOps
     var stackIndex = startStackIndex
 
     if (currentDepth >= FiberRuntime.MaxDepthBeforeTrampoline) {
@@ -1064,7 +1065,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               stackIndex = pushStackFrame(flatmap, stackIndex)
 
-              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1)
+              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
 
               if (null eq result)
                 return null
@@ -1094,7 +1096,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               stackIndex = pushStackFrame(fold, stackIndex)
 
-              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1)
+              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
+
               if (null eq result)
                 return null
               else {
@@ -1159,7 +1163,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 stackIndex = pushStackFrame(k, stackIndex)
 
-                val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1)
+                val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
 
                 if (null eq exit)
                   return null
@@ -1191,7 +1196,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               cur = null
 
               while ((cur eq null) && check()) {
-                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth) match {
+                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth, ops) match {
                   case s: Success[Any] =>
                     iterate.process(s.value)
                   case null =>
@@ -1199,6 +1204,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                   case failure =>
                     cur = failure
                 }
+                ops += 1
               }
 
               stackIndex -= 1

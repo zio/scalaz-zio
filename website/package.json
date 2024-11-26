@@ -47,10 +47,10 @@
     "@zio.dev/zio-interop-twitter": "2022.11.21-9f1a594d033d",
     "@zio.dev/zio-jdbc": "0.1.2",
     "@zio.dev/zio-json": "0.7.3",
-    "@zio.dev/zio-kafka": "2.8.3",
+    "@zio.dev/zio-kafka": "2.9.0",
     "@zio.dev/zio-keeper": "0.0.0--215-0a9dd0ea-SNAPSHOT",
     "@zio.dev/zio-lambda": "1.0.5",
-    "@zio.dev/zio-logging": "2.3.2",
+    "@zio.dev/zio-logging": "2.4.0",
     "@zio.dev/zio-memberlist": "0.0.0--40-a85dc5a1--20221121-1416-SNAPSHOT",
     "@zio.dev/zio-meta": "0.0.0--21-54bc2e8b-SNAPSHOT",
     "@zio.dev/zio-metrics-connectors": "2.3.1",
@@ -58,11 +58,11 @@
     "@zio.dev/zio-nio": "2.0.0",
     "@zio.dev/zio-optics": "0.2.2",
     "@zio.dev/zio-parser": "0.1.9",
-    "@zio.dev/zio-prelude": "1.0.0-RC31",
+    "@zio.dev/zio-prelude": "1.0.0-RC35",
     "@zio.dev/zio-process": "0.7.2",
     "@zio.dev/zio-profiling": "0.3.2",
     "@zio.dev/zio-query": "0.7.6",
-    "@zio.dev/zio-quill": "4.8.4",
+    "@zio.dev/zio-quill": "4.8.5",
     "@zio.dev/zio-redis": "1.0.0",
     "@zio.dev/zio-rocksdb": "0.4.2",
     "@zio.dev/zio-s3": "2022.11.21-367e7009c0f5",
@@ -71,7 +71,7 @@
     "@zio.dev/zio-sql": "0.1.2",
     "@zio.dev/zio-sqs": "2022.11.23-5a814304824c",
     "@zio.dev/zio-streams-compress": "0.0.2",
-    "@zio.dev/zio-telemetry": "3.0.1",
+    "@zio.dev/zio-telemetry": "3.0.2",
     "@zio.dev/zio-webhooks": "0.2.1",
     "@zio.dev/zio2-interop-cats2": "2023.1.23-571dabdd91f9",
     "autoprefixer": "10.4.20",
@@ -80,7 +80,7 @@
     "clsx": "2.0.0",
     "highlight.js": "11.8.0",
     "node-fetch": "^3.3.2",
-    "postcss": "8.4.47",
+    "postcss": "8.4.49",
     "prism-react-renderer": "1.3.5",
     "prism-themes": "1.9.0",
     "prismjs": "^1.29.0",
@@ -89,11 +89,11 @@
     "react-icons": "5.3.0",
     "react-markdown": "9.0.1",
     "remark-kroki-plugin": "0.1.1",
-    "tailwindcss": "3.4.13",
+    "tailwindcss": "3.4.15",
     "tslib": "^2.4.0"
   },
   "resolutions": {
-    "cytoscape": "3.30.2"
+    "cytoscape": "3.30.4"
   },
   "browserslist": {
     "production": [
@@ -112,8 +112,8 @@
     "@types/react": "18.3.11",
     "@types/react-helmet": "6.1.9",
     "@types/react-router-dom": "5.3.3",
-    "prettier": "3.3.3",
-    "prettier-plugin-tailwindcss": "0.6.8",
+    "prettier": "3.4.0",
+    "prettier-plugin-tailwindcss": "0.6.9",
     "typescript": "5.5.4"
   }
 }

@@ -1,4 +1,4 @@
-addSbtPlugin("ch.epfl.scala"                     % "sbt-bloop"                     % "2.0.3")
+addSbtPlugin("ch.epfl.scala"                     % "sbt-bloop"                     % "2.0.5")
 addSbtPlugin("ch.epfl.scala"                     % "sbt-scalafix"                  % "0.13.0")
 addSbtPlugin("com.eed3si9n"                      % "sbt-assembly"                  % "2.3.0")
 addSbtPlugin("com.eed3si9n"                      % "sbt-buildinfo"                 % "0.12.0")
@@ -19,4 +19,6 @@ addSbtPlugin("pl.project13.scala"                % "sbt-jmh"                    
 
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.2")
 
-libraryDependencies += "org.snakeyaml" % "snakeyaml-engine" % "2.7"
+libraryDependencies += "org.snakeyaml" % "snakeyaml-engine" % "2.8"
+
+addDependencyTreePlugin

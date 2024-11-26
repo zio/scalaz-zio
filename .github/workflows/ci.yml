@@ -134,15 +134,8 @@ jobs:
         check-latest: true
     - name: Cache scala dependencies
       uses: coursier/cache-action@v6
-    - name: Test 2.12
-      if: ${{ startsWith(matrix.scala, '2.12.') }}
+    - name: Run tests
       run: sbt -v ++${{ matrix.scala }} test${{ matrix.platform }}
-    - name: Test 2.13
-      if: ${{ startsWith(matrix.scala, '2.13.') }}
-      run: sbt -v ++${{ matrix.scala }} test${{ matrix.platform }}
-    - name: Test 3
-      if: ${{ startsWith(matrix.scala, '3.') }}
-      run: sbt -v ++${{ matrix.scala }} test${{ matrix.platform }}3
     - name: Upload Test Results 2.12
       if: ${{ startsWith(matrix.scala, '2.12.') }}
       uses: actions/upload-artifact@v3

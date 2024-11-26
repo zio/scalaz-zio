@@ -288,7 +288,11 @@ object TestArrow {
   }
 
   case class Span(start: Int, end: Int) {
-    def substring(str: String): String = str.substring(start, end)
+    def substring(str: String): String = {
+      val safeStart = math.max(0, math.min(start, str.length))
+      val safeEnd   = math.max(safeStart, math.min(end, str.length))
+      str.substring(safeStart, safeEnd)
+    }
   }
 
   sealed case class Meta[-A, +B](

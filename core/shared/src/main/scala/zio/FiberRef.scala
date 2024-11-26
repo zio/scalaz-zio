@@ -482,21 +482,15 @@ object FiberRef {
             if (newRefs eq oldRefs) zio
             else {
               fiberState.setFiberRefs(newRefs)
-              zio.onExit { _ =>
-                val currentRefs = fiberState.getFiberRefs(false)
-                if (newRefs eq currentRefs) {
-                  // FiberRefs were not modified, we can just restore the old state
-                  fiberState.setFiberRefs(oldRefs)
-                } else {
-                  // They were modified, we need to update only the current FiberRef
+              ZIO.uninterruptibleMask { restore =>
+                restore(zio).exitWith { exit =>
                   val oldValue = oldRefs.getOrNull(self)
                   if (oldValue == null) fiberState.resetFiberRef(self)
                   else fiberState.setFiberRef(self, oldValue)
+                  exit
                 }
-                Exit.unit
               }
             }
-
           }
 
         override def set(value: Value)(implicit trace: Trace): UIO[Unit] =

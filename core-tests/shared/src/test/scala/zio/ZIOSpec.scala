@@ -2,9 +2,9 @@ package zio
 
 import zio.Cause._
 import zio.LatchOps._
-import zio.internal.Platform
+import zio.internal.{FiberRuntime, Platform}
 import zio.test.Assertion._
-import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only}
+import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
 import scala.annotation.tailrec
@@ -1620,7 +1620,25 @@ object ZIOSpec extends ZIOBaseSpec {
           _     <- latch.await
           exit  <- fiber.interrupt.map(_.mapErrorCauseExit((cause: Cause[Nothing]) => cause.untraced))
         } yield assert(exit)(isInterrupted)
-      } @@ exceptJS(nonFlaky)
+      } @@ exceptJS(nonFlaky),
+      test("child fibers can be created on interrupted parents within unininterruptible regions") {
+        for {
+          latch1       <- Promise.make[Nothing, Unit]
+          isInterupted <- Promise.make[Nothing, Boolean]
+          parent <- (latch1.succeed(()) *> ZIO.never).onInterrupt {
+                      for {
+                        latch2 <- Promise.make[Nothing, Unit]
+                        child  <- latch2.await.fork
+                        _      <- ZIO.sleep(5.millis)
+                        _      <- isInterupted.done(Exit.succeed(child.asInstanceOf[FiberRuntime[?, ?]].isInterrupted()))
+                        _      <- latch2.succeed(())
+                      } yield ()
+                    }.forkDaemon
+          _   <- latch1.await
+          _   <- parent.interrupt
+          res <- isInterupted.await
+        } yield assertTrue(!res)
+      } @@ withLiveClock @@ exceptJS(nonFlaky) @@ timeout(20.seconds) @@ zioTag(interruption)
     ),
     suite("negate")(
       test("on true returns false") {
@@ -1983,6 +2001,15 @@ object ZIOSpec extends ZIOBaseSpec {
       test("positive") {
         val lst: Iterable[UIO[Int]] = ZIO.replicate(2)(ZIO.succeed(12))
         assertZIO(ZIO.collectAll(lst))(equalTo(List(12, 12)))
+      }
+    ),
+    suite("retryN")(
+      test("retryN retries n times") {
+        for {
+          ref    <- Ref.make(0)
+          _      <- (ref.update(_ + 1) *> ZIO.fail(None)).retryN(3).orElse(ZIO.unit)
+          result <- ref.get
+        } yield assertTrue(result == 4)
       }
     ),
     suite("retryUntil")(
@@ -4170,6 +4197,48 @@ object ZIOSpec extends ZIOBaseSpec {
         assertZIO(ZIO.fail(1).validate(ZIO.fail(2)).sandbox.either)(
           isLeft(equalTo(Cause.Then(Cause.Fail(1, StackTrace.none), Cause.Fail(2, StackTrace.none))))
         )
+      }
+    ),
+    suite("onDone and onDoneCause")(
+      test("onDone - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDone(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDone - should execute error callback synchronously on failure") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDone(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDoneCause(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute error callback synchronously on failure with cause") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDoneCause(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
       }
     ),
     suite("when")(
