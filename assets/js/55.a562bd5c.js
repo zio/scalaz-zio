@@ -12409,10 +12409,14 @@ module.exports = register;
       }
 
       // shift by margin and expand by outline and border
-      lx1 += marginX - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
-      lx2 += marginX + Math.max(outlineWidth, halfBorderWidth) + padding + marginOfError;
-      ly1 += marginY - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
-      ly2 += marginY + Math.max(outlineWidth, halfBorderWidth) + padding + marginOfError;
+      var leftPad = marginX - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
+      var rightPad = marginX + Math.max(outlineWidth, halfBorderWidth) + padding + marginOfError;
+      var topPad = marginY - Math.max(outlineWidth, halfBorderWidth) - padding - marginOfError;
+      var botPad = marginY + Math.max(outlineWidth, halfBorderWidth) + padding + marginOfError;
+      lx1 += leftPad;
+      lx2 += rightPad;
+      ly1 += topPad;
+      ly2 += botPad;
 
       // always store the unrotated label bounds separately
       var bbPrefix = prefix || 'main';
@@ -12424,6 +12428,10 @@ module.exports = register;
       bb.y2 = ly2;
       bb.w = lx2 - lx1;
       bb.h = ly2 - ly1;
+      bb.leftPad = leftPad;
+      bb.rightPad = rightPad;
+      bb.topPad = topPad;
+      bb.botPad = botPad;
       var isAutorotate = isEdge && rotation.strValue === 'autorotate';
       var isPfValue = rotation.pfValue != null && rotation.pfValue !== 0;
       if (isAutorotate || isPfValue) {
@@ -12815,7 +12823,7 @@ module.exports = register;
     var isDirty = function isDirty(ele) {
       return ele._private.bbCache == null || ele._private.styleDirty;
     };
-    var needRecalc = !useCache || isDirty(ele) || isEdge && isDirty(ele.source()) || isDirty(ele.target());
+    var needRecalc = !useCache || isDirty(ele) || isEdge && (isDirty(ele.source()) || isDirty(ele.target()));
     if (needRecalc) {
       if (!isPosKeySame) {
         ele.recalculateRenderedStyle(useCache);
@@ -17645,9 +17653,7 @@ module.exports = register;
       // only for beziers -- so performance of other edges isn't affected
       prop.triggersBoundsOfParallelBeziers && name === 'curve-style' && (fromValue === 'bezier' || toValue === 'bezier')) {
         ele.parallelEdges().forEach(function (pllEdge) {
-          if (pllEdge.isBundledBezier()) {
-            pllEdge.dirtyBoundingBoxCache();
-          }
+          pllEdge.dirtyBoundingBoxCache();
         });
       }
       if (prop.triggersBoundsOfConnectedEdges && name === 'display' && (fromValue === 'none' || toValue === 'none')) {
@@ -25068,7 +25074,9 @@ var printLayoutInfo;
             hasUnbundled: pairInfo.hasUnbundled,
             eles: pairInfo.eles,
             srcPos: tgtPos,
+            srcRs: tgtRs,
             tgtPos: srcPos,
+            tgtRs: srcRs,
             srcW: tgtW,
             srcH: tgtH,
             tgtW: srcW,
@@ -25155,17 +25163,17 @@ var printLayoutInfo;
   }
   BRp$c.getSegmentPoints = function (edge) {
     var rs = edge[0]._private.rscratch;
+    this.recalculateRenderedStyle(edge);
     var type = rs.edgeType;
     if (type === 'segments') {
-      this.recalculateRenderedStyle(edge);
       return getPts(rs.segpts);
     }
   };
   BRp$c.getControlPoints = function (edge) {
     var rs = edge[0]._private.rscratch;
+    this.recalculateRenderedStyle(edge);
     var type = rs.edgeType;
     if (type === 'bezier' || type === 'multibezier' || type === 'self' || type === 'compound') {
-      this.recalculateRenderedStyle(edge);
       return getPts(rs.ctrlpts);
     }
   };
@@ -26225,6 +26233,18 @@ var printLayoutInfo;
   BRp$3.registerBinding = function (target, event, handler, useCapture) {
     // eslint-disable-line no-unused-vars
     var args = Array.prototype.slice.apply(arguments, [1]); // copy
+
+    if (Array.isArray(target)) {
+      var res = [];
+      for (var i = 0; i < target.length; i++) {
+        var t = target[i];
+        if (t !== undefined) {
+          var b = this.binder(t);
+          res.push(b.on.apply(b, args));
+        }
+      }
+      return res;
+    }
     var b = this.binder(target);
     return b.on.apply(b, args);
   };
@@ -26283,6 +26303,13 @@ var printLayoutInfo;
     var containerWindow = r.cy.window();
     var isSelected = function isSelected(ele) {
       return ele.selected();
+    };
+    var getShadowRoot = function getShadowRoot(element) {
+      var rootNode = element.getRootNode();
+      // Check if the root node is a shadow root
+      if (rootNode && rootNode.nodeType === 11 && rootNode.host !== undefined) {
+        return rootNode;
+      }
     };
     var triggerEvents = function triggerEvents(target, names, e, position) {
       if (target == null) {
@@ -26697,7 +26724,8 @@ var printLayoutInfo;
       select[0] = select[2] = pos[0];
       select[1] = select[3] = pos[1];
     }, false);
-    r.registerBinding(containerWindow, 'mousemove', function mousemoveHandler(e) {
+    var shadowRoot = getShadowRoot(r.container);
+    r.registerBinding([containerWindow, shadowRoot], 'mousemove', function mousemoveHandler(e) {
       // eslint-disable-line no-undef
       var capture = r.hoverData.capture;
       if (!capture && !eventInContainer(e)) {
@@ -29581,6 +29609,7 @@ var printLayoutInfo;
   var maxDeqSize = 1; // number of eles to dequeue and render at higher texture in each batch
   var invalidThreshold = 250; // time threshold for disabling b/c of invalidations
   var maxLayerArea = 4000 * 4000; // layers can't be bigger than this
+  var maxLayerDim = 32767; // maximum size for the width/height of layer canvases
   var useHighQualityEleTxrReqs = true; // whether to use high quality ele txr requests (generally faster and cheaper in the longterm)
 
   // var log = function(){ console.log.apply( console, arguments ); };
@@ -29721,7 +29750,12 @@ var printLayoutInfo;
       opts = opts || {};
       var after = opts.after;
       getBb();
-      var area = bb.w * scale * (bb.h * scale);
+      var w = Math.ceil(bb.w * scale);
+      var h = Math.ceil(bb.h * scale);
+      if (w > maxLayerDim || h > maxLayerDim) {
+        return null;
+      }
+      var area = w * h;
       if (area > maxLayerArea) {
         return null;
       }
@@ -32777,18 +32811,18 @@ var printLayoutInfo;
       if (ele.isNode()) {
         switch (ele.pstyle('text-halign').value) {
           case 'left':
-            p.x = -bb.w;
+            p.x = -bb.w - (bb.leftPad || 0);
             break;
           case 'right':
-            p.x = 0;
+            p.x = -(bb.rightPad || 0);
             break;
         }
         switch (ele.pstyle('text-valign').value) {
           case 'top':
-            p.y = -bb.h;
+            p.y = -bb.h - (bb.topPad || 0);
             break;
           case 'bottom':
-            p.y = 0;
+            p.y = -(bb.botPad || 0);
             break;
         }
       }
@@ -33242,7 +33276,7 @@ var printLayoutInfo;
     return style;
   };
 
-  var version = "3.30.2";
+  var version = "3.30.4";
 
   var cytoscape = function cytoscape(options) {
     // if no options specified, use default
