@@ -95,7 +95,7 @@
     "tslib": "^2.4.0"
   },
   "resolutions": {
-    "cytoscape": "3.30.2"
+    "cytoscape": "3.30.4"
   },
   "browserslist": {
     "production": [
