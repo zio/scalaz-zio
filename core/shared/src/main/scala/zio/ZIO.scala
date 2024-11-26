@@ -1450,15 +1450,7 @@ sealed trait ZIO[-R, +E, +A]
         cb: ZIO[R1, E2, C] => Any
       ): Any =
         if (ab.compareAndSet(true, false)) {
-          cb(
-            ZIO
-              .withFiberRuntime[R1, E2, C] { (childFiber, _) =>
-                ZIO.suspendSucceed {
-                  childFiber.transferChildren(parentScope)
-                  cont(winner, loser)
-                }
-              }
-          )
+          cb(cont(winner, loser))
         }
 
       val raceIndicator = new AtomicBoolean(true)
@@ -1480,8 +1472,20 @@ sealed trait ZIO[-R, +E, +A]
               complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
             }
 
-            startLeftFiber(self)
-            startRightFiber(right)
+            startLeftFiber(
+              ZIO.withFiberRuntime[R, E, A] { (childFiber, _) =>
+                ZIO.suspendSucceed {
+                  self.ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
+                }
+              }
+            )
+            startRightFiber(
+              ZIO.withFiberRuntime[R1, ER, B] { (childFiber, _) =>
+                ZIO.suspendSucceed {
+                  right.ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
+                }
+              }
+            )
           },
           leftFiber.id <> rightFiber.id
         )
@@ -1500,14 +1504,14 @@ sealed trait ZIO[-R, +E, +A]
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[?] =>
-            winner.inheritAll.flatMap(_ => leftDone(exit, loser))
+            winner.inheritAll *> leftDone(exit, loser)
           case exit: Exit.Failure[_] =>
             leftDone(exit, loser)
         },
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[B] =>
-            winner.inheritAll.flatMap(_ => rightDone(exit, loser))
+            winner.inheritAll *> rightDone(exit, loser)
           case exit: Exit.Failure[E1] =>
             rightDone(exit, loser)
         }

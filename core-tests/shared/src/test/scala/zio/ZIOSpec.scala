@@ -1968,7 +1968,7 @@ object ZIOSpec extends ZIOBaseSpec {
           acquire                 = backgroundBlockingStuff.fork
           release                 = ZIO.succeed(isRunning.set(false))
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
-          _                      <- ZIO.raceAll(eff, Nil)
+          _                      <- eff.raceAll(List(ZIO.never))
         } yield assertCompletes
       } @@ timeout(10.seconds)
     ),
@@ -3152,13 +3152,18 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield assert(b)(equalTo(42))
       } @@ zioTag(interruption),
       test("raceFirst always calls finalizers") {
-        for {
+        def runTest(useCompanionObject: Boolean) = for {
           isRunning              <- ZIO.succeed(new AtomicBoolean(true))
           backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
           acquire                 = backgroundBlockingStuff.fork
           release                 = ZIO.succeed(isRunning.set(false))
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
-          _                      <- ZIO.raceFirst(eff, List(ZIO.never))
+          _                      <- if (useCompanionObject) ZIO.raceFirst(eff, List(ZIO.never)) else eff.raceFirst(ZIO.never)
+        } yield assertCompletes
+
+        for {
+          _ <- runTest(useCompanionObject = true).fork
+          _ <- runTest(useCompanionObject = false).fork
         } yield assertCompletes
       } @@ timeout(10.seconds),
       test("mergeAll") {
