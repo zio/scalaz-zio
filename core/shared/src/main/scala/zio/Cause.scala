@@ -16,6 +16,7 @@
 
 package zio
 
+import zio.Cause.Both
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.annotation.tailrec
@@ -847,27 +848,29 @@ object Cause extends Serializable {
       }
 
       def bothCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        (left, right) match {
-          case (Cause.Empty, _) => right
-          case (_, Cause.Empty) => left
-          case _ =>
-            val both = Both(left, right)
-            if (p(both))
-              both
-            else
-              Cause.Empty
+        if (left eq Cause.Empty)
+          right
+        else if (right eq Cause.empty)
+          left
+        else {
+          val both = Both(left, right)
+          if (p(both))
+            both
+          else
+            Cause.Empty
         }
 
       def thenCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        (left, right) match {
-          case (Cause.Empty, _) => right
-          case (_, Cause.Empty) => left
-          case _ =>
-            val then_ = Then(left, right)
-            if (p(then_))
-              then_
-            else
-              Cause.Empty
+        if (left eq Cause.Empty)
+          right
+        else if (right eq Cause.empty)
+          left
+        else {
+          val then_ = Then(left, right)
+          if (p(then_))
+            then_
+          else
+            Cause.Empty
         }
 
       def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] =
