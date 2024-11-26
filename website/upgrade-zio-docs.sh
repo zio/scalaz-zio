@@ -26,7 +26,6 @@ packages=(
   "@zio.dev/zio-jdbc"
   "@zio.dev/zio-json"
   "@zio.dev/zio-kafka"
-  "@zio.dev/zio-keeper"
   "@zio.dev/zio-lambda"
   "@zio.dev/zio-logging"
   "@zio.dev/zio-memberlist"
