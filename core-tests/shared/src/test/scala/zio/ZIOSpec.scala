@@ -1970,7 +1970,7 @@ object ZIOSpec extends ZIOBaseSpec {
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
           _                      <- ZIO.raceAll(eff, Nil)
         } yield assertCompletes
-      } @@ timeout(3.seconds)
+      } @@ timeout(10.seconds)
     ),
     suite("reduceAllPar")(
       test("return zero element on empty input") {
@@ -3085,6 +3085,16 @@ object ZIOSpec extends ZIOBaseSpec {
         val io = ZIO.succeed(42).race(ZIO.never)
         assertZIO(io)(equalTo(42))
       },
+      test("race always calls finalizers") {
+        for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- eff.race(ZIO.never)
+        } yield assertCompletes
+      } @@ timeout(10.seconds),
       test("firstSuccessOf of values") {
         val io = ZIO.firstSuccessOf(ZIO.fail(0), List(ZIO.succeed(100))).either
         assertZIO(io)(isRight(equalTo(100)))
@@ -3141,6 +3151,16 @@ object ZIOSpec extends ZIOBaseSpec {
           b      <- effect.await
         } yield assert(b)(equalTo(42))
       } @@ zioTag(interruption),
+      test("raceFirst always calls finalizers") {
+        for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- ZIO.raceFirst(eff, List(ZIO.never))
+        } yield assertCompletes
+      } @@ timeout(10.seconds),
       test("mergeAll") {
         val io = ZIO.mergeAll(List("a", "aa", "aaa", "aaaa").map(ZIO.succeed[String](_)))(0)((b, a) => b + a.length)
 

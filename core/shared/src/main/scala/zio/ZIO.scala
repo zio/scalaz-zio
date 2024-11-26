@@ -1353,13 +1353,22 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    ZIO.transplant(graft =>
+    ZIO.withFiberRuntime[R1, E1, A1] { (fiber, _) =>
+      val parentScope = fiber.scope
       for {
         done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
         fails <- Ref.make[Int](ios.size)
         c <- ZIO.uninterruptibleMask { restore =>
                for {
-                 fs <- ZIO.foreach(self :: ios.toList)(io => graft(ZIO.interruptible(io).fork))
+                 fs <- ZIO.foreach(self :: ios.toList) { io =>
+                         ZIO
+                           .withFiberRuntime[R1, E1, A1] { (childFiber, _) =>
+                             ZIO.suspendSucceed {
+                               ZIO.interruptible(io).ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
+                             }
+                           }
+                           .fork
+                       }
                  _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
                         io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
                       }
@@ -1371,7 +1380,7 @@ sealed trait ZIO[-R, +E, +A]
                } yield c
              }
       } yield c
-    )
+    }
   }
 
   /**
@@ -1426,6 +1435,7 @@ sealed trait ZIO[-R, +E, +A]
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
     ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
+      val parentScope = parentFiber.scope
       import java.util.concurrent.atomic.AtomicBoolean
 
       implicit val unsafe: Unsafe = Unsafe
@@ -1440,7 +1450,15 @@ sealed trait ZIO[-R, +E, +A]
         cb: ZIO[R1, E2, C] => Any
       ): Any =
         if (ab.compareAndSet(true, false)) {
-          cb(cont(winner, loser))
+          cb(
+            ZIO
+              .withFiberRuntime[R1, E2, C] { (childFiber, _) =>
+                ZIO.suspendSucceed {
+                  childFiber.transferChildren(parentScope)
+                  cont(winner, loser)
+                }
+              }
+          )
         }
 
       val raceIndicator = new AtomicBoolean(true)
