@@ -320,7 +320,7 @@ object Ref extends Serializable {
     override def toString: String =
       s"Ref(${value.get})"
 
-    trait UnsafeAPI {
+    trait UnsafeAPI extends Serializable {
       def get(implicit unsafe: Unsafe): A
       def getAndSet(a: A)(implicit unsafe: Unsafe): A
       def getAndUpdate(f: A => A)(implicit unsafe: Unsafe): A
@@ -335,7 +335,7 @@ object Ref extends Serializable {
       def updateSomeAndGet(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A
     }
 
-    @transient lazy val unsafe: UnsafeAPI =
+    val unsafe: UnsafeAPI =
       new UnsafeAPI {
         def get(implicit unsafe: Unsafe): A =
           value.get

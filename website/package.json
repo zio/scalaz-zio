@@ -60,11 +60,11 @@
     "@zio.dev/zio-nio": "2.0.0",
     "@zio.dev/zio-optics": "0.2.2",
     "@zio.dev/zio-parser": "0.1.9",
-    "@zio.dev/zio-prelude": "1.0.0-RC34",
+    "@zio.dev/zio-prelude": "1.0.0-RC35",
     "@zio.dev/zio-process": "0.7.2",
     "@zio.dev/zio-profiling": "0.3.2",
     "@zio.dev/zio-query": "0.7.6",
-    "@zio.dev/zio-quill": "4.8.4",
+    "@zio.dev/zio-quill": "4.8.5",
     "@zio.dev/zio-redis": "1.0.0",
     "@zio.dev/zio-rocksdb": "0.4.2",
     "@zio.dev/zio-s3": "2022.11.21-367e7009c0f5",
@@ -73,7 +73,7 @@
     "@zio.dev/zio-streams-compress": "0.0.2",
     "@zio.dev/zio-sql": "0.1.2",
     "@zio.dev/zio-sqs": "2022.11.23-5a814304824c",
-    "@zio.dev/zio-telemetry": "3.0.1",
+    "@zio.dev/zio-telemetry": "3.0.2",
     "@zio.dev/zio-webhooks": "0.2.1",
     "@zio.dev/zio2-interop-cats2": "2023.1.23-571dabdd91f9",
     "@zio.dev/zio2-interop-cats3": "2023.2.21-692e7bbebb7f",
@@ -95,7 +95,7 @@
     "tslib": "^2.4.0"
   },
   "resolutions": {
-    "cytoscape": "3.30.2"
+    "cytoscape": "3.30.4"
   },
   "browserslist": {
     "production": [
@@ -114,8 +114,8 @@
     "@types/react": "18.3.11",
     "@types/react-helmet": "6.1.9",
     "@types/react-router-dom": "5.3.3",
-    "prettier": "3.3.3",
-    "prettier-plugin-tailwindcss": "0.6.8",
+    "prettier": "3.4.0",
+    "prettier-plugin-tailwindcss": "0.6.9",
     "typescript": "5.5.4"
   }
 }

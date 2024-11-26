@@ -79,8 +79,10 @@ private[zio] trait LayerMacroUtils {
       )
 
       val traceVal = if (usesEnvironment || usesCompose) {
-        val trace = c.freshName(TermName("trace"))
-        List(q"implicit val $trace: ${typeOf[Trace]} = ${reify(Tracer)}.newTrace")
+        val trace       = c.freshName(TermName("trace"))
+        val suppress    = typeOf[SuppressWarnings]
+        val wartRemover = q"""${reify(Array)}("org.wartremover.warts.ExplicitImplicitTypes")"""
+        List(q"@$suppress($wartRemover) implicit val $trace: ${typeOf[Trace]} = ${reify(Tracer)}.newTrace")
       } else {
         Nil
       }
