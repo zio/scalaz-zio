@@ -2003,6 +2003,15 @@ object ZIOSpec extends ZIOBaseSpec {
         assertZIO(ZIO.collectAll(lst))(equalTo(List(12, 12)))
       }
     ),
+    suite("retryN")(
+      test("retryN retries n times") {
+        for {
+          ref    <- Ref.make(0)
+          _      <- (ref.update(_ + 1) *> ZIO.fail(None)).retryN(3).orElse(ZIO.unit)
+          result <- ref.get
+        } yield assertTrue(result == 4)
+      }
+    ),
     suite("retryUntil")(
       test("retryUntil retries until condition is true") {
         for {
@@ -4188,6 +4197,48 @@ object ZIOSpec extends ZIOBaseSpec {
         assertZIO(ZIO.fail(1).validate(ZIO.fail(2)).sandbox.either)(
           isLeft(equalTo(Cause.Then(Cause.Fail(1, StackTrace.none), Cause.Fail(2, StackTrace.none))))
         )
+      }
+    ),
+    suite("onDone and onDoneCause")(
+      test("onDone - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDone(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDone - should execute error callback synchronously on failure") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDone(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute success callback synchronously on success") {
+        for {
+          ref    <- Ref.make(false)
+          latch  <- Promise.make[Nothing, Unit]
+          _      <- ZIO.succeed(42).onDoneCause(_ => ZIO.unit, _ => ref.set(true) *> latch.succeed(()))
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
+      },
+      test("onDoneCause - should execute error callback synchronously on failure with cause") {
+        for {
+          ref   <- Ref.make(false)
+          latch <- Promise.make[Nothing, Unit]
+          _ <- ZIO
+                 .fail("Error")
+                 .onDoneCause(_ => ref.set(true) *> latch.succeed(()), _ => ZIO.unit)
+          _      <- latch.await
+          result <- ref.get
+        } yield assert(result)(isTrue)
       }
     ),
     suite("when")(

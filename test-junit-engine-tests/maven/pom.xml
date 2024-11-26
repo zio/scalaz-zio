@@ -13,6 +13,7 @@
         <scala.version>2.13.13</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
         <zio.version>2.0.22</zio.version>
+        <surefire.version>3.5.2</surefire.version>
     </properties>
 
     <dependencies>
@@ -42,7 +43,7 @@
         <dependency>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
-            <version>3.5.0</version>
+            <version>${surefire.version}</version>
         </dependency>
     </dependencies>
 
@@ -98,7 +99,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>${surefire.version}</version>
                 <configuration>
                     <goal>test</goal>
                     <parallel>methods</parallel>

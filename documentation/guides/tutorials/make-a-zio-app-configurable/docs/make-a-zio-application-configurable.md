@@ -92,17 +92,22 @@ Let's run the above workflow and see the output:
 
 ```
 
-```scala mdoc:fail
+```scala mdoc
 import zio._
+import zio.config.magnolia._
 
 import java.io.IOException
 
 case class HttpServerConfig(host: String, port: Int)
 
+object HttpServerConfig {
+  implicit val config: Config[HttpServerConfig] = deriveConfig[HttpServerConfig].nested("HttpServerConfig")
+}
+
 object MainApp extends ZIOAppDefault {
 
-  val workflow: ZIO[Any, IOException, Unit] =
-    ZIO.service[HttpServerConfig].flatMap { config =>
+  val workflow: Task[Unit] =
+    ZIO.config[HttpServerConfig].flatMap { config =>
       Console.printLine(
         "Application started with following configuration:\n" +
           s"\thost: ${config.host}\n" +
@@ -140,6 +145,61 @@ Application started with following configuration:
 Great! We have ZIO application that can access the configuration data. It works! Now, let's apply the same approach to our RESTful Web Service.
 
 ```scala mdoc:passthrough
+import scala.io.Source
+
+// NOTE: Code copied from the zio-docs module to avoid circular dependency in SBT modules.
+// This code does not show up on the website since we are using `mdoc:passthrough`.
+object utils {
+
+  def readSource(path: String, lines: Seq[(Int, Int)]): String = {
+    def readFile(path: String) =
+      try {
+        Source.fromFile("../" + path)
+      } catch {
+        case _ => Source.fromFile(path)
+      }
+
+    if (lines.isEmpty) {
+      val content = readFile(path).getLines().mkString("\n")
+      content
+    } else {
+      val chunks = for {
+        (from, to) <- lines
+      } yield readFile(path)
+        .getLines()
+        .toArray[String]
+        .slice(from - 1, to)
+        .mkString("\n")
+
+      chunks.mkString("\n\n")
+    }
+  }
+
+  def fileExtension(path: String): String = {
+    val javaPath      = java.nio.file.Paths.get(path)
+    val fileExtension =
+      javaPath.getFileName.toString
+        .split('.')
+        .lastOption
+        .getOrElse("")
+    fileExtension
+  }
+
+  def printSource(
+    path: String,
+    lines: Seq[(Int, Int)] = Seq.empty,
+    comment: Boolean = true,
+    showLineNumbers: Boolean = false,
+  ) = {
+    val title     = if (comment) s"""title="$path"""" else ""
+    val showLines = if (showLineNumbers) "showLineNumbers" else ""
+    println(s"""```${fileExtension(path)} ${title} ${showLines}""")
+    println(readSource(path, lines))
+    println("```")
+  }
+
+}
+
 utils.printSource("documentation/guides/tutorials/make-a-zio-app-configurable/src/main/scala/dev/zio/quickstart/MainApp.scala")
 ```
 
@@ -162,9 +222,9 @@ In this tutorial, we will use the HOCON files. [HOCON](https://github.com/lightb
 We should add the following dependencies to our `build.sb` file:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-config"          % "4.0.0-RC14"
-libraryDependencies += "dev.zio" %% "zio-config-typesafe" % "4.0.0-RC14"
-libraryDependencies += "dev.zio" %% "zio-config-magnolia" % "4.0.0-RC14"
+libraryDependencies += "dev.zio" %% "zio-config"          % "4.0.2"
+libraryDependencies += "dev.zio" %% "zio-config-typesafe" % "4.0.2"
+libraryDependencies += "dev.zio" %% "zio-config-magnolia" % "4.0.2"
 ```
 
 ### Defining the HOCON Configuration File
