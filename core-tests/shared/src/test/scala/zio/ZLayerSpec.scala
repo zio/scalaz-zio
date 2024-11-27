@@ -622,12 +622,12 @@ object ZLayerSpec extends ZIOBaseSpec {
         }
 
         for {
-          ref <- Ref.make(List.empty[String])
-          _ <- TodoApp.layer(ref).runWith(TodoRepo.layer, TodoConfig.layer, EmailService.layer)
+          ref    <- Ref.make(List.empty[String])
+          _      <- TodoApp.layer(ref).runWith(TodoRepo.layer, TodoConfig.layer, EmailService.layer)
           result <- ref.get.map(_.toSet)
         } yield assertTrue(
           result == Set("Running TodoRepo", "Running TodoConfig", "Running EmailService")
         )
-      },
+      }
     )
 }
