@@ -4,6 +4,8 @@ import zio.internal.ansi.AnsiStringOps
 import zio.ZLayer
 
 import scala.reflect.macros.blackbox
+import zio.ZIO
+import zio.IsSubtypeOfOutput
 
 final class ZLayerMakeMacros(val c: blackbox.Context) extends LayerMacroUtils {
   import c.universe._
@@ -32,6 +34,18 @@ final class ZLayerMakeMacros(val c: blackbox.Context) extends LayerMacroUtils {
     val _ = (dummyK, dummyKRemainder)
     assertEnvIsNotNothing[R]()
     constructLayer[R0, R, E](layer, ProvideMethod.ProvideSome)
+  }
+
+  def runWithImpl[
+    R: c.WeakTypeTag,
+    E,
+    A
+  ](layers: c.Expr[ZLayer[_, E, _]]*)(ev: c.Expr[A IsSubtypeOfOutput Unit]): c.Expr[ZIO[Any, E, Unit]] = {
+    val constructedLayer = constructLayer[Any, R, E](layers, ProvideMethod.Provide)
+    val self             = c.Expr[ZLayer[R, E, Unit]](q"${c.prefix}")
+    reify {
+      ZIO.scoped[R](self.splice.build).provideLayer(constructedLayer.splice).unit
+    }
   }
 
   /**
