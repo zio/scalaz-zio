@@ -33,5 +33,5 @@ object LayerMacros {
     val layerExpr = constructLayer[Any, R, E](deps)
     '{ ZIO.scoped($layer.build).provideLayer($layerExpr).unit }
   }
-    
+
 }
