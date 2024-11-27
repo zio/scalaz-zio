@@ -584,12 +584,21 @@ object ZLayerSpec extends ZIOBaseSpec {
         } yield assertCompletes
       },
       test("runWith works") {
+        trait Dependency
+
+        object Dependency {
+          val layer = ZLayer.succeed(new Dependency {})
+        }
+
         trait TodoRepo {
           def run(ref: Ref[List[String]]) = ref.update("Running TodoRepo" :: _)
         }
 
         object TodoRepo {
-          val layer: ZLayer[Any, Nothing, TodoRepo] = ZLayer.succeed(new TodoRepo {})
+          val layer: ZLayer[Dependency, Nothing, TodoRepo] =
+            ZLayer.fromZIO {
+              ZIO.service[Dependency].zipRight(ZIO.succeed(new TodoRepo {}))
+            }
         }
 
         trait TodoConfig {
@@ -623,7 +632,7 @@ object ZLayerSpec extends ZIOBaseSpec {
 
         for {
           ref    <- Ref.make(List.empty[String])
-          _      <- TodoApp.layer(ref).runWith(TodoRepo.layer, TodoConfig.layer, EmailService.layer)
+          _      <- TodoApp.layer(ref).runWith(TodoRepo.layer, TodoConfig.layer, Dependency.layer, EmailService.layer)
           result <- ref.get.map(_.toSet)
         } yield assertTrue(
           result == Set("Running TodoRepo", "Running TodoConfig", "Running EmailService")
