@@ -19,7 +19,16 @@ package zio.stream
 import zio._
 import zio.stream.compression.{CompressionException, CompressionLevel, CompressionStrategy, FlushMode}
 
-import java.io._
+import java.io.{
+  File,
+  FileNotFoundException,
+  IOException,
+  InputStream,
+  OutputStream,
+  PipedInputStream,
+  PipedOutputStream,
+  Reader
+}
 import java.net.{InetSocketAddress, SocketAddress, URI}
 import java.nio.channels.{AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler, FileChannel}
 import java.nio.file.StandardOpenOption._
