@@ -1333,7 +1333,7 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def raceAll[R1 <: R, E1 >: E, A1 >: A](
     ios0: => Iterable[ZIO[R1, E1, A1]]
-  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.suspendSucceed {
+  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.transplant { graft =>
     val ios = ios0
 
     def arbiter[E1, A1](
@@ -1353,25 +1353,23 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    ZIO.transplant { graft =>
-      for {
-        done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
-        fails <- Ref.make[Int](ios.size)
-        c <- ZIO.uninterruptibleMask { restore =>
-               for {
-                 fs <- ZIO.foreach(self :: ios.toList)(io => graft.applyOnExit(ZIO.interruptible(io)).fork)
-                 _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
-                        io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
-                      }
+    for {
+      done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
+      fails <- Ref.make[Int](ios.size)
+      c <- ZIO.uninterruptibleMask { restore =>
+             for {
+               fs <- ZIO.foreach(self :: ios.toList)(io => graft.applyOnExit(ZIO.interruptible(io)).fork)
+               _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
+                      io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
+                    }
 
-                 inheritAll = { (res: (A1, Fiber[E1, A1])) => res._2.inheritAll.as(res._1) }
+               inheritAll = { (res: (A1, Fiber[E1, A1])) => res._2.inheritAll.as(res._1) }
 
-                 c <- restore(done.await.flatMap(inheritAll))
-                        .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
-               } yield c
-             }
-      } yield c
-    }
+               c <- restore(done.await.flatMap(inheritAll))
+                      .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
+             } yield c
+           }
+    } yield c
   }
 
   /**
@@ -1425,50 +1423,49 @@ sealed trait ZIO[-R, +E, +A]
     leftScope: FiberScope = null,
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
-    ZIO.transplant { graft =>
-      ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
-        import java.util.concurrent.atomic.AtomicBoolean
+    ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
+      val graft = ZIO.Grafter(parentFiber)
+      import java.util.concurrent.atomic.AtomicBoolean
 
-        implicit val unsafe: Unsafe = Unsafe
+      implicit val unsafe: Unsafe = Unsafe
 
-        val parentRuntimeFlags = parentStatus.runtimeFlags
+      val parentRuntimeFlags = parentStatus.runtimeFlags
 
-        @inline def complete[E0, E1, A, B](
-          winner: Fiber.Runtime[E0, A],
-          loser: Fiber.Runtime[E1, B],
-          cont: (Fiber.Runtime[E0, A], Fiber.Runtime[E1, B]) => ZIO[R1, E2, C],
-          ab: AtomicBoolean,
-          cb: ZIO[R1, E2, C] => Any
-        ): Any =
-          if (ab.compareAndSet(true, false)) {
-            cb(cont(winner, loser))
-          }
+      @inline def complete[E0, E1, A, B](
+        winner: Fiber.Runtime[E0, A],
+        loser: Fiber.Runtime[E1, B],
+        cont: (Fiber.Runtime[E0, A], Fiber.Runtime[E1, B]) => ZIO[R1, E2, C],
+        ab: AtomicBoolean,
+        cb: ZIO[R1, E2, C] => Any
+      ): Any =
+        if (ab.compareAndSet(true, false)) {
+          cb(cont(winner, loser))
+        }
 
-        val raceIndicator = new AtomicBoolean(true)
+      val raceIndicator = new AtomicBoolean(true)
 
-        val leftFiber  = ZIO.unsafe.makeChildFiber(trace, self, parentFiber, parentRuntimeFlags, leftScope)
-        val rightFiber = ZIO.unsafe.makeChildFiber(trace, right, parentFiber, parentRuntimeFlags, rightScope)
+      val leftFiber  = ZIO.unsafe.makeChildFiber(trace, self, parentFiber, parentRuntimeFlags, leftScope)
+      val rightFiber = ZIO.unsafe.makeChildFiber(trace, right, parentFiber, parentRuntimeFlags, rightScope)
 
-        val startLeftFiber  = leftFiber.startSuspended()
-        val startRightFiber = rightFiber.startSuspended()
+      val startLeftFiber  = leftFiber.startSuspended()
+      val startRightFiber = rightFiber.startSuspended()
 
-        ZIO
-          .async[R1, E2, C](
-            { cb =>
-              leftFiber.addObserver { _ =>
-                complete(leftFiber, rightFiber, leftWins, raceIndicator, cb)
-              }
+      ZIO
+        .async[R1, E2, C](
+          { cb =>
+            leftFiber.addObserver { _ =>
+              complete(leftFiber, rightFiber, leftWins, raceIndicator, cb)
+            }
 
-              rightFiber.addObserver { _ =>
-                complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
-              }
+            rightFiber.addObserver { _ =>
+              complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
+            }
 
-              startLeftFiber(graft.applyOnExit(self))
-              startRightFiber(graft.applyOnExit(right))
-            },
-            leftFiber.id <> rightFiber.id
-          )
-      }
+            startLeftFiber(graft.applyOnExit(self))
+            startRightFiber(graft.applyOnExit(right))
+          },
+          leftFiber.id <> rightFiber.id
+        )
     }
 
   /**
@@ -4885,12 +4882,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    */
   def transplant[R, E, A](f: Grafter => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
     ZIO.withFiberRuntime[R, E, A] { (fiberState, _) =>
-      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
-      val scope =
-        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
-        else scopeOverride.get
-
-      f(new Grafter(scope))
+      f(Grafter(fiberState))
     }
 
   /**
@@ -5513,6 +5505,18 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           }
         }
       }
+  }
+
+  object Grafter {
+
+    def apply[E, A](fiberState: Fiber.Runtime[E, A])(implicit trace: Trace): Grafter = {
+      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
+      val scope =
+        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
+        else scopeOverride.get
+
+      new Grafter(scope)
+    }
   }
 
   final class IfZIO[R, E](private val b: () => ZIO[R, E, Boolean]) extends AnyVal {
