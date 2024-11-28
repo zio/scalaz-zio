@@ -1970,7 +1970,7 @@ object ZIOSpec extends ZIOBaseSpec {
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
           _                      <- eff.raceAll(List(ZIO.never))
         } yield assertCompletes
-      } @@ timeout(10.seconds)
+      } @@ timeout(10.seconds) @@ zioTag(errors) @@ exceptJS
     ),
     suite("reduceAllPar")(
       test("return zero element on empty input") {
@@ -3094,7 +3094,7 @@ object ZIOSpec extends ZIOBaseSpec {
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
           _                      <- eff.race(ZIO.never)
         } yield assertCompletes
-      } @@ timeout(10.seconds),
+      } @@ timeout(10.seconds) @@ exceptJS,
       test("firstSuccessOf of values") {
         val io = ZIO.firstSuccessOf(ZIO.fail(0), List(ZIO.succeed(100))).either
         assertZIO(io)(isRight(equalTo(100)))
@@ -3165,7 +3165,7 @@ object ZIOSpec extends ZIOBaseSpec {
           _ <- runTest(useCompanionObject = true).fork
           _ <- runTest(useCompanionObject = false).fork
         } yield assertCompletes
-      } @@ timeout(10.seconds),
+      } @@ timeout(10.seconds) @@ exceptJS @@ zioTag(interruption),
       test("mergeAll") {
         val io = ZIO.mergeAll(List("a", "aa", "aaa", "aaaa").map(ZIO.succeed[String](_)))(0)((b, a) => b + a.length)
 
