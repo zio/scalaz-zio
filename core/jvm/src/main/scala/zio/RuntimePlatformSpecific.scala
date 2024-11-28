@@ -48,10 +48,24 @@ private[zio] trait RuntimePlatformSpecific {
 
   def enableLoomBasedExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
     ZLayer.suspend {
-      LoomSupport.newVirtualThreadPerTaskExecutor() match {
-        case None           => ZLayer.fail(LoomNotAvailableException("Loom API not available", null))
-        case Some(executor) => Runtime.setExecutor(Executor.fromJavaExecutor(executor))
-      }
+      createLoomExecutor.fold(
+        ZLayer.fail(_),
+        Runtime.setExecutor
+      )
+    }
+
+  def enableLoomBasedBlockingExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
+    ZLayer.suspend {
+      createLoomExecutor.fold(
+        ZLayer.fail(_),
+        Runtime.setBlockingExecutor
+      )
+    }
+
+  private def createLoomExecutor(implicit trace: Trace): Either[LoomNotAvailableException, Executor] =
+    LoomSupport.newVirtualThreadPerTaskExecutor() match {
+      case None           => Left(LoomNotAvailableException("Loom API not available", null))
+      case Some(executor) => Right(Executor.fromJavaExecutor(executor))
     }
 
   def enableAutoBlockingExecutor(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
