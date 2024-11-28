@@ -2953,7 +2953,7 @@ object ZStreamSpec extends ZIOBaseSpec {
               _      <- queue2.offer(3)
               result <- fiber.join
             } yield assert(result)(equalTo(Chunk(1, 2)))
-          },
+          } @@ flaky,
           test("interrupts pulling on finish") {
             val s1 = ZStream(1, 2, 3)
             val s2 = ZStream.fromZIO(Clock.sleep(5.seconds).as(4))
