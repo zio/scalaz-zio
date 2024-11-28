@@ -5509,7 +5509,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
   object Grafter {
 
-    def apply[E, A](fiberState: Fiber.Runtime[E, A])(implicit trace: Trace): Grafter = {
+    private[zio] def apply(fiberState: Fiber.Runtime[?, ?])(implicit trace: Trace): Grafter = {
       val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
       val scope =
         if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
