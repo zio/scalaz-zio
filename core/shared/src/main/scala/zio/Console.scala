@@ -16,8 +16,6 @@
 
 package zio
 
-import zio.Console.ConsoleLive
-import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.io.{EOFException, IOException, PrintStream}
@@ -38,7 +36,7 @@ trait Console extends Serializable { self =>
   def readLine(prompt: String)(implicit trace: Trace): IO[IOException, String] =
     print(prompt) *> readLine
 
-  trait UnsafeAPI {
+  trait UnsafeAPI extends Serializable {
     def print(line: Any)(implicit unsafe: Unsafe): Unit
     def printError(line: Any)(implicit unsafe: Unsafe): Unit
     def printLine(line: Any)(implicit unsafe: Unsafe): Unit
@@ -86,7 +84,7 @@ object Console extends Serializable {
     def readLine(implicit trace: Trace): IO[IOException, String] =
       ZIO.attemptBlockingInterrupt(unsafe.readLine()(Unsafe.unsafe)).refineToOrDie[IOException]
 
-    @transient override val unsafe: UnsafeAPI =
+    override val unsafe: UnsafeAPI =
       new UnsafeAPI {
         override def print(line: Any)(implicit unsafe: Unsafe): Unit =
           print(SConsole.out)(line)

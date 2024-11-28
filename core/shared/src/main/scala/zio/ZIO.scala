@@ -2604,32 +2604,16 @@ sealed trait ZIO[-R, +E, +A]
       } else if (that0.isInstanceOf[Exit.Success[?]]) {
         restore(self).zipWith(that0)(f)
       } else
-        ZIO.withFiberRuntime[R1, E1, C] { (fiber, _) =>
-          val promise     = Promise.unsafe.make[Unit, Boolean](FiberId.None)(Unsafe)
-          val ref         = new java.util.concurrent.atomic.AtomicBoolean(false)
-          val parentScope = fiber.scope
+        ZIO.transplant { graft =>
+          val promise = Promise.unsafe.make[Unit, Boolean](FiberId.None)(Unsafe)
+          val ref     = new java.util.concurrent.atomic.AtomicBoolean(false)
 
           def fork[R, E, A](zio: => ZIO[R, E, A], side: Boolean): ZIO[R, Nothing, Fiber[E, A]] =
-            restore(zio)
-              .foldCauseZIO(
-                cause =>
-                  ZIO.withFiberRuntime[Any, E, A] { (childFiber, _) =>
-                    ZIO.suspendSucceed {
-                      childFiber.transferChildren(parentScope)
-                      promise.fail(()) *> Exit.failCause(cause)
-                    }
-                  },
-                a =>
-                  ZIO.withFiberRuntime[Any, Nothing, A] { (childFiber, _) =>
-                    Exit.succeed {
-                      childFiber.transferChildren(parentScope)
-                      if (ref.getAndSet(true)) {
-                        promise.unsafe.done(Exit.succeed(side))(Unsafe)
-                      }
-                      a
-                    }
-                  }
-              )
+            graft
+              .applyOnExitWith(restore(zio)) {
+                case _: Exit.Success[?] => if (ref.getAndSet(true)) promise.unsafe.done(Exit.boolean(side))(Unsafe)
+                case _                  => promise.unsafe.done(Exit.failUnit)(Unsafe)
+              }
               .forkDaemon
 
           fork(self, false).zip(fork(that0, true)).flatMap { case (left, right) =>
@@ -4897,8 +4881,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    */
   def transplant[R, E, A](f: Grafter => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
     ZIO.withFiberRuntime[R, E, A] { (fiberState, _) =>
-      val scopeOverride = fiberState.getFiberRef(FiberRef.forkScopeOverride)
-      val scope         = scopeOverride.getOrElse(fiberState.scope)
+      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
+      val scope =
+        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
+        else scopeOverride.get
 
       f(new Grafter(scope))
     }
@@ -5483,9 +5469,46 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       }
   }
 
-  final class Grafter(private val scope: FiberScope) extends AnyVal {
+  final class Grafter(private val scope: FiberScope) extends AnyVal { self =>
     def apply[R, E, A](zio: => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
       FiberRef.forkScopeOverride.locally(Some(scope))(zio)
+
+    /**
+     * Similar to [[apply]] but delays the transfer of children spawned by the
+     * effect until the effect has completed, either by success or failure.
+     *
+     * This is more performant than [[apply]] as:
+     *   1. it doesn't require updating [[FiberRef.forkScopeOverride]] which has
+     *      a "complex" join
+     *   1. only fibers that are still active by the time the effect completes
+     *      are transferred.
+     *
+     * @see
+     *   [[applyOnExitWith]] for variant that allows providing a callback
+     *   function
+     */
+    private[zio] def applyOnExit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      applyOnExitWith(zio)(ZIO.unitFn)
+
+    /**
+     * More powerful variant of [[applyOnExit]] that allows providing a callback
+     * function that is guaranteed to be invoked ''after'' the children have
+     * been transferred.
+     */
+    private[zio] def applyOnExitWith[R, E, A](
+      zio: ZIO[R, E, A]
+    )(
+      ensuring: Exit[E, A] => Unit
+    )(implicit trace: Trace): ZIO[R, E, A] =
+      ZIO.uninterruptibleMask { restore =>
+        restore(zio).exitWith { exit =>
+          ZIO.withFiberRuntime[Any, E, A] { (fiber, _) =>
+            fiber.transferChildren(self.scope)
+            ensuring(exit)
+            exit
+          }
+        }
+      }
   }
 
   final class IfZIO[R, E](private val b: () => ZIO[R, E, Boolean]) extends AnyVal {
@@ -6267,43 +6290,27 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         ZIO.uninterruptibleMask { restore =>
           val promise = Promise.unsafe.make[Unit, Unit](FiberId.None)(Unsafe)
           val ref     = new java.util.concurrent.atomic.AtomicInteger(size)
-          ZIO
-            .withFiberRuntime[R, Nothing, Iterable[Fiber.Runtime[E, Unit]]] { (fiber, _) =>
-              ZIO.foreach(as) { a =>
-                restore(f(a))
-                  .foldCauseZIO(
-                    cause =>
-                      ZIO.withFiberRuntime[Any, E, Unit] { (childFiber, _) =>
-                        ZIO.suspendSucceed {
-                          childFiber.transferChildren(fiber.scope)
-                          promise.fail(()) *> Exit.failCause(cause)
-                        }
-                      },
-                    _ => {
-                      ZIO.withFiberRuntime[Any, Nothing, Unit] { (childFiber, _) =>
-                        childFiber.transferChildren(fiber.scope)
-                        if (ref.decrementAndGet() == 0) {
-                          promise.unsafe.done(Exit.unit)(Unsafe)
-                        }
-                        Exit.unit
-                      }
-                    }
-                  )
-                  .forkDaemon
-              }
+          ZIO.transplant { graft =>
+            ZIO.foreach(as) { a =>
+              graft
+                .applyOnExitWith(restore(f(a))) {
+                  case _: Exit.Success[?] => if (ref.decrementAndGet() == 0) promise.unsafe.done(Exit.unit)(Unsafe)
+                  case _                  => promise.unsafe.done(Exit.failUnit)(Unsafe)
+                }
+                .forkDaemon
             }
-            .flatMap { fibers =>
-              restore(promise.await).foldCauseZIO(
-                cause =>
-                  ZIO
-                    .foreachParUnbounded(fibers)(_.interrupt)
-                    .flatMap(Exit.collectAllPar(_) match {
-                      case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
-                      case _                          => Exit.failCause(cause.stripFailures)
-                    }),
-                _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
-              )
-            }
+          }.flatMap { fibers =>
+            restore(promise.await).foldCauseZIO(
+              cause =>
+                ZIO
+                  .foreachParUnbounded(fibers)(_.interrupt)
+                  .flatMap(Exit.collectAllPar(_) match {
+                    case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
+                    case _                          => Exit.failCause(cause.stripFailures)
+                  }),
+              _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
+            )
+          }
         }
       }
     }
@@ -6805,10 +6812,18 @@ object Exit extends Serializable {
         }
     }
 
+  /**
+   * Optimized [[succeed]] for Boolean values that uses cached
+   * `Exit.succeed(true)` and `Exit.succeed(false)` instances
+   */
+  private[zio] def boolean(b: Boolean): Exit[Nothing, Boolean] =
+    if (b) Exit.`true` else Exit.`false`
+
   private[zio] val `true`: Exit[Nothing, Boolean]           = Success(true)
   private[zio] val `false`: Exit[Nothing, Boolean]          = Success(false)
   private[zio] val none: Exit[Nothing, Option[Nothing]]     = Success(None)
   private[zio] val failNone: Exit[Option[Nothing], Nothing] = Failure(Cause.fail(None))
+  private[zio] val failUnit: Exit[Unit, Nothing]            = Failure(Cause.fail(()))
 
   private[zio] val empty: Exit[Nothing, Nothing] = Exit.failCause[Nothing](Cause.empty)
 }

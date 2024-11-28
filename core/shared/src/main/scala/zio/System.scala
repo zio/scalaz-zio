@@ -16,7 +16,6 @@
 
 package zio
 
-import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.lang.{System => JSystem}
@@ -46,7 +45,7 @@ trait System extends Serializable { self =>
     trace: Trace
   ): IO[Throwable, Option[String]]
 
-  trait UnsafeAPI {
+  trait UnsafeAPI extends Serializable {
     def env(variable: String)(implicit unsafe: Unsafe): Option[String]
     def envOrElse(variable: String, alt: => String)(implicit unsafe: Unsafe): String
     def envOrOption(variable: String, alt: => Option[String])(implicit unsafe: Unsafe): Option[String]
@@ -137,7 +136,7 @@ object System extends SystemPlatformSpecific {
     ): IO[Throwable, Option[String]] =
       ZIO.attempt(unsafe.propertyOrOption(prop, alt)(Unsafe.unsafe))
 
-    @transient override val unsafe: UnsafeAPI =
+    override val unsafe: UnsafeAPI =
       new UnsafeAPI {
         override def env(variable: String)(implicit unsafe: Unsafe): Option[String] =
           environmentProvider.env(variable)

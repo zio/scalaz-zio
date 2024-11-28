@@ -39,7 +39,7 @@ import scala.collection.mutable.Builder
  * Because of their excellent composition properties, layers are the idiomatic
  * way in ZIO to create services that depend on other services.
  */
-sealed abstract class ZLayer[-RIn, +E, +ROut] { self =>
+sealed abstract class ZLayer[-RIn, +E, +ROut] extends ZLayerVersionSpecific[RIn, E, ROut] { self =>
 
   /**
    * A symbolic alias for `orDie`.
