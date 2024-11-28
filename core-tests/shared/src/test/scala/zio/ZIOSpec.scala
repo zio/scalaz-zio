@@ -1964,7 +1964,7 @@ object ZIOSpec extends ZIOBaseSpec {
       test("always calls finalizers") {
         for {
           isRunning              <- ZIO.succeed(new AtomicBoolean(true))
-          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
           acquire                 = backgroundBlockingStuff.fork
           release                 = ZIO.succeed(isRunning.set(false))
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
@@ -3088,7 +3088,7 @@ object ZIOSpec extends ZIOBaseSpec {
       test("race always calls finalizers") {
         for {
           isRunning              <- ZIO.succeed(new AtomicBoolean(true))
-          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
           acquire                 = backgroundBlockingStuff.fork
           release                 = ZIO.succeed(isRunning.set(false))
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
@@ -3154,7 +3154,7 @@ object ZIOSpec extends ZIOBaseSpec {
       test("raceFirst always calls finalizers") {
         def runTest(useCompanionObject: Boolean) = for {
           isRunning              <- ZIO.succeed(new AtomicBoolean(true))
-          backgroundBlockingStuff = ZIO.attemptBlocking(while (isRunning.get()) {})
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
           acquire                 = backgroundBlockingStuff.fork
           release                 = ZIO.succeed(isRunning.set(false))
           eff                     = ZIO.acquireRelease(acquire)(_ => release)
