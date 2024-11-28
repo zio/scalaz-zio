@@ -1353,22 +1353,13 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    ZIO.withFiberRuntime[R1, E1, A1] { (fiber, _) =>
-      val parentScope = fiber.scope
+    ZIO.transplant { graft =>
       for {
         done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
         fails <- Ref.make[Int](ios.size)
         c <- ZIO.uninterruptibleMask { restore =>
                for {
-                 fs <- ZIO.foreach(self :: ios.toList) { io =>
-                         ZIO
-                           .withFiberRuntime[R1, E1, A1] { (childFiber, _) =>
-                             ZIO.suspendSucceed {
-                               ZIO.interruptible(io).ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
-                             }
-                           }
-                           .fork
-                       }
+                 fs <- ZIO.foreach(self :: ios.toList)(io => graft.applyOnExit(ZIO.interruptible(io)).fork)
                  _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
                         io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
                       }
@@ -1434,61 +1425,50 @@ sealed trait ZIO[-R, +E, +A]
     leftScope: FiberScope = null,
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
-    ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
-      val parentScope = parentFiber.scope
-      import java.util.concurrent.atomic.AtomicBoolean
+    ZIO.transplant { graft =>
+      ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
+        import java.util.concurrent.atomic.AtomicBoolean
 
-      implicit val unsafe: Unsafe = Unsafe
+        implicit val unsafe: Unsafe = Unsafe
 
-      val parentRuntimeFlags = parentStatus.runtimeFlags
+        val parentRuntimeFlags = parentStatus.runtimeFlags
 
-      @inline def complete[E0, E1, A, B](
-        winner: Fiber.Runtime[E0, A],
-        loser: Fiber.Runtime[E1, B],
-        cont: (Fiber.Runtime[E0, A], Fiber.Runtime[E1, B]) => ZIO[R1, E2, C],
-        ab: AtomicBoolean,
-        cb: ZIO[R1, E2, C] => Any
-      ): Any =
-        if (ab.compareAndSet(true, false)) {
-          cb(cont(winner, loser))
-        }
+        @inline def complete[E0, E1, A, B](
+          winner: Fiber.Runtime[E0, A],
+          loser: Fiber.Runtime[E1, B],
+          cont: (Fiber.Runtime[E0, A], Fiber.Runtime[E1, B]) => ZIO[R1, E2, C],
+          ab: AtomicBoolean,
+          cb: ZIO[R1, E2, C] => Any
+        ): Any =
+          if (ab.compareAndSet(true, false)) {
+            cb(cont(winner, loser))
+          }
 
-      val raceIndicator = new AtomicBoolean(true)
+        val raceIndicator = new AtomicBoolean(true)
 
-      val leftFiber  = ZIO.unsafe.makeChildFiber(trace, self, parentFiber, parentRuntimeFlags, leftScope)
-      val rightFiber = ZIO.unsafe.makeChildFiber(trace, right, parentFiber, parentRuntimeFlags, rightScope)
+        val leftFiber  = ZIO.unsafe.makeChildFiber(trace, self, parentFiber, parentRuntimeFlags, leftScope)
+        val rightFiber = ZIO.unsafe.makeChildFiber(trace, right, parentFiber, parentRuntimeFlags, rightScope)
 
-      val startLeftFiber  = leftFiber.startSuspended()
-      val startRightFiber = rightFiber.startSuspended()
+        val startLeftFiber  = leftFiber.startSuspended()
+        val startRightFiber = rightFiber.startSuspended()
 
-      ZIO
-        .async[R1, E2, C](
-          { cb =>
-            leftFiber.addObserver { _ =>
-              complete(leftFiber, rightFiber, leftWins, raceIndicator, cb)
-            }
-
-            rightFiber.addObserver { _ =>
-              complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
-            }
-
-            startLeftFiber(
-              ZIO.withFiberRuntime[R, E, A] { (childFiber, _) =>
-                ZIO.suspendSucceed {
-                  self.ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
-                }
+        ZIO
+          .async[R1, E2, C](
+            { cb =>
+              leftFiber.addObserver { _ =>
+                complete(leftFiber, rightFiber, leftWins, raceIndicator, cb)
               }
-            )
-            startRightFiber(
-              ZIO.withFiberRuntime[R1, ER, B] { (childFiber, _) =>
-                ZIO.suspendSucceed {
-                  right.ensuring(ZIO.succeed(childFiber.transferChildren(parentScope)))
-                }
+
+              rightFiber.addObserver { _ =>
+                complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
               }
-            )
-          },
-          leftFiber.id <> rightFiber.id
-        )
+
+              startLeftFiber(graft.applyOnExit(self))
+              startRightFiber(graft.applyOnExit(right))
+            },
+            leftFiber.id <> rightFiber.id
+          )
+      }
     }
 
   /**
