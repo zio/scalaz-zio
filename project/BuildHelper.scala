@@ -56,9 +56,14 @@ object BuildHelper {
         case "zio-test"    => Nil
         case _             => List("zio.internal.**")
       }
-      // We get some weird errors when trying to inline Scala 2.12 std lib
-      val inlineScala = if (isScala213) Seq("-opt-inline-from:scala.**") else Nil
-      inlineScala ++ Seq(
+      val scala213Flags =
+        if (isScala213)
+          Seq(
+            "-opt-inline-from:scala.**", // We get some weird errors when trying to inline Scala 2.12 std lib
+            "-Ybackend-parallelism:4"
+          )
+        else Nil
+      scala213Flags ++ Seq(
         "-opt:l:method",
         "-opt:l:inline",
         // To remove calls to `assert` in releases. Assertions are level 2000

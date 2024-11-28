@@ -16,6 +16,7 @@
 
 package zio
 
+import zio.Cause.Both
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.annotation.tailrec
@@ -822,28 +823,66 @@ object Cause extends Serializable {
     final case class Filter[E](p: Cause[E] => Boolean) extends Folder[Any, E, Cause[E]] {
       def empty(context: Any): Cause[E] = Cause.empty
 
-      def failCase(context: Any, error: E, stackTrace: StackTrace): Cause[E] = Cause.Fail(error, stackTrace)
+      def failCase(context: Any, error: E, stackTrace: StackTrace): Cause[E] = {
+        val c = Cause.Fail(error, stackTrace)
+        if (p(c))
+          c
+        else
+          Cause.empty
+      }
 
-      def dieCase(context: Any, t: Throwable, stackTrace: StackTrace): Cause[E] = Cause.Die(t, stackTrace)
+      def dieCase(context: Any, t: Throwable, stackTrace: StackTrace): Cause[E] = {
+        val c = Cause.Die(t, stackTrace)
+        if (p(c))
+          c
+        else
+          Cause.empty
+      }
 
-      def interruptCase(context: Any, fiberId: FiberId, stackTrace: StackTrace): Cause[E] =
-        Cause.Interrupt(fiberId, stackTrace)
+      def interruptCase(context: Any, fiberId: FiberId, stackTrace: StackTrace): Cause[E] = {
+        val c = Cause.Interrupt(fiberId, stackTrace)
+        if (p(c))
+          c
+        else
+          Cause.empty
+      }
 
       def bothCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        if (p(left)) {
-          if (p(right)) Cause.Both(left, right)
-          else left
-        } else if (p(right)) right
-        else Cause.empty
+        if (left eq Cause.Empty)
+          right
+        else if (right eq Cause.empty)
+          left
+        else {
+          val both = Both(left, right)
+          if (p(both))
+            both
+          else
+            Cause.Empty
+        }
 
       def thenCase(context: Any, left: Cause[E], right: Cause[E]): Cause[E] =
-        if (p(left)) {
-          if (p(right)) Cause.Then(left, right)
-          else left
-        } else if (p(right)) right
-        else Cause.empty
+        if (left eq Cause.Empty)
+          right
+        else if (right eq Cause.empty)
+          left
+        else {
+          val then_ = Then(left, right)
+          if (p(then_))
+            then_
+          else
+            Cause.Empty
+        }
 
-      def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] = Stackless(value, stackless)
+      def stacklessCase(context: Any, value: Cause[E], stackless: Boolean): Cause[E] =
+        value match {
+          case Cause.Empty => value
+          case _ =>
+            val stackless2 = Stackless(value, stackless)
+            if (p(stackless2))
+              stackless2
+            else
+              Cause.Empty
+        }
     }
   }
 

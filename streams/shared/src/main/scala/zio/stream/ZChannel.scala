@@ -998,17 +998,10 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
               }
           }
 
-        def inheritChildren(parentScope: FiberScope): UIO[Unit] =
-          ZIO.withFiberRuntime[Any, Nothing, Unit] { (state, _) =>
-            state.transferChildren(parentScope)
-            Exit.unit
-          }
-
         ZChannel.fromZIO {
-          ZIO.withFiberRuntime[Env1, Nothing, MergeState] { (parent, _) =>
-            val inherit = inheritChildren(parent.scope)
-            val fL      = pullL.ensuring(inherit).forkIn(scope)
-            val fR      = pullR.ensuring(inherit).forkIn(scope)
+          ZIO.transplant[Env1, Nothing, MergeState] { graft =>
+            val fL = graft.applyOnExit(pullL).forkIn(scope)
+            val fR = graft.applyOnExit(pullR).forkIn(scope)
             fL.zipWith(fR)(BothRunning(_, _, true))
           }
         }
