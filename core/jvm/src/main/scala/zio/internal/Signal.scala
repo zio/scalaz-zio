@@ -111,8 +111,31 @@ private object Signal {
 
       private def initInvocationHandler(handler: Consumer[AnyRef]): InvocationHandler =
         (proxy: Any, method: Method, args: Array[AnyRef]) => {
-          if (args.nonEmpty) handler.accept(args(0))
-          null
+          // Handle `toString`, `equals`, `hashCode` explicitly to avoid unintended recursion
+          method.getName match {
+            case "toString" =>
+              proxy match {
+                case ref: AnyRef =>
+                  s"${ref.getClass.getName}@${Integer.toHexString(System.identityHashCode(ref))}"
+                case _ =>
+                  "InvalidProxy"
+              }
+            case "equals" =>
+              if (args != null && args.length == 1 && args(0) != null) {
+                (proxy, args(0)) match {
+                  case (ref1: AnyRef, ref2: AnyRef) => java.lang.Boolean.valueOf(ref1 eq ref2)
+                  case _                            => java.lang.Boolean.FALSE
+                }
+              } else java.lang.Boolean.FALSE
+            case "hashCode" =>
+              proxy match {
+                case ref: AnyRef => java.lang.Integer.valueOf(System.identityHashCode(ref))
+                case _           => java.lang.Integer.valueOf(0)
+              }
+            case _ =>
+              if (args != null && args.nonEmpty) handler.accept(args(0))
+              null
+          }
         }
 
     }
