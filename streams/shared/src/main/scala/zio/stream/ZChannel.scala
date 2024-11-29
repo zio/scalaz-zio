@@ -705,6 +705,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                 failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
                   outgoing.offer(Fiber.done(ZChannel.failLeftUnit))
             })
+            .ignore
             .raceFirst(ZChannel.awaitErrorSignal(childScope, fiberId)(errorSignal))
             .forkIn(scope)
       } yield {
@@ -783,6 +784,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                 failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
                   outgoing.offer(ZChannel.failLeftUnit)
             })
+            .ignore
             .raceFirst(ZChannel.awaitErrorSignal(childScope, fiberId)(errorSignal))
             .forkIn(scope)
       } yield {
@@ -2014,7 +2016,7 @@ object ZChannel {
                              }
                        }
         _ <- pullStrategy(fiberId).forever
-               .onError(cause =>
+               .catchAllCause(cause =>
                  cause.failureOrCause match {
                    case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
                    case Left(x: Right[OutErr, OutDone]) =>
