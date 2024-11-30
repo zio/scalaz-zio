@@ -1948,8 +1948,13 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    */
   def mapZIOPar[R1 <: R, E1 >: E, A2](n: => Int, bufferSize: Int = 16)(f: A => ZIO[R1, E1, A2])(implicit
     trace: Trace
-  ): ZStream[R1, E1, A2] =
-    self >>> ZPipeline.mapZIOPar(n, bufferSize)(f)
+  ): ZStream[R1, E1, A2] = {
+    require(n > 0, "Parallelism level must be greater than 0")
+    require(bufferSize > 0, "Buffer size must be greater than 0")
+    val effectiveBufferSize = if (bufferSize == 16) Math.min(n * 2, 1024) else bufferSize
+
+    self >>> ZPipeline.mapZIOPar(n, effectiveBufferSize)(f)
+  }
 
   /**
    * Maps over elements of the stream with the specified effectful function,
