@@ -248,7 +248,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           chars <- if (bytesRead < 0)
                      Exit.failNone
                    else if (bytesRead == 0)
-                     ZIO.succeed(Chunk.empty)
+                     Exit.emptyChunk
                    else if (bytesRead < chunkSize)
                      ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else

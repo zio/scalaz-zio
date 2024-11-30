@@ -149,7 +149,7 @@ object Hub {
           else {
             val surplus = unsafePublishAll(hub, as)
             strategy.unsafeCompleteSubscribers(hub, subscribers)
-            if (surplus.isEmpty) ZIO.succeed(Chunk.empty)
+            if (surplus.isEmpty) Exit.emptyChunk
             else
               strategy.handleSurplus(hub, subscribers, surplus, shutdownFlag).map { published =>
                 if (published) Chunk.empty else surplus

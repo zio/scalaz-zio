@@ -48,7 +48,7 @@ private[compression] class Gunzipper private (bufferSize: Int) {
 
   def onNone(implicit trace: Trace): ZIO[Any, CompressionException, Chunk[Byte]] =
     if (state.isInProgress) ZIO.fail(CompressionException("Stream closed before completion."))
-    else ZIO.succeed(Chunk.empty)
+    else Exit.emptyChunk
 
   private def nextStep(
     acc: Array[Byte],

@@ -4323,7 +4323,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
           bytes <- if (bytesRead < 0)
                      Exit.failNone
                    else if (bytesRead == 0)
-                     ZIO.succeed(Chunk.empty)
+                     Exit.emptyChunk
                    else if (bytesRead < chunkSize)
                      ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else
@@ -5584,7 +5584,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     def fail[E](e: E)(implicit trace: Trace): IO[Option[E], Nothing] = ZIO.fail(Some(e))
     def failCause[E](c: Cause[E])(implicit trace: Trace): IO[Option[E], Nothing] =
       Exit.failCause(c).mapError(Some(_))
-    def empty[A](implicit trace: Trace): IO[Nothing, Chunk[A]]   = ZIO.succeed(Chunk.empty)
+    def empty[A](implicit trace: Trace): IO[Nothing, Chunk[A]]   = Exit.emptyChunk
     def end(implicit trace: Trace): IO[Option[Nothing], Nothing] = Exit.failNone
   }
 

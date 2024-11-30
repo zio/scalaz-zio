@@ -66,7 +66,7 @@ object Standard {
         stream
           .readAll(8192)
           .catchAll {
-            case None        => ZIO.succeed(Chunk.empty)
+            case None        => Exit.emptyChunk
             case Some(error) => ZIO.fail(error)
           }
           .flatMap { bytes =>

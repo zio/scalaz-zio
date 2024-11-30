@@ -1015,21 +1015,21 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
                             }
           result         <- ZIO.succeed(decoder.decode(byteBuffer, charBuffer, false))
           decodedChars   <- handleCoderResult(result)
-          remainderChars <- if (remainingBytes.isEmpty) ZIO.succeed(Chunk.empty) else decodeChunk(remainingBytes)
+          remainderChars <- if (remainingBytes.isEmpty) Exit.emptyChunk else decodeChunk(remainingBytes)
         } yield decodedChars ++ remainderChars
 
       def endOfInput: IO[CharacterCodingException, Chunk[Char]] =
         for {
           result         <- ZIO.succeed(decoder.decode(byteBuffer, charBuffer, true))
           decodedChars   <- handleCoderResult(result)
-          remainderChars <- if (result.isOverflow) endOfInput else ZIO.succeed(Chunk.empty)
+          remainderChars <- if (result.isOverflow) endOfInput else Exit.emptyChunk
         } yield decodedChars ++ remainderChars
 
       def flushRemaining: IO[CharacterCodingException, Chunk[Char]] =
         for {
           result         <- ZIO.succeed(decoder.flush(charBuffer))
           decodedChars   <- handleCoderResult(result)
-          remainderChars <- if (result.isOverflow) flushRemaining else ZIO.succeed(Chunk.empty)
+          remainderChars <- if (result.isOverflow) flushRemaining else Exit.emptyChunk
         } yield decodedChars ++ remainderChars
 
       val push: Option[Chunk[Byte]] => IO[CharacterCodingException, Chunk[Char]] = {
@@ -1219,7 +1219,7 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
                             }
           result         <- ZIO.succeed(encoder.encode(charBuffer, byteBuffer, false))
           encodedBytes   <- handleCoderResult(result)
-          remainderBytes <- if (remainingChars.isEmpty) ZIO.succeed(Chunk.empty) else encodeChunk(remainingChars)
+          remainderBytes <- if (remainingChars.isEmpty) Exit.emptyChunk else encodeChunk(remainingChars)
 
         } yield encodedBytes ++ remainderBytes
 
@@ -1227,14 +1227,14 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
         for {
           result         <- ZIO.succeed(encoder.encode(charBuffer, byteBuffer, true))
           encodedBytes   <- handleCoderResult(result)
-          remainderBytes <- if (result.isOverflow) endOfInput else ZIO.succeed(Chunk.empty)
+          remainderBytes <- if (result.isOverflow) endOfInput else Exit.emptyChunk
         } yield encodedBytes ++ remainderBytes
 
       def flushRemaining: IO[CharacterCodingException, Chunk[Byte]] =
         for {
           result         <- ZIO.succeed(encoder.flush(byteBuffer))
           encodedBytes   <- handleCoderResult(result)
-          remainderBytes <- if (result.isOverflow) flushRemaining else ZIO.succeed(Chunk.empty)
+          remainderBytes <- if (result.isOverflow) flushRemaining else Exit.emptyChunk
         } yield encodedBytes ++ remainderBytes
 
       val push: Option[Chunk[Char]] => IO[CharacterCodingException, Chunk[Byte]] = {

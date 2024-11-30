@@ -29,7 +29,7 @@ private[zio] trait FiberPlatformSpecific {
     new Fiber.Synthetic.Internal[Throwable, A] {
       override def await(implicit trace: Trace): UIO[Exit[Throwable, A]] = ZIO.fromCompletionStage(cs).exit
 
-      def children(implicit trace: Trace): UIO[Chunk[Fiber.Runtime[_, _]]] = ZIO.succeed(Chunk.empty)
+      def children(implicit trace: Trace): UIO[Chunk[Fiber.Runtime[_, _]]] = Exit.emptyChunk
 
       override def poll(implicit trace: Trace): UIO[Option[Exit[Throwable, A]]] =
         ZIO.suspendSucceed {
@@ -65,7 +65,7 @@ private[zio] trait FiberPlatformSpecific {
         ZIO.fromFutureJava(ftr).exit
 
       def children(implicit trace: Trace): UIO[Chunk[Fiber.Runtime[_, _]]] =
-        ZIO.succeed(Chunk.empty)
+        Exit.emptyChunk
 
       def poll(implicit trace: Trace): UIO[Option[Exit[Throwable, A]]] =
         ZIO.suspendSucceed {

@@ -196,14 +196,14 @@ object Queue extends QueuePlatformSpecific {
             unsafeCompletePromise(taker, item)
           }
 
-          if (remaining.isEmpty) ZIO.succeed(Chunk.empty)
+          if (remaining.isEmpty) Exit.emptyChunk
           else {
             // not enough takers, offer to the queue
             val surplus = unsafeOfferAll(queue, remaining)
 
             if (surplus.isEmpty) {
               strategy.unsafeCompleteTakers(queue, takers)
-              ZIO.succeed(Chunk.empty)
+              Exit.emptyChunk
             } else
               strategy.handleSurplus(surplus, queue, takers, shutdownFlag).map { offered =>
                 if (offered) Chunk.empty else surplus
