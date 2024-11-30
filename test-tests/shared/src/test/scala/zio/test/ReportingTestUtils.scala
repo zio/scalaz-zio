@@ -143,18 +143,30 @@ object ReportingTestUtils {
   def test7(implicit sourceLocation: SourceLocation): Spec[Any, Nothing] = test("labeled failures") {
     for {
       a <- ZIO.succeed(Some(1))
-      b <- ZIO.succeed(Some(1))
+      b <- ZIO.succeed(None)
       c <- ZIO.succeed(Some(0))
-      d <- ZIO.succeed(Some(1))
-    } yield assert(a)(isSome(equalTo(1)).label("first")) &&
-      assert(b)(isSome(equalTo(1)).label("second")) &&
-      assert(c)(isSome(equalTo(1)).label("third")) &&
-      assert(d)(isSome(equalTo(1)).label("fourth"))
+      d <- ZIO.succeed(Some(0))
+    } yield assert(a)(isSome(equalTo(1).label("eqA")).label("someA")).label("lblA") &&
+      assert(b)(isSome(equalTo(1).label("eqB")).label("someB")).label("lblB") &&
+      assert(c)(isSome(equalTo(1).label("eqC")).label("someC")).label("lblC") &&
+      assert(d)(isSome(equalTo(1))).label("lblD")
   }
   def test7Expected(implicit sourceLocation: SourceLocation): Vector[String] = Vector(
     expectedFailureStreaming("labeled failures"),
-    s"0 was not equal to 1",
-    s"""${blue("c")} did not satisfy isSome(equalTo(1)).label("third")""",
+    """  ✗ Option was None
+      |  someB
+      |  b did not satisfy isSome(equalTo(1).label("eqB")).label("someB")
+      |  b = None""".stripMargin,
+    """  ✗ 0 was not equal to 1
+      |  eqC
+      |  c did not satisfy isSome(equalTo(1).label("eqC")).label("someC")
+      |  isSome = 0
+      |  c = Some(0)""".stripMargin,
+    """  ✗ 0 was not equal to 1
+      |  lblD
+      |  d did not satisfy isSome(equalTo(1))
+      |  isSome = 0
+      |  d = Some(0)""".stripMargin,
     assertSourceLocation()
   )
 
