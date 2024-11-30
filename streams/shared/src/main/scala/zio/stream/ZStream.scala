@@ -3491,8 +3491,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def toPull(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[R, Option[E], Chunk[A]]] =
     channel.toPull.map { pull =>
       pull.mapError(error => Some(error)).flatMap {
-        case Left(done)  => ZIO.fail(None)
-        case Right(elem) => ZIO.succeed(elem)
+        case Left(done)  => Exit.failNone
+        case Right(elem) => Exit.succeed(elem)
       }
     }
 
@@ -4318,7 +4318,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
           bufArray  <- ZIO.succeed(Array.ofDim[Byte](chunkSize))
           bytesRead <- ZIO.attemptBlockingIO(is.read(bufArray)).asSomeError
           bytes <- if (bytesRead < 0)
-                     ZIO.fail(None)
+                     Exit.failNone
                    else if (bytesRead == 0)
                      ZIO.succeed(Chunk.empty)
                    else if (bytesRead < chunkSize)

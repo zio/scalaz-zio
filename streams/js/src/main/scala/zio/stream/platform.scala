@@ -192,7 +192,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
               )
             )
         )
-        .on("end", () => cb(ZIO.fail(None)))
+        .on("end", () => cb(Exit.failNone))
         .on("error", (err: js.Dynamic) => cb(ZIO.fail(Some(new Throwable(err.toString)))))
     }
   }
