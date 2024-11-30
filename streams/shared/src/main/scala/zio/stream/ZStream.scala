@@ -3490,10 +3490,13 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    */
   def toPull(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[R, Option[E], Chunk[A]]] =
     channel.toPull.map { pull =>
-      pull.mapError(error => Some(error)).flatMap {
-        case Left(done)  => Exit.failNone
-        case Right(elem) => Exit.succeed(elem)
-      }
+      pull.foldZIO(
+        success = {
+          case Left(done)  => Exit.failNone
+          case Right(elem) => Exit.succeed(elem)
+        },
+        failure = error => Exit.fail(Some(error))
+      )
     }
 
   /**
