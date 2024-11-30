@@ -237,7 +237,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
             ZStream.repeatZIOChunkOption(
               for {
                 bytesRead <- ZIO.attempt(channel.read(reusableBuffer)).asSomeError
-                _         <- Exit.failNone.when(bytesRead == -1)
+                _         <- Exit.failNone.whenDiscard(bytesRead == -1)
                 chunk <- ZIO.succeed {
                            reusableBuffer.flip()
                            Chunk.fromByteBuffer(reusableBuffer)
