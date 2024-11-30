@@ -123,7 +123,7 @@ object ZKeyedPool {
                                       .extend(
                                         ZPool
                                           .make(
-                                            get(key).provideEnvironment(environment),
+                                            get(key).provideSomeEnvironment[Scope](environment.union[Scope](_)),
                                             range(key),
                                             ttl(key).getOrElse(Duration.Infinity)
                                           )
