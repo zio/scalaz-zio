@@ -54,14 +54,14 @@ The following snippet compiles, but it leads to race conditions due to a mutable
 
 ```scala mdoc:nest
 // Compiles but don't work properly
-var init = 0
+val init = collection.mutable.Seq(1,3,5)
 val counterRef = Ref.make(init)
 ```
 
 To correct this, we should change the `init` to be immutable:
 
 ```scala mdoc:nest
-val init = 0
+val init = Seq(1,3,5)
 val counterRef = Ref.make(init)
 ```
 
