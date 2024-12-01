@@ -131,6 +131,7 @@ object TestExecutor {
                           fullyQualifiedName
                         )
                       )
+                    _       <- Gen.deterministic.set(true)
                     result  <- Live.withLive(test)(_.timed).either
                     duration = result.map(_._1.toMillis).fold(_ => 1L, identity)
                     event =

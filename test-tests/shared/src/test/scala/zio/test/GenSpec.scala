@@ -7,6 +7,7 @@ import zio.test.TestAspect.{exceptJS, jvmOnly, nonFlaky, scala2Only}
 import zio.test.{check => Check, checkN => CheckN}
 
 import java.time.{Duration => _, _}
+import scala.annotation.nowarn
 import scala.math.Numeric.DoubleIsFractional
 
 object GenSpec extends ZIOBaseSpec {
@@ -776,6 +777,82 @@ object GenSpec extends ZIOBaseSpec {
       check(Gen.setOfN(2)(Gen.fromIterable(List(1, 2, 3)))) { set =>
         assertTrue(set.size == 2)
       }
-    }
+    },
+    suite("determinism")(
+      test("fromIterable and then nondeterministic") {
+        val gen = for {
+          i  <- Gen.fromIterable(1 to 3)
+          id <- Gen.uuid
+        } yield (i, id)
+        assertZIO(gen.map(_._1).runCollect)(equalTo(List(1, 2, 3))) &&
+        assertZIO(gen.map(_._2).runCollect.map(_.toSet))(hasSize(equalTo(3)))
+      },
+      test("nondeterministic and then fromIterable") {
+        val gen = for {
+          id <- Gen.uuid
+          i  <- Gen.fromIterable(1 to 3)
+        } yield (i, id)
+        assertZIO(gen.runCollect)(hasSize(equalTo(1))) &&
+        assertZIO(gen.map(_._1).runCollectN(3))(forall(isOneOf(1 to 3))) &&
+        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+      },
+      test("concat and then nondeterministic") {
+        val gen = for {
+          i  <- Gen.fromIterable(1 to 3) ++ Gen.const(4)
+          id <- Gen.uuid
+        } yield (i, id)
+        assertZIO(gen.map(_._1).runCollect)(equalTo(List(1, 2, 3, 4))) &&
+        assertZIO(gen.map(_._2).runCollect.map(_.toSet))(hasSize(equalTo(4)))
+      },
+      test("nondeterministic and then concat") {
+        val gen = for {
+          id <- Gen.uuid
+          i  <- Gen.fromIterable(1 to 3) ++ Gen.const(4)
+        } yield (i, id)
+        assertZIO(gen.runCollect)(hasSize(equalTo(1))) &&
+        assertZIO(gen.map(_._1).runCollectN(3))(forall(isOneOf(1 to 4))) &&
+        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+      },
+      test("const is deterministic") {
+        val gen = for {
+          id <- Gen.const("id")
+          i  <- Gen.fromIterable(1 to 3)
+        } yield (i, id)
+        assertZIO(gen.runCollect)(equalTo(List(1 -> "id", 2 -> "id", 3 -> "id")))
+      },
+      test("infinite iterable works when deterministic") {
+        @nowarn("cat=deprecation")
+        val gen = for {
+          i <- Gen.fromIterable(Stream.iterate(1)(_ + 1))
+          id <- Gen.uuid.mapZIO(ZIO.succeedNow) // access something deprecated on Scala 2.12
+        } yield (i, id)
+        assertZIO(gen.map(_._1).runCollectN(3))(equalTo(List(1, 2, 3))) &&
+        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+      },
+      test("infinite iterable doesn't work when nondeterministic") {
+        @nowarn("cat=deprecation")
+        val gen = for {
+          id <- Gen.uuid.mapZIO(ZIO.succeedNow) // access something deprecated on Scala 2.12
+          i <- Gen.fromIterable(Stream.iterate(1)(_ + 1).map { n =>
+                 if (n % 15 == 0) throw new IllegalStateException("FizzBuzz") else n
+               })
+        } yield (i, id)
+        assertZIO(gen.runCollectN(3).exit)(
+          dies(isSubtype[IllegalStateException](hasMessage(equalTo("FizzBuzz"))))
+        )
+      },
+      test("boolean can be deterministic") {
+        assertZIO(Gen.boolean.runCollect)(equalTo(List(false, true)))
+      },
+      test("boolean can be nondeterministic") {
+        assertZIO(Gen.int.flatMap(_ => Gen.boolean).runCollect)(hasSize(equalTo(1)))
+      },
+      test("option can be deterministic") {
+        assertZIO(Gen.option(Gen.boolean).runCollect)(equalTo(List(None, Some(false), Some(true))))
+      },
+      test("option can be nondeterministic") {
+        assertZIO(Gen.int.flatMap(_ => Gen.option(Gen.boolean)).runCollect)(hasSize(equalTo(1)))
+      }
+    )
   )
 }
