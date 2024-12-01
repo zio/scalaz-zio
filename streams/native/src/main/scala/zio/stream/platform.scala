@@ -223,7 +223,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
             ZStream.repeatZIOChunkOption(
               for {
                 bytesRead <- ZIO.attempt(channel.read(reusableBuffer)).asSomeError
-                _         <- ZIO.fail(None).when(bytesRead == -1)
+                _         <- Exit.failNone.when(bytesRead == -1)
                 chunk <- ZIO.succeed {
                            reusableBuffer.flip()
                            Chunk.fromByteBuffer(reusableBuffer)
@@ -246,7 +246,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           bufArray  <- ZIO.succeed(Array.ofDim[Char](chunkSize))
           bytesRead <- ZIO.attemptBlockingIO(reader.read(bufArray)).asSomeError
           chars <- if (bytesRead < 0)
-                     ZIO.fail(None)
+                     Exit.failNone
                    else if (bytesRead == 0)
                      ZIO.succeed(Chunk.empty)
                    else if (bytesRead < chunkSize)
