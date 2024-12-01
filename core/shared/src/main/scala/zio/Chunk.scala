@@ -352,7 +352,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
         if (iterator.hasNextAt(index))
           p(iterator.nextAt(index)).flatMap(b => if (b) ZIO.succeed(drop(index + 1)) else loop(index + 1))
         else
-          ZIO.succeed(Chunk.empty)
+          Exit.emptyChunk
 
       loop(0)
     }
@@ -386,7 +386,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
         if (iterator.hasNextAt(index))
           p(iterator.nextAt(index)).flatMap(b => if (b) loop(index + 1) else ZIO.succeed(drop(index)))
         else
-          ZIO.succeed(Chunk.empty)
+          Exit.emptyChunk
 
       loop(0)
     }

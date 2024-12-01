@@ -3700,7 +3700,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def fromFuture[A](make: ExecutionContext => scala.concurrent.Future[A])(implicit trace: Trace): Task[A] =
     ZIO.executorWith { executor =>
       ZIO.suspend {
-        import scala.util.{Success, Failure}
+        import scala.util.{Failure, Success}
 
         val ec = executor.asExecutionContext
         val f  = make(ec)
@@ -3737,7 +3737,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    *   context
    */
   private[zio] def fromFutureNow[A](f: concurrent.Future[A])(implicit trace: Trace, unsafe: Unsafe): Task[A] = {
-    import scala.util.{Success, Failure}
+    import scala.util.{Failure, Success}
     f.value match {
       case None =>
         ZIO.executorWith { executor =>
@@ -6827,11 +6827,12 @@ object Exit extends Serializable {
   private[zio] def boolean(b: Boolean): Exit[Nothing, Boolean] =
     if (b) Exit.`true` else Exit.`false`
 
-  private[zio] val `true`: Exit[Nothing, Boolean]           = Success(true)
-  private[zio] val `false`: Exit[Nothing, Boolean]          = Success(false)
-  private[zio] val none: Exit[Nothing, Option[Nothing]]     = Success(None)
-  private[zio] val failNone: Exit[Option[Nothing], Nothing] = Failure(Cause.fail(None))
-  private[zio] val failUnit: Exit[Unit, Nothing]            = Failure(Cause.fail(()))
+  private[zio] val `true`: Exit[Nothing, Boolean]            = Success(true)
+  private[zio] val `false`: Exit[Nothing, Boolean]           = Success(false)
+  private[zio] val none: Exit[Nothing, Option[Nothing]]      = Success(None)
+  private[zio] val emptyChunk: Exit[Nothing, Chunk[Nothing]] = Success(Chunk.empty)
+  private[zio] val failNone: Exit[Option[Nothing], Nothing]  = Failure(Cause.fail(None))
+  private[zio] val failUnit: Exit[Unit, Nothing]             = Failure(Cause.fail(()))
 
   private[zio] val empty: Exit[Nothing, Nothing] = Exit.failCause[Nothing](Cause.empty)
 }
