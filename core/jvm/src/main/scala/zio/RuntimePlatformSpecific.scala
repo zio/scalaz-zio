@@ -48,7 +48,7 @@ private[zio] trait RuntimePlatformSpecific {
 
   def enableLoomBasedExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
     ZLayer.suspend {
-      createLoomExecutor.fold(
+      sharedLoomExecutor.fold(
         ZLayer.fail(_),
         Runtime.setExecutor
       )
@@ -56,13 +56,14 @@ private[zio] trait RuntimePlatformSpecific {
 
   def enableLoomBasedBlockingExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
     ZLayer.suspend {
-      createLoomExecutor.fold(
+      sharedLoomExecutor.fold(
         ZLayer.fail(_),
         Runtime.setBlockingExecutor
       )
     }
 
-  private def createLoomExecutor(implicit trace: Trace): Either[LoomNotAvailableException, Executor] =
+  // a single Loom executor instance that can be shared between blocking and non-blocking fibers
+  private lazy val sharedLoomExecutor: Either[LoomNotAvailableException, Executor] =
     LoomSupport.newVirtualThreadPerTaskExecutor() match {
       case None           => Left(LoomNotAvailableException("Loom API not available", null))
       case Some(executor) => Right(Executor.fromJavaExecutor(executor))
