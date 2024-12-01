@@ -233,14 +233,14 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
   def collectWhileZIO[R, E, B](pf: PartialFunction[A, ZIO[R, E, B]])(implicit
     trace: Trace
   ): ZIO[R, E, Chunk[B]] =
-    if (isEmpty) Exit.emptyChunk else self.materialize.collectWhileZIO(pf)
+    if (isEmpty) ZIO.succeed(Chunk.empty) else self.materialize.collectWhileZIO(pf)
 
   /**
    * Returns a filtered, mapped subset of the elements of this chunk based on a
    * .
    */
   def collectZIO[R, E, B](pf: PartialFunction[A, ZIO[R, E, B]])(implicit trace: Trace): ZIO[R, E, Chunk[B]] =
-    if (isEmpty) Exit.emptyChunk else self.materialize.collectZIO(pf)
+    if (isEmpty) ZIO.succeed(Chunk.empty) else self.materialize.collectZIO(pf)
 
   /**
    * Determines whether this chunk and the specified chunk have the same length
