@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkzio_site=self.webpackChunkzio_site||[]).push([[18121],{68070:t=>{t.exports=JSON.parse('{"tags":[{"label":"chat bot","permalink":"/blog/tags/chat-bot","count":1},{"label":"announcement","permalink":"/blog/tags/announcement","count":2},{"label":"documentation","permalink":"/blog/tags/documentation","count":1}]}')}}]);
