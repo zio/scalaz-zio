@@ -3639,14 +3639,15 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def foreachParDiscard[R, E, A](
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.succeed(as).flatMap { as =>
-      as.size match {
+    ZIO.suspendSucceed {
+      val as0 = as
+      as0.size match {
         case 0 => Exit.unit
-        case 1 => f(as.head).unit
+        case 1 => f(as0.head).unit
         case size =>
           ZIO.parallelismWith {
-            case Some(n) if n < size => foreachParDiscard(n)(as, size)(f)
-            case _                   => foreachParUnboundedDiscard(as, size)(f)
+            case Some(n) if n < size => foreachParDiscard(n)(as0, size)(f)
+            case _                   => foreachParUnboundedDiscard(as0, size)(f)
           }
       }
     }
@@ -6336,11 +6337,11 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
                     case _                          => Exit.failCause(cause.stripFailures)
                   }),
               _ => {
-                  val it = fibers.iterator
-                  ZIO.whileLoop(it.hasNext)(it.next().inheritAll)(ZIO.unitFn)
-            }
-          )
-            }
+                val it = fibers.iterator
+                ZIO.whileLoop(it.hasNext)(it.next().inheritAll)(ZIO.unitFn)
+              }
+            )
+          }
         }
     }
 }
