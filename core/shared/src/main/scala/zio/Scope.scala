@@ -349,30 +349,30 @@ object Scope {
                   case ExecutionStrategy.Sequential =>
                     (
                       ZIO
-                        .foreach(fins: Iterable[(Long, Finalizer)]) { case (_, fin) =>
+                        .foreach(fins.values) { fin =>
                           update(fin).apply(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAll(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllDiscard),
                       Exited(nextKey, exit, update)
                     )
 
                   case ExecutionStrategy.Parallel =>
                     (
                       ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
+                        .foreachPar(fins.values) { fin =>
+                          update(fin)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllParDiscard),
                       Exited(nextKey, exit, update)
                     )
 
                   case ExecutionStrategy.ParallelN(n) =>
                     (
                       ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
+                        .foreachPar(fins.values) { fin =>
+                          update(fin)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit))
+                        .flatMap(Exit.collectAllParDiscard)
                         .withParallelism(n),
                       Exited(nextKey, exit, update)
                     )

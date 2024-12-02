@@ -1802,9 +1802,9 @@ object ZIOSpec extends ZIOBaseSpec {
         val successes = Gen.successes(smallInts)
         val exits     = Gen.either(causes, successes).map(_.fold(Exit.failCause, Exit.succeed))
         check(exits, exits, exits) { (exit1, exit2, exit3) =>
-          val zio1  = ZIO.done(exit1)
-          val zio2  = ZIO.done(exit2)
-          val zio3  = ZIO.done(exit3)
+          val zio1  = exit1
+          val zio2  = exit2
+          val zio3  = exit3
           val left  = (zio1 orElse zio2) orElse zio3
           val right = zio1 orElse (zio2 orElse zio3)
           for {
@@ -2963,7 +2963,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause))
                          .fork
                      }
-            cause <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            cause <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(cause.defects.length == 1)
         } @@ exceptJS(nonFlaky)
 

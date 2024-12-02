@@ -50,7 +50,7 @@ trait Runtime[+R] { self =>
     ZIO.fiberIdWith { fiberId =>
       ZIO.asyncInterrupt[Any, E, A] { callback =>
         val fiber = unsafe.fork(zio)(trace, Unsafe.unsafe)
-        fiber.unsafe.addObserver(exit => callback(ZIO.done(exit)))(Unsafe.unsafe)
+        fiber.unsafe.addObserver(callback(_))(Unsafe.unsafe)
         Left(ZIO.blocking(fiber.interruptAs(fiberId)))
       }
     }

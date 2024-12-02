@@ -283,10 +283,9 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
             sinkFiber.join.raceWith(scheduleFiber.join)(
               (sinkExit, _) =>
                 scheduleFiber.interrupt *>
-                  ZIO.done(sinkExit).map { case (leftovers, b) => handleSide(leftovers, b, None) },
+                  sinkExit.map { case (leftovers, b) => handleSide(leftovers, b, None) },
               (scheduleExit, _) =>
-                ZIO
-                  .done(scheduleExit)
+                scheduleExit
                   .foldCauseZIO(
                     _.failureOrCause match {
                       case Left(_) =>
@@ -918,9 +917,9 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
           latchR   <- ZStream.Handoff.make[Unit]
           _        <- (self.channel.concatMap(ZChannel.writeChunk(_)) >>> producer(left, latchL)).runIn(scope).forkIn(scope)
           _        <- (that.channel.concatMap(ZChannel.writeChunk(_)) >>> producer(right, latchR)).runIn(scope).forkIn(scope)
-          pullLeft  = latchL.offer(()) *> left.take.flatMap(ZIO.done(_))
-          pullRight = latchR.offer(()) *> right.take.flatMap(ZIO.done(_))
-        } yield ZStream.unfoldZIO(s)(s => f(s, pullLeft, pullRight).flatMap(ZIO.done(_).unsome)).channel
+          pullLeft  = latchL.offer(()) *> left.take.unexit
+          pullRight = latchR.offer(()) *> right.take.unexit
+        } yield ZStream.unfoldZIO(s)(s => f(s, pullLeft, pullRight).unexit.unsome).channel
       }
     )
   }
@@ -959,9 +958,9 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
           latchR   <- ZStream.Handoff.make[Unit]
           _        <- (self.channel >>> producer(left, latchL)).runIn(scope).forkIn(scope)
           _        <- (that.channel >>> producer(right, latchR)).runIn(scope).forkIn(scope)
-          pullLeft  = latchL.offer(()) *> left.take.flatMap(_.done)
-          pullRight = latchR.offer(()) *> right.take.flatMap(_.done)
-        } yield ZStream.unfoldChunkZIO(s)(s => f(s, pullLeft, pullRight).flatMap(ZIO.done(_).unsome)).channel
+          pullLeft  = latchL.offer(()) *> left.take.flatMap(_.exit)
+          pullRight = latchR.offer(()) *> right.take.flatMap(_.exit)
+        } yield ZStream.unfoldChunkZIO(s)(s => f(s, pullLeft, pullRight).unexit.unsome).channel
       }
     )
   }
@@ -1386,7 +1385,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    * failures while `Exit.Success` values translate to stream elements.
    */
   def flattenExit[E1 >: E, A1](implicit ev: A <:< Exit[E1, A1], trace: Trace): ZStream[R, E1, A1] =
-    mapZIO(a => ZIO.done(ev(a)))
+    mapZIO(ev(_))
 
   /**
    * Unwraps [[Exit]] values that also signify end-of-stream by failing with
@@ -1394,7 +1393,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    *
    * For `Exit[E, A]` values that do not signal end-of-stream, prefer:
    * {{{
-   * stream.mapZIO(ZIO.done(_))
+   * stream.mapZIO(identity)
    * }}}
    */
   def flattenExitOption[E1 >: E, A1](implicit
@@ -1998,8 +1997,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     import HaltStrategy.{Either, Left, Right}
 
     def handler(terminate: Boolean)(exit: Exit[E1, Any]): ZChannel.MergeDecision[R1, E1, Any, E1, Any] =
-      if (terminate || !exit.isSuccess) ZChannel.MergeDecision.done(ZIO.done(exit))
-      else ZChannel.MergeDecision.await(ZIO.done(_))
+      if (terminate || !exit.isSuccess) ZChannel.MergeDecision.done(exit)
+      else ZChannel.MergeDecision.await(ZIO.identityFn)
 
     new ZStream(
       ZChannel.succeed(strategy).flatMap { strategy =>
@@ -3820,8 +3819,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
         right <- that.toPull.map(pullNonEmpty(_))
         pull <- (ZStream.fromZIOOption {
                   left.raceWith(right)(
-                    (leftDone, rightFiber) => ZIO.done(leftDone).zipWith(rightFiber.join)((_, _, true)),
-                    (rightDone, leftFiber) => ZIO.done(rightDone).zipWith(leftFiber.join)((r, l) => (l, r, false))
+                    (leftDone, rightFiber) => leftDone.zipWith(rightFiber.join)((_, _, true)),
+                    (rightDone, leftFiber) => rightDone.zipWith(leftFiber.join)((r, l) => (l, r, false))
                   )
                 }.flatMap { case (l, r, leftFirst) =>
                   ZStream.fromZIO(Ref.make(l(l.size - 1) -> r(r.size - 1))).flatMap { latest =>
@@ -5580,7 +5579,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     def emit[A](a: A)(implicit trace: Trace): IO[Nothing, Chunk[A]]         = ZIO.succeed(Chunk.single(a))
     def emit[A](as: Chunk[A])(implicit trace: Trace): IO[Nothing, Chunk[A]] = ZIO.succeed(as)
     def fromDequeue[E, A](d: Dequeue[stream.Take[E, A]])(implicit trace: Trace): IO[Option[E], Chunk[A]] =
-      d.take.flatMap(_.done)
+      d.take.flatMap(_.exit)
     def fail[E](e: E)(implicit trace: Trace): IO[Option[E], Nothing] = ZIO.fail(Some(e))
     def failCause[E](c: Cause[E])(implicit trace: Trace): IO[Option[E], Nothing] =
       Exit.failCause(c.map(Some(_)))
@@ -5884,7 +5883,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
      * terminates with the specified cause if this `Exit` is a `Failure`.
      */
     def done(exit: Exit[E, A])(implicit trace: Trace): B =
-      apply(ZIO.done(exit.mapBothExit(e => Some(e), a => Chunk.single(a))))
+      apply(exit.mapBothExit(e => Some(e), a => Chunk.single(a)))
 
     /**
      * Terminates with an end of stream signal.

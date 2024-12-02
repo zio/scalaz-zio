@@ -90,7 +90,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] =
             ZChannel.unwrap(
               output.take
-                .flatMap(_.done)
+                .flatMap(_.exit)
                 .fold(
                   maybeError =>
                     ZChannel.fromZIO(output.shutdown) *>
@@ -132,7 +132,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
                  if (_)
                    Pull.end
                  else
-                   output.take.flatMap(_.done).onError(_ => done.set(true) *> output.shutdown)
+                   output.take.flatMap(_.exit).onError(_ => done.set(true) *> output.shutdown)
                }
       } yield pull
     }.flatMap(repeatZIOChunkOption(_))
@@ -162,7 +162,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
     } yield {
       lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] = ZChannel.unwrap(
         output.take
-          .flatMap(_.done)
+          .flatMap(_.exit)
           .foldCauseZIO(
             maybeError =>
               output.shutdown as (maybeError.failureOrCause match {
