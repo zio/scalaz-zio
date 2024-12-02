@@ -436,10 +436,9 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     uniform.map(n => -math.log(1 - n))
 
   /**
-   * Constructs a deterministic generator that only generates the specified
-   * fixed values. Note: This generator will attempt to materialize the entire
-   * iterable, so it should not be used with infinite iterables. For infinite 
-   * sequences, consider using Gen.unfoldGen or Gen.fromZIO instead.
+   * Constructs a deterministic generator that generates values from the specified
+   * iterable. For infinite iterables, it will generate values from a bounded prefix
+   * determined by the current size parameter.
    */
   def fromIterable[R, A](
     as: Iterable[A],
@@ -447,12 +446,17 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
   )(implicit trace: Trace): Gen[R, A] =
     if (as.isEmpty) empty
     else Gen {
-      // Convert to vector once to avoid re-traversing
-      val vec = as.toVector
-      // Generate a new random index for each sample
-      ZStream.fromZIO(Random.nextIntBounded(vec.length)).map { index =>
-        val a = vec(index)
-        Sample.unfold(a)(a => (a, shrinker(a)))
+      // Take a bounded prefix for each sample to handle infinite iterables
+      ZStream.repeatZIO {
+        for {
+          size <- Sized.size
+          // Take a bounded prefix based on size
+          vec = as.take(math.max(1, size)).toVector
+          index <- Random.nextIntBounded(vec.length)
+        } yield {
+          val a = vec(index)
+          Sample.unfold(a)(a => (a, shrinker(a)))
+        }
       }
     }
 
