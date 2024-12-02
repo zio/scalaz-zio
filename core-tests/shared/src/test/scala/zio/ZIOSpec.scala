@@ -1802,11 +1802,8 @@ object ZIOSpec extends ZIOBaseSpec {
         val successes = Gen.successes(smallInts)
         val exits     = Gen.either(causes, successes).map(_.fold(Exit.failCause, Exit.succeed))
         check(exits, exits, exits) { (exit1, exit2, exit3) =>
-          val zio1  = exit1
-          val zio2  = exit2
-          val zio3  = exit3
-          val left  = (zio1 orElse zio2) orElse zio3
-          val right = zio1 orElse (zio2 orElse zio3)
+          val left = (exit1 orElse exit2) orElse exit3
+          val right = exit1 orElse (exit2 orElse exit3)
           for {
             left  <- left.exit
             right <- right.exit
