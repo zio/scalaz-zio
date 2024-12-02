@@ -101,7 +101,7 @@ trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific { self =>
           () => runtime.unsafe.run(Fiber.dumpAll)(trace, Unsafe.unsafe).getOrThrowFiberFailure()(Unsafe.unsafe)
 
         if (System.os.isWindows) {
-          Platform.addSignalHandler("INT", dumpFibers)(Unsafe.unsafe)
+          Platform.addSignalHandler("SIGINT", dumpFibers)(Unsafe.unsafe)
         } else {
           Platform.addSignalHandler("INFO", dumpFibers)(Unsafe.unsafe)
           Platform.addSignalHandler("USR1", dumpFibers)(Unsafe.unsafe)
