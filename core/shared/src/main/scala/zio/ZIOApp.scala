@@ -91,8 +91,8 @@ trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific {
 
       (for {
         runtime <- ZIO.runtime[Environment with ZIOAppArgs]
-        _ <- installSignalHandlers(runtime)
-        result <- runtime.run(ZIO.scoped[Environment with ZIOAppArgs](run))
+        _       <- installSignalHandlers(runtime)
+        result  <- runtime.run(ZIO.scoped[Environment with ZIOAppArgs](run))
       } yield result).provideLayer(newLayer)
     }
 
@@ -137,9 +137,9 @@ object ZIOApp {
    * program, as well as a hook into the ZIO runtime configuration.
    */
   def apply[R](
-                run0: ZIO[R with ZIOAppArgs with Scope, Any, Any],
-                bootstrap0: ZLayer[ZIOAppArgs, Any, R]
-              )(implicit tagged: EnvironmentTag[R]): ZIOApp =
+    run0: ZIO[R with ZIOAppArgs with Scope, Any, Any],
+    bootstrap0: ZLayer[ZIOAppArgs, Any, R]
+  )(implicit tagged: EnvironmentTag[R]): ZIOApp =
     new ZIOApp {
       type Environment = R
 
