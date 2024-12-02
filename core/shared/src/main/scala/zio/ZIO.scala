@@ -3451,15 +3451,23 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   final def foreach[R, E, A, B: ClassTag](in: Array[A])(f: A => ZIO[R, E, B])(implicit
     trace: Trace
   ): ZIO[R, E, Array[B]] =
-    if (in.isEmpty) ZIO.succeed(Array.empty[B])
-    else
-      ZIO.suspendSucceed {
-        val iterator = in.iterator
-        val builder  = Array.newBuilder[B]
-        builder.sizeHint(in.length)
+    in.length match {
+      case 0 => ZIO.succeed(Array.empty[B])
+      case 1 => ZIO.suspendSucceed(f(in(0)).map(Array(_)))
+      case size =>
+        ZIO.suspendSucceed {
+          val iterator = in.iterator
+          val arr      = Array.ofDim[B](size)
+          var i        = 0
 
-        ZIO.whileLoop(iterator.hasNext)(f(iterator.next()))(builder += _).as(builder.result())
-      }
+          ZIO
+            .whileLoop(iterator.hasNext)(f(iterator.next())) { b =>
+              arr(i) = b
+              i += 1
+            }
+            .as(arr)
+        }
+    }
 
   /**
    * Applies the function `f` to each element of the `Map[Key, Value]` and
@@ -3471,15 +3479,18 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def foreach[R, E, Key, Key2, Value, Value2](
     map: Map[Key, Value]
   )(f: (Key, Value) => ZIO[R, E, (Key2, Value2)])(implicit trace: Trace): ZIO[R, E, Map[Key2, Value2]] =
-    if (map.isEmpty) ZIO.succeed(Map.empty)
-    else
-      ZIO.suspendSucceed {
-        val iterator = map.iterator
-        val builder  = Map.newBuilder[Key2, Value2]
+    map.size match {
+      case 0 => ZIO.succeed(Map.empty)
+      case 1 => ZIO.suspendSucceed(f.tupled(map.head).map(Map.apply(_)))
+      case _ =>
+        ZIO.suspendSucceed {
+          val iterator = map.iterator
+          val builder  = Map.newBuilder[Key2, Value2]
 
-        val ft = f.tupled
-        ZIO.whileLoop(iterator.hasNext)(ft(iterator.next()))(builder += _).as(builder.result())
-      }
+          val ft = f.tupled
+          ZIO.whileLoop(iterator.hasNext)(ft(iterator.next()))(builder += _).as(builder.result())
+        }
+    }
 
   /**
    * Applies the function `f` if the argument is non-empty and returns the
@@ -3488,7 +3499,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   final def foreach[R, E, A, B](in: Option[A])(f: A => ZIO[R, E, B])(implicit
     trace: Trace
   ): ZIO[R, E, Option[B]] =
-    in.fold[ZIO[R, E, Option[B]]](none)(f(_).map(Some(_)))
+    in.fold[ZIO[R, E, Option[B]]](none)(a => ZIO.suspendSucceed(f(a).map(Some(_))))
 
   /**
    * Applies the function `f` to each element of the `NonEmptyChunk[A]` and
@@ -3554,12 +3565,17 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   )(
     f: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
-    if (as.isEmpty) ZIO.succeed(bf.fromSpecific(as)(Nil))
-    else
-      ZIO.parallelismWith {
-        case Some(n) => foreachPar(n)(as)(f)
-        case None    => foreachParUnbounded(as)(f)
-      }
+    as.size match {
+      case 0 =>
+        ZIO.succeed(bf.fromSpecific(as)(Nil))
+      case 1 =>
+        ZIO.suspendSucceed(f(as.head)).map(b => bf.fromSpecific(as)(as.map(_ => b)))
+      case size =>
+        ZIO.parallelismWith {
+          case Some(n) if n < size => foreachPar(n)(as, size)(f)
+          case _                   => foreachParUnbounded(as, size)(f)
+        }
+    }
 
   /**
    * Applies the function `f` to each element of the `Set[A]` in parallel, and
@@ -3623,9 +3639,16 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def foreachParDiscard[R, E, A](
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.parallelismWith {
-      case Some(n) => foreachParDiscard(n)(as)(f)
-      case None    => foreachParUnboundedDiscard(as)(f)
+    ZIO.succeed(as).flatMap { as =>
+      as.size match {
+        case 0 => Exit.unit
+        case 1 => f(as.head).unit
+        case size =>
+          ZIO.parallelismWith {
+            case Some(n) if n < size => foreachParDiscard(n)(as, size)(f)
+            case _                   => foreachParUnboundedDiscard(as, size)(f)
+          }
+      }
     }
 
   /**
@@ -6229,72 +6252,68 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   private[zio] def succeedNow[A](a: A): UIO[A] =
     succeed(a)(Trace.empty)
 
-  private def collectAllParUnboundedDiscard[R, E, A](as: => Iterable[ZIO[R, E, A]])(implicit
+  private def collectAllParUnboundedDiscard[R, E, A](as: Iterable[ZIO[R, E, A]], size: Int)(implicit
     trace: Trace
   ): ZIO[R, E, Unit] =
-    foreachParUnboundedDiscard(as)(ZIO.identityFn)
+    foreachParUnboundedDiscard(as, size)(ZIO.identityFn)
 
   private def foreachPar[R, E, A, B, Collection[+Element] <: Iterable[Element]](n: => Int)(
-    as: Collection[A]
+    as: Collection[A],
+    size: Int
   )(
     fn: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
     ZIO.suspendSucceed {
-      val array = Array.ofDim[AnyRef](as.size)
+      val array = Array.ofDim[AnyRef](size)
       val zioFunction: ((A, Int)) => ZIO[R, E, Any] = { case (a, i) =>
         fn(a).flatMap(b => ZIO.succeed(array(i) = b.asInstanceOf[AnyRef]))
       }
-      foreachParDiscard(n)(as.zipWithIndex)(zioFunction) *>
+      foreachParDiscard(n)(as.zipWithIndex, size)(zioFunction) *>
         ZIO.succeed(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
     }
 
   private def foreachParDiscard[R, E, A](
-    n: => Int
-  )(as0: => Iterable[A])(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.suspendSucceed {
-      val as   = as0
-      val size = as.size
-      if (size == 0) Exit.unit
-      else if (size == 1) f(as.head).unit
-      else {
-
+    n: Int
+  )(as: Iterable[A], size: Int)(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
+    size match {
+      case 0 => Exit.unit
+      case 1 => f(as.head).unit
+      case size =>
         def worker(queue: Queue[A]): ZIO[R, E, Unit] =
           queue.poll.flatMap {
             case Some(a) => f(a) *> worker(queue)
-            case None    => Exit.unit
+            case _       => Exit.unit
           }
-
-        for {
-          queue <- Queue.bounded[A](size)
-          _     <- queue.offerAll(as)
-          _     <- ZIO.collectAllParUnboundedDiscard(ZIO.replicate(n.min(size))(worker(queue)))
-        } yield ()
-      }
+        Queue.bounded[A](size).flatMap { queue =>
+          val nWorkers = n.min(size)
+          val workers  = ZIO.replicate(nWorkers)(worker(queue))
+          queue.offerAll(as) *> ZIO.collectAllParUnboundedDiscard(workers, nWorkers)
+        }
     }
 
   private def foreachParUnbounded[R, E, A, B, Collection[+Element] <: Iterable[Element]](
-    as: Collection[A]
+    as: Collection[A],
+    size: Int
   )(
     f: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
     ZIO.suspendSucceed {
-      val array = Array.ofDim[AnyRef](as.size)
+      val array = Array.ofDim[AnyRef](size)
       val zioFunction: ((A, Int)) => ZIO[R, E, Any] = { case (a, i) =>
         f(a).flatMap(b => ZIO.succeed(array(i) = b.asInstanceOf[AnyRef]))
       }
-      foreachParUnboundedDiscard(as.zipWithIndex)(zioFunction) *>
+      foreachParUnboundedDiscard(as.zipWithIndex, size)(zioFunction) *>
         ZIO.succeed(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
     }
 
   private def foreachParUnboundedDiscard[R, E, A](
-    as0: => Iterable[A]
+    as: Iterable[A],
+    size: Int
   )(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.suspendSucceed {
-      val as   = as0
-      val size = as.size
-      if (size == 0) Exit.unit
-      else if (size == 1) f(as.head).unit
-      else {
+    size match {
+      case 0 => Exit.unit
+      case 1 => f(as.head).unit
+      case size =>
         ZIO.uninterruptibleMask { restore =>
           val promise = Promise.unsafe.make[Unit, Unit](FiberId.None)(Unsafe)
           val ref     = new java.util.concurrent.atomic.AtomicInteger(size)
@@ -6311,16 +6330,18 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
             restore(promise.await).foldCauseZIO(
               cause =>
                 ZIO
-                  .foreachParUnbounded(fibers)(_.interrupt)
+                  .foreachParUnbounded(fibers, size)(_.interrupt)
                   .flatMap(Exit.collectAllPar(_) match {
                     case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
                     case _                          => Exit.failCause(cause.stripFailures)
                   }),
-              _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
-            )
-          }
+              _ => {
+                  val it = fibers.iterator
+                  ZIO.whileLoop(it.hasNext)(it.next().inheritAll)(ZIO.unitFn)
+            }
+          )
+            }
         }
-      }
     }
 }
 
