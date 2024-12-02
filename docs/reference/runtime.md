@@ -1,5 +1,5 @@
 ---
-id: with-virtual-threads
+id: runtime
 title: "How to enable Virtual Threads (Project Loom) ?"
 ---
 
