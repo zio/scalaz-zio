@@ -131,6 +131,127 @@ object RefSpec extends ZIOBaseSpec {
                       case Changed => Closed
                     }
         } yield assert(value1)(equalTo(Changed)) && assert(value2)(equalTo(Closed))
+      },
+      test("getAndIncrement[Int]") {
+        for {
+          ref    <- Ref.make(1)
+          value1 <- ref.getAndIncrement
+          value2 <- ref.get
+        } yield assertTrue(value1 == 1, value2 == 2)
+      },
+      test("getAndIncrement[Long]") {
+        for {
+          ref    <- Ref.make(1L)
+          value1 <- ref.getAndIncrement
+          value2 <- ref.get
+        } yield assertTrue(value1 == 1L, value2 == 2L)
+      },
+      test("getAndDecrement[Int]") {
+        for {
+          ref    <- Ref.make(1)
+          value1 <- ref.getAndDecrement
+          value2 <- ref.get
+        } yield assertTrue(value1 == 1, value2 == 0)
+      },
+      test("getAndDecrement[Long]") {
+        for {
+          ref    <- Ref.make(1L)
+          value1 <- ref.getAndDecrement
+          value2 <- ref.get
+        } yield assertTrue(value1 == 1L, value2 == 0L)
+      },
+      test("getAndAdd[Int]") {
+        for {
+          ref    <- Ref.make(1)
+          value1 <- ref.getAndAdd(10)
+          value2 <- ref.get
+        } yield assertTrue(value1 == 1, value2 == 11)
+      },
+      test("getAndAdd[Long]") {
+        for {
+          ref    <- Ref.make(1L)
+          value1 <- ref.getAndAdd(10)
+          value2 <- ref.getAndAdd(20L)
+          value3 <- ref.get
+        } yield assertTrue(value1 == 1L, value2 == 11L, value3 == 31L)
+      },
+      test("incrementAndGet[Int]") {
+        for {
+          ref   <- Ref.make(1)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2)
+      },
+      test("incrementAndGet[Long]") {
+        for {
+          ref   <- Ref.make(1L)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2L)
+      },
+      test("decrementAndGet[Int]") {
+        for {
+          ref   <- Ref.make(1)
+          value <- ref.decrementAndGet
+        } yield assertTrue(value == 0)
+      },
+      test("decrementAndGet[Long]") {
+        for {
+          ref   <- Ref.make(1L)
+          value <- ref.decrementAndGet
+        } yield assertTrue(value == 0L)
+      },
+      test("addAndGet[Int]") {
+        for {
+          ref   <- Ref.make(1)
+          value <- ref.addAndGet(10)
+        } yield assertTrue(value == 11)
+      },
+      test("addAndGet[Long]") {
+        for {
+          ref    <- Ref.make(1L)
+          value1 <- ref.addAndGet(10)
+          value2 <- ref.addAndGet(20L)
+        } yield assertTrue(value1 == 11L, value2 == 31L)
+      },
+      test("incrementAndGet[Byte]") {
+        for {
+          ref   <- Ref.make(1.toByte)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2.toByte)
+      },
+      test("incrementAndGet[Char]") {
+        for {
+          ref   <- Ref.make(1.toChar)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2.toChar)
+      },
+      test("incrementAndGet[Short]") {
+        for {
+          ref   <- Ref.make(1.toShort)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2.toShort)
+      },
+      test("incrementAndGet[Double]") {
+        for {
+          ref   <- Ref.make(1.0d)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2.0d)
+      },
+      test("incrementAndGet[Float]") {
+        for {
+          ref   <- Ref.make(1.0f)
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == 2.0f)
+      },
+      test("incrementAndGet[BigInt]") {
+        for {
+          ref   <- Ref.make(BigInt(1))
+          value <- ref.incrementAndGet
+        } yield assertTrue(value == BigInt(2))
+      },
+      test("Ref[String].incrementAndGet does not compile") {
+        val result   = typeCheck(""" Ref.make("").incrementAndGet """)
+        val expected = "value incrementAndGet is not a member of zio.UIO[zio.Ref[String]]"
+        assertZIO(result)(isLeft(startsWithString(expected)))
       }
     )
   )

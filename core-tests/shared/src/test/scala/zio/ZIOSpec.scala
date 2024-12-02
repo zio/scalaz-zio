@@ -7,6 +7,7 @@ import zio.test.Assertion._
 import zio.test.TestAspect.{exceptJS, flaky, forked, jvmOnly, nonFlaky, scala2Only, timeout, withLiveClock}
 import zio.test._
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
@@ -1959,7 +1960,17 @@ object ZIOSpec extends ZIOBaseSpec {
       } @@ flaky @@ zioTag(errors),
       test("returns success when it happens after failure") {
         assertZIO(ZIO.fail(42).raceAll(List(ZIO.succeed(24) <* Live.live(ZIO.sleep(100.millis)))))(equalTo(24))
-      } @@ zioTag(errors)
+      } @@ zioTag(errors),
+      test("always calls finalizers") {
+        for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- eff.raceAll(List(ZIO.never))
+        } yield assertCompletes
+      } @@ timeout(10.seconds) @@ zioTag(errors) @@ exceptJS
     ),
     suite("reduceAllPar")(
       test("return zero element on empty input") {
@@ -2001,6 +2012,15 @@ object ZIOSpec extends ZIOBaseSpec {
       test("positive") {
         val lst: Iterable[UIO[Int]] = ZIO.replicate(2)(ZIO.succeed(12))
         assertZIO(ZIO.collectAll(lst))(equalTo(List(12, 12)))
+      }
+    ),
+    suite("retryN")(
+      test("retryN retries n times") {
+        for {
+          ref    <- Ref.make(0)
+          _      <- (ref.update(_ + 1) *> ZIO.fail(None)).retryN(3).orElse(ZIO.unit)
+          result <- ref.get
+        } yield assertTrue(result == 4)
       }
     ),
     suite("retryUntil")(
@@ -3065,6 +3085,16 @@ object ZIOSpec extends ZIOBaseSpec {
         val io = ZIO.succeed(42).race(ZIO.never)
         assertZIO(io)(equalTo(42))
       },
+      test("race always calls finalizers") {
+        for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- eff.race(ZIO.never)
+        } yield assertCompletes
+      } @@ timeout(10.seconds) @@ exceptJS,
       test("firstSuccessOf of values") {
         val io = ZIO.firstSuccessOf(ZIO.fail(0), List(ZIO.succeed(100))).either
         assertZIO(io)(isRight(equalTo(100)))
@@ -3121,6 +3151,21 @@ object ZIOSpec extends ZIOBaseSpec {
           b      <- effect.await
         } yield assert(b)(equalTo(42))
       } @@ zioTag(interruption),
+      test("raceFirst always calls finalizers") {
+        def runTest(useCompanionObject: Boolean) = for {
+          isRunning              <- ZIO.succeed(new AtomicBoolean(true))
+          backgroundBlockingStuff = ZIO.whileLoop(isRunning.get)(ZIO.yieldNow)(_ => ())
+          acquire                 = backgroundBlockingStuff.fork
+          release                 = ZIO.succeed(isRunning.set(false))
+          eff                     = ZIO.acquireRelease(acquire)(_ => release)
+          _                      <- if (useCompanionObject) ZIO.raceFirst(eff, List(ZIO.never)) else eff.raceFirst(ZIO.never)
+        } yield assertCompletes
+
+        for {
+          _ <- runTest(useCompanionObject = true).fork
+          _ <- runTest(useCompanionObject = false).fork
+        } yield assertCompletes
+      } @@ timeout(10.seconds) @@ exceptJS @@ zioTag(interruption),
       test("mergeAll") {
         val io = ZIO.mergeAll(List("a", "aa", "aaa", "aaaa").map(ZIO.succeed[String](_)))(0)((b, a) => b + a.length)
 

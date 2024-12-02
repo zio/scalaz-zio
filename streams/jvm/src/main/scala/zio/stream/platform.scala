@@ -19,7 +19,16 @@ package zio.stream
 import zio._
 import zio.stream.compression.{CompressionException, CompressionLevel, CompressionStrategy, FlushMode}
 
-import java.io._
+import java.io.{
+  File,
+  FileNotFoundException,
+  IOException,
+  InputStream,
+  OutputStream,
+  PipedInputStream,
+  PipedOutputStream,
+  Reader
+}
 import java.net.{InetSocketAddress, SocketAddress, URI}
 import java.nio.channels.{AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler, FileChannel}
 import java.nio.file.StandardOpenOption._
@@ -228,7 +237,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
             ZStream.repeatZIOChunkOption(
               for {
                 bytesRead <- ZIO.attempt(channel.read(reusableBuffer)).asSomeError
-                _         <- ZIO.fail(None).when(bytesRead == -1)
+                _         <- Exit.failNone.whenDiscard(bytesRead == -1)
                 chunk <- ZIO.succeed {
                            reusableBuffer.flip()
                            Chunk.fromByteBuffer(reusableBuffer)
@@ -271,9 +280,9 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           bufArray  <- ZIO.succeed(Array.ofDim[Char](chunkSize))
           bytesRead <- ZIO.attemptBlockingIO(reader.read(bufArray)).asSomeError
           chars <- if (bytesRead < 0)
-                     ZIO.fail(None)
+                     Exit.failNone
                    else if (bytesRead == 0)
-                     ZIO.succeed(Chunk.empty)
+                     Exit.emptyChunk
                    else if (bytesRead < chunkSize)
                      ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else

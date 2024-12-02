@@ -739,11 +739,12 @@ sealed trait ZIO[-R, +E, +A]
   final def forEachZIO[R1 <: R, E2, B](f: A => ZIO[R1, E2, B])(implicit trace: Trace): ZIO[R1, E2, Option[B]] =
     self.foldCauseZIO(_ => ZIO.none, a => f(a).map(Some(_)))
 
-  final def forever(implicit trace: Trace): ZIO[R, E, Nothing] = {
-    lazy val loop: ZIO[R, E, Nothing] = self *> ZIO.yieldNow *> loop
-
-    loop
-  }
+  final def forever(implicit trace: Trace): ZIO[R, E, Nothing] =
+    ZIO.suspendSucceed {
+      ZIO
+        .whileLoop(true)(self)(ZIO.unitFn)
+        .asInstanceOf[ZIO[R, E, Nothing]]
+    }
 
   /**
    * Returns an effect that forks this effect into its own separate fiber,
@@ -1332,7 +1333,7 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def raceAll[R1 <: R, E1 >: E, A1 >: A](
     ios0: => Iterable[ZIO[R1, E1, A1]]
-  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.suspendSucceed {
+  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.transplant { graft =>
     val ios = ios0
 
     def arbiter[E1, A1](
@@ -1352,12 +1353,12 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    (for {
+    for {
       done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
       fails <- Ref.make[Int](ios.size)
       c <- ZIO.uninterruptibleMask { restore =>
              for {
-               fs <- ZIO.foreach(self :: ios.toList)(io => ZIO.interruptible(io).fork)
+               fs <- ZIO.foreach(self :: ios.toList)(io => graft.applyOnExit(ZIO.interruptible(io)).fork)
                _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
                       io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
                     }
@@ -1368,7 +1369,7 @@ sealed trait ZIO[-R, +E, +A]
                       .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
              } yield c
            }
-    } yield c)
+    } yield c
   }
 
   /**
@@ -1423,6 +1424,7 @@ sealed trait ZIO[-R, +E, +A]
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
     ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
+      val graft = ZIO.Grafter(parentFiber)
       import java.util.concurrent.atomic.AtomicBoolean
 
       implicit val unsafe: Unsafe = Unsafe
@@ -1459,8 +1461,8 @@ sealed trait ZIO[-R, +E, +A]
               complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
             }
 
-            startLeftFiber(self)
-            startRightFiber(right)
+            startLeftFiber(graft.applyOnExit(self))
+            startRightFiber(graft.applyOnExit(right))
           },
           leftFiber.id <> rightFiber.id
         )
@@ -1479,14 +1481,14 @@ sealed trait ZIO[-R, +E, +A]
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[?] =>
-            winner.inheritAll.flatMap(_ => leftDone(exit, loser))
+            winner.inheritAll *> leftDone(exit, loser)
           case exit: Exit.Failure[_] =>
             leftDone(exit, loser)
         },
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[B] =>
-            winner.inheritAll.flatMap(_ => rightDone(exit, loser))
+            winner.inheritAll *> rightDone(exit, loser)
           case exit: Exit.Failure[E1] =>
             rightDone(exit, loser)
         }
@@ -1548,11 +1550,15 @@ sealed trait ZIO[-R, +E, +A]
    * that succeeds, executes `io` an additional time.
    */
   final def repeatN(n: => Int)(implicit trace: Trace): ZIO[R, E, A] =
-    ZIO.suspendSucceed {
-      def loop(n: Int): ZIO[R, E, A] =
-        self.flatMap(a => if (n <= 0) Exit.succeed(a) else ZIO.yieldNow *> loop(n - 1))
-
-      loop(n)
+    self.flatMap { a =>
+      var i = n
+      var s = a
+      ZIO
+        .whileLoop(i > 0) {
+          i -= 1
+          self
+        }(s = _)
+        .as(s)
     }
 
   /**
@@ -2599,32 +2605,16 @@ sealed trait ZIO[-R, +E, +A]
       } else if (that0.isInstanceOf[Exit.Success[?]]) {
         restore(self).zipWith(that0)(f)
       } else
-        ZIO.withFiberRuntime[R1, E1, C] { (fiber, _) =>
-          val promise     = Promise.unsafe.make[Unit, Boolean](FiberId.None)(Unsafe)
-          val ref         = new java.util.concurrent.atomic.AtomicBoolean(false)
-          val parentScope = fiber.scope
+        ZIO.transplant { graft =>
+          val promise = Promise.unsafe.make[Unit, Boolean](FiberId.None)(Unsafe)
+          val ref     = new java.util.concurrent.atomic.AtomicBoolean(false)
 
           def fork[R, E, A](zio: => ZIO[R, E, A], side: Boolean): ZIO[R, Nothing, Fiber[E, A]] =
-            restore(zio)
-              .foldCauseZIO(
-                cause =>
-                  ZIO.withFiberRuntime[Any, E, A] { (childFiber, _) =>
-                    ZIO.suspendSucceed {
-                      childFiber.transferChildren(parentScope)
-                      promise.fail(()) *> Exit.failCause(cause)
-                    }
-                  },
-                a =>
-                  ZIO.withFiberRuntime[Any, Nothing, A] { (childFiber, _) =>
-                    Exit.succeed {
-                      childFiber.transferChildren(parentScope)
-                      if (ref.getAndSet(true)) {
-                        promise.unsafe.done(Exit.succeed(side))(Unsafe)
-                      }
-                      a
-                    }
-                  }
-              )
+            graft
+              .applyOnExitWith(restore(zio)) {
+                case _: Exit.Success[?] => if (ref.getAndSet(true)) promise.unsafe.done(Exit.boolean(side))(Unsafe)
+                case _                  => promise.unsafe.done(Exit.failUnit)(Unsafe)
+              }
               .forkDaemon
 
           fork(self, false).zip(fork(that0, true)).flatMap { case (left, right) =>
@@ -3072,10 +3062,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Option[B]])(implicit trace: Trace): ZIO[R, E, Option[B]] =
     succeed(as.iterator).flatMap { iterator =>
-      def loop: ZIO[R, E, Option[B]] =
-        if (iterator.hasNext) f(iterator.next()).flatMap(_.fold(loop)(some(_)))
-        else none
-      loop
+      var a: Option[B] = None
+      ZIO.whileLoop(iterator.hasNext && a.isEmpty)(f(iterator.next()))(a = _).as(a)
     }
 
   /**
@@ -3234,10 +3222,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Boolean])(implicit trace: Trace): ZIO[R, E, Boolean] =
     succeed(as.iterator).flatMap { iterator =>
-      def loop: ZIO[R, E, Boolean] =
-        if (iterator.hasNext) f(iterator.next()).flatMap(b => if (b) Exit.`true` else loop)
-        else Exit.`false`
-      loop
+      ZIO.iterate(false)(!_ && iterator.hasNext)(_ => f(iterator.next()))
     }
 
   /**
@@ -3417,10 +3402,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Boolean])(implicit trace: Trace): ZIO[R, E, Boolean] =
     succeed(as.iterator).flatMap { iterator =>
-      def loop: ZIO[R, E, Boolean] =
-        if (iterator.hasNext) f(iterator.next()).flatMap(b => if (b) loop else Exit.`false`)
-        else Exit.`true`
-      loop
+      ZIO.iterate(true)(_ && iterator.hasNext)(_ => f(iterator.next()))
     }
 
   /**
@@ -3535,7 +3517,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       if (as0.isEmpty) Exit.unit
       else {
         val iterator = as0.iterator
-        ZIO.whileLoop(iterator.hasNext)(f(iterator.next()))(_ => ())
+        ZIO.whileLoop(iterator.hasNext)(f(iterator.next()))(ZIO.unitFn)
       }
     }
 
@@ -3718,7 +3700,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def fromFuture[A](make: ExecutionContext => scala.concurrent.Future[A])(implicit trace: Trace): Task[A] =
     ZIO.executorWith { executor =>
       ZIO.suspend {
-        import scala.util.{Success, Failure}
+        import scala.util.{Failure, Success}
 
         val ec = executor.asExecutionContext
         val f  = make(ec)
@@ -3755,7 +3737,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    *   context
    */
   private[zio] def fromFutureNow[A](f: concurrent.Future[A])(implicit trace: Trace, unsafe: Unsafe): Task[A] = {
-    import scala.util.{Success, Failure}
+    import scala.util.{Failure, Success}
     f.value match {
       case None =>
         ZIO.executorWith { executor =>
@@ -4038,14 +4020,16 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     initial: => S
   )(cont: S => Boolean, inc: S => S)(body: S => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, List[A]] =
     ZIO.suspendSucceed {
+      var s       = initial
+      val builder = List.newBuilder[A]
 
-      def loop(initial: S): ZIO[R, E, List[A]] =
-        if (cont(initial))
-          body(initial).flatMap(a => loop(inc(initial)).map(as => a :: as))
-        else
-          Exit.succeed(List.empty[A])
-
-      loop(initial)
+      ZIO
+        .whileLoop(cont(s)) {
+          val effect = body(s)
+          s = inc(s)
+          effect
+        }(builder += _)
+        .as(builder.result())
     }
 
   /**
@@ -4065,12 +4049,12 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     initial: => S
   )(cont: S => Boolean, inc: S => S)(body: S => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
     ZIO.suspendSucceed {
-
-      def loop(initial: S): ZIO[R, E, Unit] =
-        if (cont(initial)) body(initial) *> loop(inc(initial))
-        else Exit.unit
-
-      loop(initial)
+      var s = initial
+      ZIO.whileLoop(cont(s)) {
+        val effect = body(s)
+        s = inc(s)
+        effect
+      }(ZIO.unitFn)
     }
 
   /**
@@ -4368,7 +4352,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * explicit references to them are held, because they cannot be reactivated.
    */
   def never(implicit trace: Trace): UIO[Nothing] =
-    async[Any, Nothing, Nothing](_ => ())
+    async[Any, Nothing, Nothing](ZIO.unitFn)
 
   /**
    * Returns an effect that succeeds with the `None` value.
@@ -4898,10 +4882,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    */
   def transplant[R, E, A](f: Grafter => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
     ZIO.withFiberRuntime[R, E, A] { (fiberState, _) =>
-      val scopeOverride = fiberState.getFiberRef(FiberRef.forkScopeOverride)
-      val scope         = scopeOverride.getOrElse(fiberState.scope)
-
-      f(new Grafter(scope))
+      f(Grafter(fiberState))
     }
 
   /**
@@ -5361,6 +5342,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   )(implicit trace: Trace): ZIO[R, E, A] =
     Stateful(trace, onState)
 
+  private final val MaxIterationsPerYield = 512
+
   private val _IdentityFn: Any => Any = (a: Any) => a
 
   private val _FailFn: Any => Exit[Any, Nothing] = a => Exit.Failure(Cause.fail(a))
@@ -5482,9 +5465,58 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       }
   }
 
-  final class Grafter(private val scope: FiberScope) extends AnyVal {
+  final class Grafter(private val scope: FiberScope) extends AnyVal { self =>
     def apply[R, E, A](zio: => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
       FiberRef.forkScopeOverride.locally(Some(scope))(zio)
+
+    /**
+     * Similar to [[apply]] but delays the transfer of children spawned by the
+     * effect until the effect has completed, either by success or failure.
+     *
+     * This is more performant than [[apply]] as:
+     *   1. it doesn't require updating [[FiberRef.forkScopeOverride]] which has
+     *      a "complex" join
+     *   1. only fibers that are still active by the time the effect completes
+     *      are transferred.
+     *
+     * @see
+     *   [[applyOnExitWith]] for variant that allows providing a callback
+     *   function
+     */
+    private[zio] def applyOnExit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      applyOnExitWith(zio)(ZIO.unitFn)
+
+    /**
+     * More powerful variant of [[applyOnExit]] that allows providing a callback
+     * function that is guaranteed to be invoked ''after'' the children have
+     * been transferred.
+     */
+    private[zio] def applyOnExitWith[R, E, A](
+      zio: ZIO[R, E, A]
+    )(
+      ensuring: Exit[E, A] => Unit
+    )(implicit trace: Trace): ZIO[R, E, A] =
+      ZIO.uninterruptibleMask { restore =>
+        restore(zio).exitWith { exit =>
+          ZIO.withFiberRuntime[Any, E, A] { (fiber, _) =>
+            fiber.transferChildren(self.scope)
+            ensuring(exit)
+            exit
+          }
+        }
+      }
+  }
+
+  object Grafter {
+
+    private[zio] def apply(fiberState: Fiber.Runtime[?, ?])(implicit trace: Trace): Grafter = {
+      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
+      val scope =
+        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
+        else scopeOverride.get
+
+      new Grafter(scope)
+    }
   }
 
   final class IfZIO[R, E](private val b: () => ZIO[R, E, Boolean]) extends AnyVal {
@@ -6266,43 +6298,27 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         ZIO.uninterruptibleMask { restore =>
           val promise = Promise.unsafe.make[Unit, Unit](FiberId.None)(Unsafe)
           val ref     = new java.util.concurrent.atomic.AtomicInteger(size)
-          ZIO
-            .withFiberRuntime[R, Nothing, Iterable[Fiber.Runtime[E, Unit]]] { (fiber, _) =>
-              ZIO.foreach(as) { a =>
-                restore(f(a))
-                  .foldCauseZIO(
-                    cause =>
-                      ZIO.withFiberRuntime[Any, E, Unit] { (childFiber, _) =>
-                        ZIO.suspendSucceed {
-                          childFiber.transferChildren(fiber.scope)
-                          promise.fail(()) *> Exit.failCause(cause)
-                        }
-                      },
-                    _ => {
-                      ZIO.withFiberRuntime[Any, Nothing, Unit] { (childFiber, _) =>
-                        childFiber.transferChildren(fiber.scope)
-                        if (ref.decrementAndGet() == 0) {
-                          promise.unsafe.done(Exit.unit)(Unsafe)
-                        }
-                        Exit.unit
-                      }
-                    }
-                  )
-                  .forkDaemon
-              }
+          ZIO.transplant { graft =>
+            ZIO.foreach(as) { a =>
+              graft
+                .applyOnExitWith(restore(f(a))) {
+                  case _: Exit.Success[?] => if (ref.decrementAndGet() == 0) promise.unsafe.done(Exit.unit)(Unsafe)
+                  case _                  => promise.unsafe.done(Exit.failUnit)(Unsafe)
+                }
+                .forkDaemon
             }
-            .flatMap { fibers =>
-              restore(promise.await).foldCauseZIO(
-                cause =>
-                  ZIO
-                    .foreachParUnbounded(fibers)(_.interrupt)
-                    .flatMap(Exit.collectAllPar(_) match {
-                      case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
-                      case _                          => Exit.failCause(cause.stripFailures)
-                    }),
-                _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
-              )
-            }
+          }.flatMap { fibers =>
+            restore(promise.await).foldCauseZIO(
+              cause =>
+                ZIO
+                  .foreachParUnbounded(fibers)(_.interrupt)
+                  .flatMap(Exit.collectAllPar(_) match {
+                    case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
+                    case _                          => Exit.failCause(cause.stripFailures)
+                  }),
+              _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
+            )
+          }
         }
       }
     }
@@ -6804,10 +6820,19 @@ object Exit extends Serializable {
         }
     }
 
-  private[zio] val `true`: Exit[Nothing, Boolean]           = Success(true)
-  private[zio] val `false`: Exit[Nothing, Boolean]          = Success(false)
-  private[zio] val none: Exit[Nothing, Option[Nothing]]     = Success(None)
-  private[zio] val failNone: Exit[Option[Nothing], Nothing] = Failure(Cause.fail(None))
+  /**
+   * Optimized [[succeed]] for Boolean values that uses cached
+   * `Exit.succeed(true)` and `Exit.succeed(false)` instances
+   */
+  private[zio] def boolean(b: Boolean): Exit[Nothing, Boolean] =
+    if (b) Exit.`true` else Exit.`false`
+
+  private[zio] val `true`: Exit[Nothing, Boolean]            = Success(true)
+  private[zio] val `false`: Exit[Nothing, Boolean]           = Success(false)
+  private[zio] val none: Exit[Nothing, Option[Nothing]]      = Success(None)
+  private[zio] val emptyChunk: Exit[Nothing, Chunk[Nothing]] = Success(Chunk.empty)
+  private[zio] val failNone: Exit[Option[Nothing], Nothing]  = Failure(Cause.fail(None))
+  private[zio] val failUnit: Exit[Unit, Nothing]             = Failure(Cause.fail(()))
 
   private[zio] val empty: Exit[Nothing, Nothing] = Exit.failCause[Nothing](Cause.empty)
 }

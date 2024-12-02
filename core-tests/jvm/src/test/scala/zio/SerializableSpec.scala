@@ -19,13 +19,19 @@ object SerializableSpec extends ZIOBaseSpec {
         returnCount <- returnSem.available
       } yield assert(returnCount)(equalTo(count))
     },
-    test("Clock is serializable") {
+    test("ClockLive is serializable") {
+      Live.live(ZIO.clock).flatMap(clockTest)
+    },
+    test("ClockJava is serializable") {
+      ZIO.succeed(Clock.ClockJava(java.time.Clock.systemUTC())).flatMap(clockTest)
+    },
+    test("System is serializable") {
       for {
-        clock       <- Live.live(ZIO.clock)
-        time1       <- Clock.nanoTime
-        returnClock <- serializeAndBack(clock)
-        time2       <- returnClock.nanoTime
-      } yield assert(time1)(isLessThanEqualTo(time2))
+        system    <- Live.live(ZIO.system)
+        props1    <- system.properties
+        returnSem <- serializeAndBack(system)
+        props2    <- returnSem.properties
+      } yield assert(props1)(equalTo(props2))
     },
     test("Queue is serializable") {
       for {
@@ -145,6 +151,7 @@ object SerializableSpec extends ZIOBaseSpec {
         value             <- promise.await
         deserialized      <- serializeAndBack(promise)
         deserializedValue <- deserialized.await
+        _                 <- deserialized.poll
       } yield assert(deserializedValue)(equalTo(value))
     },
     test("Schedule is serializable") {
@@ -216,6 +223,13 @@ object SerializableSpec extends ZIOBaseSpec {
       } yield assertTrue(nonEmptyChunk == result)
     }
   )
+
+  def clockTest(clock: Clock) =
+    for {
+      time1       <- clock.nanoTime
+      returnClock <- serializeAndBack(clock)
+      time2       <- returnClock.nanoTime
+    } yield assert(time1)(isLessThanEqualTo(time2))
 }
 
 object SerializableSpecHelpers {
