@@ -280,7 +280,7 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
               releaseThat(e).exit
                 .flatMap(e1 =>
                   releaseSelf(e).exit
-                    .flatMap(e2 => ZIO.done(e1 *> e2))
+                    .flatMap(e2 => e1 *> e2)
                 ),
             b
           )
@@ -522,10 +522,10 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
                                innerReleaseMap
                                  .releaseAll(e, ExecutionStrategy.Sequential)
                                  .exit
-                                 .zipWith(cleanup(exitEA).provideEnvironment(r1).exit)((l, r) => ZIO.done(l *> r))
+                                 .zipWith(cleanup(exitEA).provideEnvironment(r1).exit)((l, r) => l *> r)
                                  .flatten
                              }
-          a <- ZIO.done(exitEA)
+          a <- exitEA
         } yield (releaseMapEntry, a)
       }
     }
@@ -551,11 +551,11 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
                                  .provideEnvironment(r1)
                                  .exit
                                  .zipWith(innerReleaseMap.releaseAll(e, ExecutionStrategy.Sequential).exit)((l, r) =>
-                                   ZIO.done(l *> r)
+                                   l *> r
                                  )
                                  .flatten
                              }
-          a <- ZIO.done(exitEA)
+          a <- exitEA
         } yield (releaseMapEntry, a)
       }
     }
@@ -1525,7 +1525,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreach(fins: Iterable[(Long, Finalizer)]) { case (_, fin) =>
                           update(fin).apply(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAll(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllDiscard),
                       Exited(nextKey, exit, update)
                     )
 
@@ -1535,7 +1535,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
                           update(finalizer)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllParDiscard),
                       Exited(nextKey, exit, update)
                     )
 
@@ -1545,7 +1545,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
                           update(finalizer)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit))
+                        .flatMap(Exit.collectAllParDiscard)
                         .withParallelism(n),
                       Exited(nextKey, exit, update)
                     )
@@ -1816,7 +1816,7 @@ object ZManaged extends ZManagedPlatformSpecific {
    * Returns an effect from a lazily evaluated [[zio.Exit]] value.
    */
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): ZManaged[Any, E, A] =
-    ZManaged.fromZIO(ZIO.done(r))
+    ZManaged.fromZIO(r)
 
   /**
    * Accesses the whole environment of the effect.

@@ -491,23 +491,6 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield assert(race1)(equalTo(race2))
       }
     ),
-    suite("done")(
-      test("Check done lifts exit result into IO") {
-
-        val fiberId = FiberId(0, 123, Trace.empty)
-        val error   = exampleError
-
-        for {
-          completed   <- ZIO.done(Exit.succeed(1))
-          interrupted <- ZIO.done(Exit.interrupt(fiberId)).exit
-          terminated  <- ZIO.done(Exit.die(error)).exit
-          failed      <- ZIO.done(Exit.fail(error)).exit
-        } yield assert(completed)(equalTo(1)) &&
-          assert(interrupted)(isInterrupted) &&
-          assert(terminated)(dies(equalTo(error))) &&
-          assert(failed)(fails(equalTo(error)))
-      }
-    ),
     suite("executor")(
       test("retrieves the current executor for this effect") {
         val executor = Executor.fromExecutionContext {
@@ -1802,11 +1785,8 @@ object ZIOSpec extends ZIOBaseSpec {
         val successes = Gen.successes(smallInts)
         val exits     = Gen.either(causes, successes).map(_.fold(Exit.failCause, Exit.succeed))
         check(exits, exits, exits) { (exit1, exit2, exit3) =>
-          val zio1  = ZIO.done(exit1)
-          val zio2  = ZIO.done(exit2)
-          val zio3  = ZIO.done(exit3)
-          val left  = (zio1 orElse zio2) orElse zio3
-          val right = zio1 orElse (zio2 orElse zio3)
+          val left  = (exit1 orElse exit2) orElse exit3
+          val right = exit1 orElse (exit2 orElse exit3)
           for {
             left  <- left.exit
             right <- right.exit
@@ -2947,7 +2927,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause.failures))
                          .fork
                      }
-            failures <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            failures <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(failures.length == 0)
         } +
         test("previous untyped errors are retained even after interruptible region") {
@@ -2963,7 +2943,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause))
                          .fork
                      }
-            cause <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            cause <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(cause.defects.length == 1)
         } @@ exceptJS(nonFlaky)
 
