@@ -147,11 +147,6 @@ const oldStyledZioProjects =
       sidebarPath: 'sidebars.js',
     },
     {
-      name: 'ZIO Keeper',
-      routeBasePath: 'zio-keeper',
-      sidebarPath: 'sidebars.js',
-    },
-    {
       name: 'ZIO Memberlist',
       routeBasePath: 'zio-memberlist',
       sidebarPath: 'sidebars.js',

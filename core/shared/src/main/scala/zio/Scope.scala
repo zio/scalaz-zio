@@ -85,6 +85,12 @@ object Scope {
     def close(exit: => Exit[Any, Any])(implicit trace: Trace): UIO[Unit]
 
     /**
+     * Returns the number of finalizers that have been added to this scope and
+     * not yet finalized.
+     */
+    def size: Int
+
+    /**
      * Uses the scope by providing it to a `ZIO` workflow that needs a scope,
      * guaranteeing that the scope is closed with the result of that workflow as
      * soon as the workflow completes execution, whether by success, failure, or
@@ -135,6 +141,7 @@ object Scope {
         ZIO.unit
       def forkWith(executionStrategy: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
         makeWith(executionStrategy)
+      def size: Int = 0
     }
 
   /**
@@ -166,6 +173,8 @@ object Scope {
               _         <- scope.addFinalizerExit(finalizer)
             } yield scope
           }
+        def size: Int =
+          releaseMap.size
       }
     }
 
@@ -258,10 +267,16 @@ object Scope {
     def replace(key: Key, finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Finalizer]]
 
     /**
+     * Number of finalizers that have not yet been run
+     */
+    def size: Int
+
+    /**
      * Updates the finalizers associated with this scope using the specified
      * function.
      */
     def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit]
+
   }
 
   private object ReleaseMap {
@@ -290,8 +305,8 @@ object Scope {
           else if (l == Long.MinValue) Long.MaxValue
           else l - 1
 
-        val ref: Ref[State] =
-          Ref.unsafe.make(Running(initialKey, LongMap.empty, identity))
+        val ref =
+          Ref.unsafe.make[State](Running(initialKey, LongMap.empty, identity))
 
         new ReleaseMap {
           type Key = Long
@@ -334,30 +349,30 @@ object Scope {
                   case ExecutionStrategy.Sequential =>
                     (
                       ZIO
-                        .foreach(fins: Iterable[(Long, Finalizer)]) { case (_, fin) =>
+                        .foreach(fins.values) { fin =>
                           update(fin).apply(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAll(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllDiscard),
                       Exited(nextKey, exit, update)
                     )
 
                   case ExecutionStrategy.Parallel =>
                     (
                       ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
+                        .foreachPar(fins.values) { fin =>
+                          update(fin)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllParDiscard),
                       Exited(nextKey, exit, update)
                     )
 
                   case ExecutionStrategy.ParallelN(n) =>
                     (
                       ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
+                        .foreachPar(fins.values) { fin =>
+                          update(fin)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit))
+                        .flatMap(Exit.collectAllParDiscard)
                         .withParallelism(n),
                       Exited(nextKey, exit, update)
                     )
@@ -377,6 +392,12 @@ object Scope {
               case Running(nk, fins, update) =>
                 (ZIO.succeed(fins get key), Running(nk, fins.updated(key, finalizer), update))
             }.flatten
+
+          def size: Int =
+            ref.unsafe.get match {
+              case Exited(_, _, _)     => 0
+              case Running(_, fins, _) => fins.size
+            }
 
           def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit] =
             ref.update {

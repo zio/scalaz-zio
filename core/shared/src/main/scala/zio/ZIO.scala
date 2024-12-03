@@ -1333,7 +1333,7 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def raceAll[R1 <: R, E1 >: E, A1 >: A](
     ios0: => Iterable[ZIO[R1, E1, A1]]
-  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.suspendSucceed {
+  )(implicit trace: Trace): ZIO[R1, E1, A1] = ZIO.transplant { graft =>
     val ios = ios0
 
     def arbiter[E1, A1](
@@ -1353,12 +1353,12 @@ sealed trait ZIO[-R, +E, +A]
             )
       )
 
-    (for {
+    for {
       done  <- Promise.make[E1, (A1, Fiber[E1, A1])]
       fails <- Ref.make[Int](ios.size)
       c <- ZIO.uninterruptibleMask { restore =>
              for {
-               fs <- ZIO.foreach(self :: ios.toList)(io => ZIO.interruptible(io).fork)
+               fs <- ZIO.foreach(self :: ios.toList)(io => graft.applyOnExit(ZIO.interruptible(io)).fork)
                _ <- fs.foldLeft[ZIO[R1, E1, Any]](ZIO.unit) { case (io, f) =>
                       io *> f.await.flatMap(arbiter(fs, f, done, fails)).fork
                     }
@@ -1369,7 +1369,7 @@ sealed trait ZIO[-R, +E, +A]
                       .onInterrupt(fs.foldLeft(ZIO.unit)((io, f) => io <* f.interrupt))
              } yield c
            }
-    } yield c)
+    } yield c
   }
 
   /**
@@ -1424,6 +1424,7 @@ sealed trait ZIO[-R, +E, +A]
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
     ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
+      val graft = ZIO.Grafter(parentFiber)
       import java.util.concurrent.atomic.AtomicBoolean
 
       implicit val unsafe: Unsafe = Unsafe
@@ -1460,8 +1461,8 @@ sealed trait ZIO[-R, +E, +A]
               complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
             }
 
-            startLeftFiber(self)
-            startRightFiber(right)
+            startLeftFiber(graft.applyOnExit(self))
+            startRightFiber(graft.applyOnExit(right))
           },
           leftFiber.id <> rightFiber.id
         )
@@ -1480,14 +1481,14 @@ sealed trait ZIO[-R, +E, +A]
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[?] =>
-            winner.inheritAll.flatMap(_ => leftDone(exit, loser))
+            winner.inheritAll *> leftDone(exit, loser)
           case exit: Exit.Failure[_] =>
             leftDone(exit, loser)
         },
       (winner, loser) =>
         winner.await.flatMap {
           case exit: Exit.Success[B] =>
-            winner.inheritAll.flatMap(_ => rightDone(exit, loser))
+            winner.inheritAll *> rightDone(exit, loser)
           case exit: Exit.Failure[E1] =>
             rightDone(exit, loser)
         }
@@ -3180,6 +3181,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   /**
    * Returns an effect from a [[zio.Exit]] value.
    */
+  @deprecated(
+    "For suspending a side-effecting method that produces an Exit, use `ZIO.suspendSucceed` instead.",
+    "2.1.14"
+  )
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): IO[E, A] =
     ZIO.suspendSucceed(r)
 
@@ -3699,7 +3704,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def fromFuture[A](make: ExecutionContext => scala.concurrent.Future[A])(implicit trace: Trace): Task[A] =
     ZIO.executorWith { executor =>
       ZIO.suspend {
-        import scala.util.{Success, Failure}
+        import scala.util.{Failure, Success}
 
         val ec = executor.asExecutionContext
         val f  = make(ec)
@@ -3736,7 +3741,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    *   context
    */
   private[zio] def fromFutureNow[A](f: concurrent.Future[A])(implicit trace: Trace, unsafe: Unsafe): Task[A] = {
-    import scala.util.{Success, Failure}
+    import scala.util.{Failure, Success}
     f.value match {
       case None =>
         ZIO.executorWith { executor =>
@@ -4881,12 +4886,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    */
   def transplant[R, E, A](f: Grafter => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
     ZIO.withFiberRuntime[R, E, A] { (fiberState, _) =>
-      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
-      val scope =
-        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
-        else scopeOverride.get
-
-      f(new Grafter(scope))
+      f(Grafter(fiberState))
     }
 
   /**
@@ -5509,6 +5509,18 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           }
         }
       }
+  }
+
+  object Grafter {
+
+    private[zio] def apply(fiberState: Fiber.Runtime[?, ?])(implicit trace: Trace): Grafter = {
+      val scopeOverride = fiberState.getFiberRefOrNull(FiberRef.forkScopeOverride)
+      val scope =
+        if ((scopeOverride eq null) || (scopeOverride eq None)) fiberState.scope
+        else scopeOverride.get
+
+      new Grafter(scope)
+    }
   }
 
   final class IfZIO[R, E](private val b: () => ZIO[R, E, Boolean]) extends AnyVal {
@@ -6819,11 +6831,12 @@ object Exit extends Serializable {
   private[zio] def boolean(b: Boolean): Exit[Nothing, Boolean] =
     if (b) Exit.`true` else Exit.`false`
 
-  private[zio] val `true`: Exit[Nothing, Boolean]           = Success(true)
-  private[zio] val `false`: Exit[Nothing, Boolean]          = Success(false)
-  private[zio] val none: Exit[Nothing, Option[Nothing]]     = Success(None)
-  private[zio] val failNone: Exit[Option[Nothing], Nothing] = Failure(Cause.fail(None))
-  private[zio] val failUnit: Exit[Unit, Nothing]            = Failure(Cause.fail(()))
+  private[zio] val `true`: Exit[Nothing, Boolean]            = Success(true)
+  private[zio] val `false`: Exit[Nothing, Boolean]           = Success(false)
+  private[zio] val none: Exit[Nothing, Option[Nothing]]      = Success(None)
+  private[zio] val emptyChunk: Exit[Nothing, Chunk[Nothing]] = Success(Chunk.empty)
+  private[zio] val failNone: Exit[Option[Nothing], Nothing]  = Failure(Cause.fail(None))
+  private[zio] val failUnit: Exit[Unit, Nothing]             = Failure(Cause.fail(()))
 
   private[zio] val empty: Exit[Nothing, Nothing] = Exit.failCause[Nothing](Cause.empty)
 }
