@@ -491,23 +491,6 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield assert(race1)(equalTo(race2))
       }
     ),
-    suite("done")(
-      test("Check done lifts exit result into IO") {
-
-        val fiberId = FiberId(0, 123, Trace.empty)
-        val error   = exampleError
-
-        for {
-          completed   <- ZIO.done(Exit.succeed(1))
-          interrupted <- ZIO.done(Exit.interrupt(fiberId)).exit
-          terminated  <- ZIO.done(Exit.die(error)).exit
-          failed      <- ZIO.done(Exit.fail(error)).exit
-        } yield assert(completed)(equalTo(1)) &&
-          assert(interrupted)(isInterrupted) &&
-          assert(terminated)(dies(equalTo(error))) &&
-          assert(failed)(fails(equalTo(error)))
-      }
-    ),
     suite("executor")(
       test("retrieves the current executor for this effect") {
         val executor = Executor.fromExecutionContext {
@@ -2944,7 +2927,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause.failures))
                          .fork
                      }
-            failures <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            failures <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(failures.length == 0)
         } +
         test("previous untyped errors are retained even after interruptible region") {
