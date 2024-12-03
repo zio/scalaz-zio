@@ -445,20 +445,21 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     shrinker: A => ZStream[R, Nothing, A] = defaultShrinker
   )(implicit trace: Trace): Gen[R, A] =
     if (as.isEmpty) empty
-    else Gen {
-      // Take a bounded prefix for each sample to handle infinite iterables
-      ZStream.repeatZIO {
-        for {
-          size <- Sized.size
-          // Take a bounded prefix based on size
-          vec = as.take(math.max(1, size)).toVector
-          index <- Random.nextIntBounded(vec.length)
-        } yield {
-          val a = vec(index)
-          Sample.unfold(a)(a => (a, shrinker(a)))
+    else
+      Gen {
+        // Take a bounded prefix for each sample to handle infinite iterables
+        ZStream.repeatZIO {
+          for {
+            size  <- Sized.size
+            // Take a bounded prefix based on size
+            vec   = as.take(math.max(1, size)).toVector
+            index <- Random.nextIntBounded(vec.length)
+          } yield {
+            val a = vec(index)
+            Sample.unfold(a)(a => (a, shrinker(a)))
+          }
         }
       }
-    }
 
   /**
    * Constructs a generator from a function that uses randomness. The returned
