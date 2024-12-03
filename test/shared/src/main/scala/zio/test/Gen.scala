@@ -436,9 +436,9 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     uniform.map(n => -math.log(1 - n))
 
   /**
-   * Constructs a deterministic generator that generates values from the specified
-   * iterable. For infinite iterables, it will generate values from a bounded prefix
-   * determined by the current size parameter.
+   * Constructs a deterministic generator that generates values from the
+   * specified iterable. For infinite iterables, it will generate values from a
+   * bounded prefix determined by the current size parameter.
    */
   def fromIterable[R, A](
     as: Iterable[A],
@@ -450,9 +450,9 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
         // Take a bounded prefix for each sample to handle infinite iterables
         ZStream.repeatZIO {
           for {
-            size  <- Sized.size
+            size <- Sized.size
             // Take a bounded prefix based on size
-            vec   = as.take(math.max(1, size)).toVector
+            vec    = as.take(math.max(1, size)).toVector
             index <- Random.nextIntBounded(vec.length)
           } yield {
             val a = vec(index)
@@ -500,7 +500,6 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    */
   def hexChar(implicit trace: Trace): Gen[Any, Char] = weighted(
     char('\u0030', '\u0039') -> 10,
-    char('\u0041', '\u0046') -> 6,
     char('\u0061', '\u0066') -> 6
   )
 
