@@ -20,8 +20,9 @@ object MimaSettings {
         exclude[ReversedMissingMethodProblem]("zio.Fiber#Runtime#UnsafeAPI.zio$Fiber$Runtime$UnsafeAPI$$$outer"),
         exclude[FinalClassProblem]("zio.ZPool$DefaultPool"),
         exclude[DirectMissingMethodProblem]("zio.ZPool#DefaultPool.invalidated"),
-        exclude[ReversedMissingMethodProblem]("zio.Scope#ReleaseMap.size"),
-        exclude[ReversedMissingMethodProblem]("zio.Scope#Closeable.size")
+        exclude[ReversedMissingMethodProblem]("zio.Scope#Closeable.size"),
+        exclude[Problem]("zio.Scope#ReleaseMap*"),
+        exclude[Problem]("zio.Scope$ReleaseMap*")
       ),
       mimaFailOnProblem := failOnProblem
     )
