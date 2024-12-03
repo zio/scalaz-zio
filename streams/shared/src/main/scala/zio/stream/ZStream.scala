@@ -4108,8 +4108,9 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
   /**
    * The stream that ends with the [[zio.Exit]] value `exit`.
    */
+  @deprecated("use `ZStream.fromZIO` instead", "2.1.14")
   def done[E, A](exit: => Exit[E, A])(implicit trace: Trace): ZStream[Any, E, A] =
-    fromZIO(ZIO.done(exit))
+    fromZIO(exit)
 
   /**
    * The empty stream

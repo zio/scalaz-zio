@@ -1816,7 +1816,7 @@ object ZManaged extends ZManagedPlatformSpecific {
    * Returns an effect from a lazily evaluated [[zio.Exit]] value.
    */
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): ZManaged[Any, E, A] =
-    ZManaged.fromZIO(ZIO.done(r))
+    ZManaged.fromZIO(r)
 
   /**
    * Accesses the whole environment of the effect.
