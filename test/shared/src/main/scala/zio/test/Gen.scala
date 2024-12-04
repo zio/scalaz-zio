@@ -462,17 +462,30 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     if (as.isEmpty) empty
     else
       Gen {
-        // Take a bounded prefix for each sample to handle infinite iterables
-        ZStream.repeatZIO {
-          for {
-            size <- Sized.size
-            // Take a bounded prefix based on size
-            vec    = as.take(math.max(1, size)).toVector
-            index <- Random.nextIntBounded(vec.length)
-          } yield {
-            val a = vec(index)
-            Sample.unfold(a)(a => (a, shrinker(a)))
+        // Check if the iterable is infinite by trying to convert to Vector
+        val asVec =
+          try {
+            Some(as.toVector)
+          } catch {
+            case _: OutOfMemoryError => None
           }
+
+        asVec match {
+          // For finite iterables, return all elements deterministically
+          case Some(vec) => ZStream.fromIterable(vec).map(a => Sample.unfold(a)(a => (a, shrinker(a))))
+          // For infinite iterables, use random sampling with bounded prefix
+          case None =>
+            ZStream.repeatZIO {
+              for {
+                size <- Sized.size
+                // Take a bounded prefix based on size
+                vec    = as.take(math.max(1, size)).toVector
+                index <- Random.nextIntBounded(vec.length)
+              } yield {
+                val a = vec(index)
+                Sample.unfold(a)(a => (a, shrinker(a)))
+              }
+            }
         }
       }
 
