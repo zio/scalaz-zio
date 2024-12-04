@@ -381,18 +381,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     if (gens.isEmpty) empty
     else
       Gen {
-        // Take a bounded prefix for each sample to handle infinite iterables
-        ZStream.repeatZIO {
-          for {
-            size <- Sized.size
-            // Take a bounded prefix based on size
-            vec    = gens.take(math.max(1, size)).toVector
-            index <- Random.nextIntBounded(vec.length)
-          } yield {
-            val gen = vec(index)
-            gen.sample
-          }
-        }.flatten
+        ZStream.fromIterable(gens).flatMap(_.sample)
       }
 
   /**
@@ -455,39 +444,12 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * specified iterable. For infinite iterables, it will generate values from a
    * bounded prefix determined by the current size parameter.
    */
-  def fromIterable[R, A](
-    as: Iterable[A],
-    shrinker: A => ZStream[R, Nothing, A] = defaultShrinker
-  )(implicit trace: Trace): Gen[R, A] =
-    if (as.isEmpty) empty
-    else
-      Gen {
-        // Check if the iterable is infinite by trying to convert to Vector
-        val asVec =
-          try {
-            Some(as.toVector)
-          } catch {
-            case _: OutOfMemoryError => None
-          }
-
-        asVec match {
-          // For finite iterables, return all elements deterministically
-          case Some(vec) => ZStream.fromIterable(vec).map(a => Sample.unfold(a)(a => (a, shrinker(a))))
-          // For infinite iterables, use random sampling with bounded prefix
-          case None =>
-            ZStream.repeatZIO {
-              for {
-                size <- Sized.size
-                // Take a bounded prefix based on size
-                vec    = as.take(math.max(1, size)).toVector
-                index <- Random.nextIntBounded(vec.length)
-              } yield {
-                val a = vec(index)
-                Sample.unfold(a)(a => (a, shrinker(a)))
-              }
-            }
-        }
-      }
+  def fromIterable[R, A](as: => Iterable[A])(implicit trace: Trace): Gen[R, A] =
+    Gen {
+      ZStream
+        .fromIterable(as)
+        .map(Sample.noShrink)
+    }
 
   /**
    * Constructs a generator from a function that uses randomness. The returned
