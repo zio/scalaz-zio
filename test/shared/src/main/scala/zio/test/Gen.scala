@@ -385,16 +385,19 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
         ZStream.repeatZIO {
           for {
             size <- Sized.size
-            // Take a bounded prefix based on size from each generator
-            samples <- ZIO.foreach(gs) { gen =>
-                         gen.sample.take(math.max(1, size)).runCollect
-                       }
-            // Get a random index for proper randomization
-            index <- Random.nextIntBounded(samples.flatten.size)
-            values = samples.flatten.map(_.value)
+            // Take one sample from each generator
+            sample <- ZIO.foreach(gs) { gen =>
+                        gen.sample.take(1).runCollect.map(_.headOption.map(_.value))
+                      }
+            // Filter out None values and get a random index
+            values = sample.flatten
+            index <- Random.nextIntBounded(values.length max 1)
           } yield {
-            val value = values(index)
-            Sample.unfold(value)(a => (a, ZStream.fromIterable(values.filter(_ != value))))
+            val value = if (values.isEmpty) None else Some(values(index))
+            value match {
+              case Some(v) => Sample.unfold(v)(_ => (v, ZStream.empty))
+              case None    => Sample.noShrink(gs.head.sample.runHead.map(_.value))
+            }
           }
         }
       }
