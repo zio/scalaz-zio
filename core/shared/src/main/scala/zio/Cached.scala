@@ -69,7 +69,7 @@ object Cached {
     ref: ScopedRef[Exit[Error, Resource]],
     acquire: ZIO[Scope, Error, Resource]
   ) extends Cached[Error, Resource] {
-    def get(implicit trace: Trace): IO[Error, Resource] = ref.get.flatMap(ZIO.done(_))
+    def get(implicit trace: Trace): IO[Error, Resource] = ref.get.unexit
 
     def refresh(implicit trace: Trace): IO[Error, Unit] = ref.set[Any, Error](acquire.map(Exit.succeed(_)))
   }

@@ -29,6 +29,7 @@ case class Take[+E, +A](exit: Exit[Option[E], Chunk[A]]) extends AnyVal {
   /**
    * Transforms `Take[E, A]` to `ZIO[R, E, B]`.
    */
+  @deprecated("use `exit` instead", "2.1.14")
   def done[R](implicit trace: Trace): ZIO[R, Option[E], Chunk[A]] =
     ZIO.done(exit)
 

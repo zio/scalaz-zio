@@ -399,8 +399,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
     io: ZIO[Env1, OutErr1, OutDone1]
   )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr1, OutElem, OutDone1] =
     self.mergeWith(ZChannel.fromZIO(io))(
-      selfDone => ZChannel.MergeDecision.done(ZIO.done(selfDone)),
-      ioDone => ZChannel.MergeDecision.done(ZIO.done(ioDone))
+      ZChannel.MergeDecision.done,
+      ZChannel.MergeDecision.done
     )
 
   /**
@@ -1211,7 +1211,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                 // Can't really happen because Out <:< Nothing. So just skip ahead.
                 interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
               case ChannelState.Done =>
-                ZIO.done(exec.getDone)
+                exec.getDone
               case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
                 ChannelExecutor.readUpstream[Env, OutErr, OutErr, OutDone](
                   r.asInstanceOf[ChannelState.Read[Env, OutErr]],
@@ -1463,12 +1463,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
     trace: Trace
   ): ZChannel[Env1, InErr1, InElem1, InDone1, OutErr1, OutElem1, zippable.Out] =
     self.mergeWith(that)(
-      exit1 =>
-        ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone2, OutErr1, zippable.Out](exit2 =>
-          ZIO.done(exit1.zip(exit2))
-        ),
-      exit2 =>
-        ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone, OutErr1, zippable.Out](exit1 => ZIO.done(exit1.zip(exit2)))
+      exit1 => ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone2, OutErr1, zippable.Out](exit2 => exit1.zip(exit2)),
+      exit2 => ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone, OutErr1, zippable.Out](exit1 => exit1.zip(exit2))
     )
 
   /**

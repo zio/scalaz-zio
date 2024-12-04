@@ -1289,7 +1289,7 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
    * failure terminating the stream.
    */
   def flattenExit[Err, Out](implicit trace: Trace): ZPipeline[Any, Err, Exit[Err, Out], Out] =
-    ZPipeline.mapZIO(ZIO.done(_))
+    ZPipeline.mapZIO(ZIO.identityFn)
 
   /**
    * Creates a pipeline that submerges iterables into the structure of the
