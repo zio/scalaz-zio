@@ -381,7 +381,18 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     if (gens.isEmpty) empty
     else
       Gen {
-        ZStream.fromIterable(gens).flatMap(_.sample)
+        // Take a bounded prefix for each sample to handle infinite iterables
+        ZStream.repeatZIO {
+          for {
+            size <- Sized.size
+            // Take a bounded prefix based on size
+            vec    = gens.take(math.max(1, size)).toVector
+            index <- Random.nextIntBounded(vec.length)
+          } yield {
+            val gen = vec(index)
+            gen.sample
+          }
+        }.flatten
       }
 
   /**
@@ -444,12 +455,39 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * specified iterable. For infinite iterables, it will generate values from a
    * bounded prefix determined by the current size parameter.
    */
-  def fromIterable[R, A](as: => Iterable[A])(implicit trace: Trace): Gen[R, A] =
-    Gen {
-      ZStream
-        .fromIterable(as)
-        .map(Sample.noShrink)
-    }
+  def fromIterable[R, A](
+    as: Iterable[A],
+    shrinker: A => ZStream[R, Nothing, A] = defaultShrinker
+  )(implicit trace: Trace): Gen[R, A] =
+    if (as.isEmpty) empty
+    else
+      Gen {
+        // Check if the iterable is infinite by trying to convert to Vector
+        val asVec =
+          try {
+            Some(as.toVector)
+          } catch {
+            case _: OutOfMemoryError => None
+          }
+
+        asVec match {
+          // For finite iterables, return all elements deterministically
+          case Some(vec) => ZStream.fromIterable(vec).map(a => Sample.unfold(a)(a => (a, shrinker(a))))
+          // For infinite iterables, use random sampling with bounded prefix
+          case None =>
+            ZStream.repeatZIO {
+              for {
+                size <- Sized.size
+                // Take a bounded prefix based on size
+                vec    = as.take(math.max(1, size)).toVector
+                index <- Random.nextIntBounded(vec.length)
+              } yield {
+                val a = vec(index)
+                Sample.unfold(a)(a => (a, shrinker(a)))
+              }
+            }
+        }
+      }
 
   /**
    * Constructs a generator from a function that uses randomness. The returned
@@ -846,11 +884,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * A generator of Unicode characters. Shrinks toward '0'.
    */
   def unicodeChar(implicit trace: Trace): Gen[Any, Char] =
-    Gen.oneOf(
-      Gen.char('\u0000', '\u007F'), // ASCII range
-      Gen.char('\u0080', '\uD7FF'), // Rest of BMP before surrogates
-      Gen.char('\uE000', '\uFFFF')  // Rest of BMP after surrogates
-    )
+    Gen.oneOf(Gen.char('\u0000', '\uD7FF'), Gen.char('\uE000', '\uFFFD'))
 
   /**
    * A generator of uniformly distributed doubles between [0, 1]. The shrinker
