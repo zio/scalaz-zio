@@ -884,7 +884,11 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * A generator of Unicode characters. Shrinks toward '0'.
    */
   def unicodeChar(implicit trace: Trace): Gen[Any, Char] =
-    Gen.oneOf(Gen.char('\u0000', '\uD7FF'), Gen.char('\uE000', '\uFFFD'))
+    Gen.oneOf(
+      Gen.char('\u0000', '\u007F'), // ASCII range
+      Gen.char('\u0080', '\uD7FF'), // Rest of BMP before surrogates
+      Gen.char('\uE000', '\uFFFF')  // Rest of BMP after surrogates
+    )
 
   /**
    * A generator of uniformly distributed doubles between [0, 1]. The shrinker
