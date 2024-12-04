@@ -378,7 +378,22 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * specified generators.
    */
   def concatAll[R, A](gens: => Iterable[Gen[R, A]])(implicit trace: Trace): Gen[R, A] =
-    Gen.suspend(gens.foldLeft[Gen[R, A]](Gen.empty)(_ ++ _))
+    if (gens.isEmpty) empty
+    else
+      Gen {
+        // Take a bounded prefix for each sample to handle infinite iterables
+        ZStream.repeatZIO {
+          for {
+            size <- Sized.size
+            // Take a bounded prefix based on size
+            vec    = gens.take(math.max(1, size)).toVector
+            index <- Random.nextIntBounded(vec.length)
+          } yield {
+            val gen = vec(index)
+            gen.sample
+          }
+        }.flatten
+      }
 
   /**
    * A constant generator of the specified value.
