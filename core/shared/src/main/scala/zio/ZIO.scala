@@ -3181,6 +3181,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   /**
    * Returns an effect from a [[zio.Exit]] value.
    */
+  @deprecated(
+    "For suspending a side-effecting method that produces an Exit, use `ZIO.suspendSucceed` instead.",
+    "2.1.14"
+  )
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): IO[E, A] =
     ZIO.suspendSucceed(r)
 

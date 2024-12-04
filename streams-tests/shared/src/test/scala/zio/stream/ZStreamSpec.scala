@@ -4250,7 +4250,7 @@ object ZStreamSpec extends ZIOBaseSpec {
                 fib <- ZStream
                          .fromQueue(c.queue)
                          .tap(_ => c.proceed)
-                         .flatMap(ex => ZStream.fromZIOOption(ZIO.done(ex)))
+                         .flatMap(ex => ZStream.fromZIOOption(ex))
                          .flattenChunks
                          .debounce(200.millis)
                          .interruptWhen(ZIO.never)
@@ -4888,9 +4888,9 @@ object ZStreamSpec extends ZIOBaseSpec {
                 ZStream.fromChunkQueue(left).zipLatest(ZStream.fromChunkQueue(right)).runIntoQueue(out).fork
               _      <- left.offer(Chunk(0))
               _      <- right.offerAll(List(Chunk(0), Chunk(1)))
-              chunk1 <- ZIO.replicateZIO(2)(out.take.flatMap(_.done)).map(_.flatten)
+              chunk1 <- ZIO.replicateZIO(2)(out.take.flatMap(_.exit)).map(_.flatten)
               _      <- left.offerAll(List(Chunk(1), Chunk(2)))
-              chunk2 <- ZIO.replicateZIO(2)(out.take.flatMap(_.done)).map(_.flatten)
+              chunk2 <- ZIO.replicateZIO(2)(out.take.flatMap(_.exit)).map(_.flatten)
             } yield assert(chunk1)(equalTo(List((0, 0), (0, 1)))) && assert(chunk2)(equalTo(List((1, 1), (2, 1))))
           } @@ exceptJS(nonFlaky),
           test("handle empty pulls properly") {

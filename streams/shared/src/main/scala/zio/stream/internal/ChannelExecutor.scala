@@ -472,7 +472,7 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
       ZIO
         .foreach(finalizers)(_.apply(ex).exit)
         .map(results => Exit.collectAll(results) getOrElse Exit.unit)
-        .flatMap(ZIO.done(_))
+        .unexit
 
   private[this] def runSubexecutor()(implicit trace: Trace): ChannelState[Env, Any] =
     activeSubexecutor match {
@@ -714,7 +714,7 @@ private[zio] object ChannelExecutor {
         val fin2 = parentSubexecutor.close(ex)
 
         if ((fin1 eq null) && (fin2 eq null)) null
-        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).flatMap(ZIO.done(_))
+        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).unexit
         else if (fin1 ne null) fin1
         else fin2
       }
