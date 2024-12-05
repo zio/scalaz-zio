@@ -270,7 +270,7 @@ object Scope {
           )
         case Exited(nextKey, exit) =>
           (
-            ZIO.suspendSucceed(finalizer(exit)) *> ReleaseMap.noOpFinalizer,
+            ZIO.suspendSucceed(finalizer(exit)) *> ReleaseMap.noopFinalizer,
             Exited(next(nextKey), exit)
           )
       }
@@ -374,7 +374,7 @@ object Scope {
   }
 
   private object ReleaseMap {
-    private val noOpFinalizer = Exit.succeed((_: Exit[Any, Any]) => Exit.unit)
+    private val noopFinalizer = Exit.succeed((_: Exit[Any, Any]) => Exit.unit)
 
     /**
      * Creates a new ReleaseMap.
