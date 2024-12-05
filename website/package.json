@@ -31,7 +31,7 @@
     "@zio.dev/zio-aws": "2022.11.23-f353ed48e161",
     "@zio.dev/zio-bson": "1.0.7",
     "@zio.dev/zio-cache": "0.2.3",
-    "@zio.dev/zio-cli": "0.5.0",
+    "@zio.dev/zio-cli": "0.7.0",
     "@zio.dev/zio-config": "4.0.2",
     "@zio.dev/zio-connect": "0.4.4",
     "@zio.dev/zio-constraintless": "0.3.3",
