@@ -18,6 +18,7 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable.LongMap
 
 /**
@@ -209,8 +210,17 @@ object Scope {
   private type Finalizer = Exit[Any, Any] => UIO[Any]
 
   private sealed abstract class State
-  private final case class Exited(nextKey: Long, exit: Exit[Any, Any])            extends State
-  private final case class Running(nextKey: Long, finalizers: LongMap[Finalizer]) extends State
+  private object State {
+    // The sorting order of the LongMap uses bit ordering (000, 001, ... 111 but with 64 bits). This
+    // works out to be `0 ... Long.MaxValue, Long.MinValue, ... -1`. The order of the map is mainly
+    // important for the finalization, in which we want to walk it in reverse order. So we insert
+    // into the map using keys that will build it in reverse. That way, when we do the final iteration,
+    // the finalizers are already in correct order.
+    final val initial: State = Running(-1L, LongMap.empty)
+
+    final case class Exited(nextKey: Long, exit: Exit[Any, Any])            extends State
+    final case class Running(nextKey: Long, finalizers: LongMap[Finalizer]) extends State
+  }
 
   /**
    * A `ReleaseMap` represents the finalizers associated with a scope.
@@ -219,20 +229,29 @@ object Scope {
    * Snoyman @snoyberg.
    * (https://github.com/snoyberg/conduit/blob/master/resourcet/Control/Monad/Trans/Resource/Internal.hs)
    */
-  private final class ReleaseMap extends Serializable {
-
-    // The sorting order of the LongMap uses bit ordering (000, 001, ... 111 but with 64 bits). This
-    // works out to be `0 ... Long.MaxValue, Long.MinValue, ... -1`. The order of the map is mainly
-    // important for the finalization, in which we want to walk it in reverse order. So we insert
-    // into the map using keys that will build it in reverse. That way, when we do the final iteration,
-    // the finalizers are already in correct order.
-    private[this] val ref =
-      Ref.unsafe.make[State](Running(-1L, LongMap.empty))(Unsafe)
+  private final class ReleaseMap extends AtomicReference[State](State.initial) with Serializable {
+    ref: AtomicReference[State] =>
+    import State.{Exited, Running}
 
     private[this] def next(l: Long) =
       if (l == 0L) throw new RuntimeException("ReleaseMap wrapped around")
       else if (l == Long.MinValue) Long.MaxValue
       else l - 1
+
+    private[this] def modify[B](f: State => (UIO[B], State))(implicit trace: Trace): UIO[B] =
+      ZIO.suspendSucceed {
+        var loop = true
+        var b    = null.asInstanceOf[UIO[B]]
+        while (loop) {
+          val current        = ref.get()
+          val (value, state) = f(current)
+          if (ref.compareAndSet(current, state)) {
+            b = value
+            loop = false
+          }
+        }
+        b
+      }
 
     /**
      * Adds a finalizer to the finalizers associated with this scope. If the
@@ -243,7 +262,7 @@ object Scope {
      * finalizer from the map and run it.
      */
     def add(finalizer: Finalizer)(implicit trace: Trace): UIO[Finalizer] =
-      ref.modify {
+      modify {
         case Running(nextKey, fins) =>
           (
             Exit.succeed(release(nextKey, _)),
@@ -254,7 +273,7 @@ object Scope {
             ZIO.suspendSucceed(finalizer(exit)) *> ReleaseMap.noOpFinalizer,
             Exited(next(nextKey), exit)
           )
-      }.flatten
+      }
 
     /**
      * Adds a finalizer to the finalizers associated with this scope. If the
@@ -262,7 +281,7 @@ object Scope {
      * finalizer will be run immediately.
      */
     def addDiscard(finalizer: Finalizer)(implicit trace: Trace): UIO[Unit] =
-      ref.modify {
+      modify {
         case Running(nextKey, fins) =>
           (
             Exit.unit,
@@ -273,14 +292,14 @@ object Scope {
             ZIO.suspendSucceed(finalizer(exit).unit),
             Exited(next(nextKey), exit)
           )
-      }.flatten
+      }
 
     /**
      * Runs the specified finalizer and removes it from the finalizers
      * associated with this scope.
      */
     def release(key: Long, exit: Exit[Any, Any])(implicit trace: Trace): UIO[Any] =
-      ref.modify {
+      modify {
         case s @ Running(_, fins) =>
           (
             ZIO.suspendSucceed {
@@ -291,7 +310,7 @@ object Scope {
             s.copy(finalizers = fins - key)
           )
         case s: Exited => (Exit.unit, s)
-      }.flatten
+      }
 
     /**
      * Runs the finalizers associated with this scope using the specified
@@ -299,7 +318,7 @@ object Scope {
      * this scope will be run immediately.
      */
     def releaseAll(exit: Exit[Any, Any], execStrategy: ExecutionStrategy)(implicit trace: Trace): UIO[Unit] =
-      ref.modify {
+      modify {
         case s: Exited => (Exit.unit, s)
         case Running(nextKey, fins) if fins.size == 1 =>
           (
@@ -342,13 +361,13 @@ object Scope {
               )
 
           }
-      }.flatten
+      }
 
     /**
      * Number of finalizers that have not yet been run
      */
     def size: Int =
-      ref.unsafe.get(Unsafe) match {
+      ref.get match {
         case _: Exited        => 0
         case Running(_, fins) => fins.size
       }

@@ -662,7 +662,7 @@ sealed trait ZIO[-R, +E, +A]
     ev1: A IsSubtypeOfOutput ZIO[R1, E1, B],
     trace: Trace
   ): ZIO[R1, E1, B] =
-    self.flatMap(a => ev1(a))
+    self.asInstanceOf[UIO[ZIO[R1, E1, B]]].flatMap(ZIO.identityFn)
 
   /**
    * Returns an effect that swaps the error/success cases. This allows you to
@@ -2823,9 +2823,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def addFinalizerExit[R](
     finalizer: Exit[Any, Any] => URIO[R, Any]
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, Any] =
-    ZIO.environmentWithZIO[R] { env =>
-      env.unsafe
-        .getScope(Unsafe)
+    ZIO.environmentWithZIO[R & Scope] { env =>
+      env.getScope
         .addFinalizerExit(exit => finalizer(exit).provideEnvironment(env))
     }
 
@@ -4652,7 +4651,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Accesses the current scope and uses it to perform the specified effect.
    */
   def scopeWith[R, E, A](f: Scope => ZIO[R, E, A])(implicit trace: Trace): ZIO[R with Scope, E, A] =
-    FiberRef.currentEnvironment.getWith(env => f(env.unsafe.getScope(Unsafe)))
+    FiberRef.currentEnvironment.getWith(env => f(env.asInstanceOf[ZEnvironment[Scope]].getScope))
 
   /**
    * Returns a new scoped workflow that runs finalizers added to the scope of

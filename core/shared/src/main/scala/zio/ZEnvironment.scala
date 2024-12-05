@@ -115,6 +115,14 @@ final class ZEnvironment[+R] private (
   def getDynamic[A](implicit tag: Tag[A]): Option[A] =
     Option(unsafe.getOrElse(tag.tag, null.asInstanceOf[A])(Unsafe))
 
+  /**
+   * Retrieves the current Scope the environment. Raises a compilation error if
+   * the `ZEnvironment` is not statically known to contain a `Scope`
+   */
+  private[zio] def getScope(implicit ev: R <:< Scope): Scope =
+    if (scope eq null) throw new Error(s"Defect in zio.ZEnvironment: Could not find Scope inside $self")
+    else scope
+
   override lazy val hashCode: Int =
     MurmurHash3.productHash((map, scope))
 
@@ -252,15 +260,11 @@ final class ZEnvironment[+R] private (
     private[ZEnvironment] def addService[A](tag: LightTypeTag, a: A)(implicit unsafe: Unsafe): ZEnvironment[R with A]
   }
 
-  trait UnsafeAPI4 {
-    private[zio] def getScope(implicit unsafe: Unsafe): Scope
-  }
-
   private def isScopeTag(tag: LightTypeTag): Boolean =
     (tag eq ScopeTag) || taggedIsSubtype(tag, ScopeTag)
 
-  val unsafe: UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 with UnsafeAPI4 =
-    new UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 with UnsafeAPI4 with Serializable {
+  val unsafe: UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 =
+    new UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 with Serializable {
       private[ZEnvironment] def add[A](tag: LightTypeTag, a: A)(implicit unsafe: Unsafe): ZEnvironment[R with A] =
         if (a.isInstanceOf[Scope] && isScopeTag(tag))
           addScope(a.asInstanceOf[Scope]).asInstanceOf[ZEnvironment[R with A]]
@@ -290,10 +294,6 @@ final class ZEnvironment[+R] private (
         if (value == null) default
         else value
       }
-
-      private[zio] def getScope(implicit unsafe: Unsafe): Scope =
-        if (scope eq null) throw new Error(s"Defect in zio.ZEnvironment: Could not find Scope inside ${self}")
-        else scope
 
       private[this] def getUnsafe[A](tag: LightTypeTag): A = {
         val fromCache = self.cache.get(tag)

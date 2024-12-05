@@ -22,7 +22,9 @@ object MimaSettings {
         exclude[DirectMissingMethodProblem]("zio.ZPool#DefaultPool.invalidated"),
         exclude[ReversedMissingMethodProblem]("zio.Scope#Closeable.size"),
         exclude[Problem]("zio.Scope#ReleaseMap*"),
-        exclude[Problem]("zio.Scope$ReleaseMap*")
+        exclude[Problem]("zio.Scope$ReleaseMap*"),
+        exclude[MissingClassProblem]("zio.Scope$Running*"),
+        exclude[MissingClassProblem]("zio.Scope$Exited*")
       ),
       mimaFailOnProblem := failOnProblem
     )
