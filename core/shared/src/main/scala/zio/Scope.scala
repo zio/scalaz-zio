@@ -240,15 +240,11 @@ object Scope {
 
     private[this] def modify[B](f: State => (UIO[B], State))(implicit trace: Trace): UIO[B] =
       ZIO.suspendSucceed {
-        var loop = true
-        var b    = null.asInstanceOf[UIO[B]]
-        while (loop) {
+        var b = null.asInstanceOf[UIO[B]]
+        while (b eq null) {
           val current        = ref.get()
           val (value, state) = f(current)
-          if (ref.compareAndSet(current, state)) {
-            b = value
-            loop = false
-          }
+          if (ref.compareAndSet(current, state)) b = value
         }
         b
       }
