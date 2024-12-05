@@ -17,15 +17,13 @@
 package zio.stream
 
 import zio._
-import zio.internal.{PartitionedRingBuffer, SingleThreadedRingBuffer, UniqueKey}
+import zio.internal.{SingleThreadedRingBuffer, UniqueKey}
 import zio.metrics.MetricLabel
-import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stm._
-import zio.stream.ZStream.{DebounceState, HandoffSignal, failCause, zipChunks}
+import zio.stream.ZStream.{DebounceState, HandoffSignal, zipChunks}
 import zio.stream.internal.{ZInputStream, ZReader}
 
 import java.io.{IOException, InputStream}
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
@@ -4957,10 +4955,13 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     fa: => ZIO[R, Option[E], Chunk[A]]
   )(implicit trace: Trace): ZStream[R, E, A] =
     unfoldChunkZIO(fa)(fa =>
-      fa.map(chunk => Some((chunk, fa))).catchAll {
-        case None    => Exit.none
-        case Some(e) => Exit.fail(e)
-      }
+      fa.foldZIO(
+        failure = {
+          case None    => Exit.none
+          case Some(e) => Exit.fail(e)
+        },
+        success = chunk => Exit.succeed(Some((chunk, fa)))
+      )
     )
 
   /**
