@@ -153,6 +153,13 @@ trait Metric[+Type, -In, +Out] extends ZIOAspect[Nothing, Any, Nothing, Any, Not
    * Returns a new metric, which is identical in every way to this one, except
    * the specified tags have been added to the tags of this metric.
    */
+  final def tagged(extraTags: (String, String)*): Metric[Type, In, Out] =
+    tagged(extraTags.map { case (key, value) => MetricLabel(key, value) }.toSet)
+
+  /**
+   * Returns a new metric, which is identical in every way to this one, except
+   * the specified tags have been added to the tags of this metric.
+   */
   final def tagged(extraTags0: Set[MetricLabel]): Metric[Type, In, Out] =
     new Metric[Type, In, Out] {
       val keyType = self.keyType
