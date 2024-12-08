@@ -411,9 +411,9 @@ object ZEnvironment {
         if (patches eq Nil) env
         else
           patches.head match {
-            case AddService(service, tag) => loop(env.unsafe.addService(tag, service)(Unsafe.unsafe), patches.tail)
+            case AddScope(scope)          => loop(env.unsafe.addScope(scope)(Unsafe), patches.tail)
+            case AddService(service, tag) => loop(env.unsafe.addService(tag, service)(Unsafe), patches.tail)
             case AndThen(first, second)   => loop(env, erase(first) :: erase(second) :: patches.tail)
-            case AddScope(scope)          => loop(env.unsafe.addScope(scope)(Unsafe.unsafe), patches.tail)
             case _: Empty[?]              => loop(env, patches.tail)
             case _: RemoveService[?, ?]   => loop(env, patches.tail)
             case _: UpdateService[?, ?]   => loop(env, patches.tail)
