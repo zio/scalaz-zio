@@ -146,7 +146,7 @@ object ZPool {
       }
 
     def toZIO(implicit trace: Trace): ZIO[Any, E, A] =
-      ZIO.done(result)
+      ZIO.suspendSucceed(result)
   }
 
   private final case class DefaultPool[E, A](

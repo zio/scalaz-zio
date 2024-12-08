@@ -399,8 +399,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
     io: ZIO[Env1, OutErr1, OutDone1]
   )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr1, OutElem, OutDone1] =
     self.mergeWith(ZChannel.fromZIO(io))(
-      selfDone => ZChannel.MergeDecision.done(ZIO.done(selfDone)),
-      ioDone => ZChannel.MergeDecision.done(ZIO.done(ioDone))
+      ZChannel.MergeDecision.done,
+      ZChannel.MergeDecision.done
     )
 
   /**
@@ -671,7 +671,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         _           <- scope.addFinalizer(outgoing.shutdown)
         errorSignal <- Promise.make[Nothing, Unit]
         permits     <- Semaphore.make(n.toLong)
-        failure     <- Ref.make[Cause[OutErr1]](Cause.empty)
+        failure      = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
         pull        <- (queueReader >>> self).toPullInAlt(scope)
         childScope  <- scope.fork
         fiberId     <- ZIO.fiberId
@@ -714,11 +714,13 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             outgoing.take.flatMap(_.await).map {
               case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
               case f: Exit.Failure[Either[Unit, OutDone]] =>
-                def extractFailures = ZChannel.unwrap(failure.get.map(ZChannel.refailCause(_)))
+                val failure0 = failure.unsafe.get(Unsafe)
                 f.cause.failureOrCause match {
-                  case Left(_: Left[Unit, OutDone])    => extractFailures
-                  case Left(x: Right[Unit, OutDone])   => ZChannel.succeedNow(x.value)
-                  case Right(c) if c.isInterruptedOnly => extractFailures
+                  case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
+                  case Left(x: Right[Unit, OutDone]) =>
+                    if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
+                    else ZChannel.refailCause(failure0)
+                  case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
             }
@@ -749,7 +751,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         _           <- scope.addFinalizer(outgoing.shutdown)
         errorSignal <- Promise.make[Nothing, Unit]
         permits     <- Semaphore.make(n.toLong)
-        failure     <- Ref.make[Cause[OutErr1]](Cause.empty)
+        failure      = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
         pull        <- (queueReader >>> self).toPullInAlt(scope)
         childScope  <- scope.fork
         fiberId     <- ZIO.fiberId
@@ -793,11 +795,13 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             outgoing.take.map {
               case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
               case f: Exit.Failure[Either[Unit, OutDone]] =>
-                def extractFailures = ZChannel.unwrap(failure.get.map(ZChannel.refailCause(_)))
+                val failure0 = failure.unsafe.get(Unsafe)
                 f.cause.failureOrCause match {
-                  case Left(_: Left[Unit, OutDone])    => extractFailures
-                  case Left(x: Right[Unit, OutDone])   => ZChannel.succeedNow(x.value)
-                  case Right(c) if c.isInterruptedOnly => extractFailures
+                  case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
+                  case Left(x: Right[Unit, OutDone]) =>
+                    if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
+                    else ZChannel.refailCause(failure0)
+                  case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
             }
@@ -1211,7 +1215,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                 // Can't really happen because Out <:< Nothing. So just skip ahead.
                 interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
               case ChannelState.Done =>
-                ZIO.done(exec.getDone)
+                exec.getDone
               case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
                 ChannelExecutor.readUpstream[Env, OutErr, OutErr, OutDone](
                   r.asInstanceOf[ChannelState.Read[Env, OutErr]],
@@ -1463,12 +1467,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
     trace: Trace
   ): ZChannel[Env1, InErr1, InElem1, InDone1, OutErr1, OutElem1, zippable.Out] =
     self.mergeWith(that)(
-      exit1 =>
-        ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone2, OutErr1, zippable.Out](exit2 =>
-          ZIO.done(exit1.zip(exit2))
-        ),
-      exit2 =>
-        ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone, OutErr1, zippable.Out](exit1 => ZIO.done(exit1.zip(exit2)))
+      exit1 => ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone2, OutErr1, zippable.Out](exit2 => exit1.zip(exit2)),
+      exit2 => ZChannel.MergeDecision.Await[Env1, OutErr1, OutDone, OutErr1, zippable.Out](exit1 => exit1.zip(exit2))
     )
 
   /**

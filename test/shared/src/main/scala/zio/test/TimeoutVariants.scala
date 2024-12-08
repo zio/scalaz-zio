@@ -53,7 +53,7 @@ trait TimeoutVariants {
     duration: Duration
   )(implicit trace: Trace): ZTest[R, E] =
     test.raceWith(Live.withLive(showWarning(labels, duration))(_.delay(duration)))(
-      (result, fiber) => fiber.interrupt *> ZIO.done(result),
+      (result, fiber) => fiber.interrupt *> result,
       (_, fiber) => fiber.join
     )
 
