@@ -404,7 +404,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    *   - In nondeterministic mode, equivalent to [[Gen.oneOf]].
    */
   def concatAll[R, A](gens: => Iterable[Gen[R, A]])(implicit trace: Trace): Gen[R, A] = Gen.dual(
-    Gen(ZStream.concatAll(Chunk.fromIterable(gens).map(_.sample))),
+    Gen(ZStream.fromIterable(gens).flatMap(_.sample)),
     Gen.oneOf(Chunk.fromIterable(gens): _*)
   )
 
