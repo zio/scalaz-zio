@@ -18,7 +18,7 @@ package zio.test
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stream.ZStream
-import zio.{ZIO, Zippable, Trace}
+import zio._
 
 /**
  * A sample is a single observation from a random variable, together with a tree
@@ -39,8 +39,20 @@ final case class Sample[-R, +A](value: A, shrink: ZStream[R, Nothing, Sample[R, 
    * not meet the specified predicate and recursively filtering the shrink tree.
    */
   def filter(f: A => Boolean)(implicit trace: Trace): ZStream[R, Nothing, Sample[R, A]] =
-    if (f(value)) ZStream(Sample(value, shrink.flatMap(_.filter(f))))
-    else shrink.flatMap(_.filter(f))
+    filterZIO(a => Exit.succeed(f(a)))
+
+  /**
+   * Filters this sample by replacing it with its shrink tree if the value does
+   * not meet the specified effectful predicate and recursively filtering the
+   * shrink tree.
+   */
+  def filterZIO[R1 <: R](
+    f: A => ZIO[R1, Nothing, Boolean]
+  )(implicit trace: Trace): ZStream[R1, Nothing, Sample[R1, A]] =
+    ZStream.fromZIO(f(value)).flatMap { keep =>
+      val shrink = this.shrink.flatMap(_.filterZIO(f))
+      if (keep) ZStream(Sample(value, shrink)) else shrink
+    }
 
   def flatMap[R1 <: R, B](f: A => Sample[R1, B])(implicit trace: Trace): Sample[R1, B] = {
     val sample = f(value)
@@ -52,6 +64,11 @@ final case class Sample[-R, +A](value: A, shrink: ZStream[R, Nothing, Sample[R, 
 
   def map[B](f: A => B)(implicit trace: Trace): Sample[R, B] =
     Sample(f(value), shrink.map(_.map(f)))
+
+  def collect[B](pf: PartialFunction[A, B])(implicit trace: Trace): ZStream[R, Nothing, Sample[R, B]] = {
+    val shrink = this.shrink.flatMap(_.collect(pf))
+    pf.andThen(b => ZStream(Sample(b, shrink))).applyOrElse(value, (_: A) => shrink)
+  }
 
   /**
    * Converts the shrink tree into a stream of shrinkings by recursively

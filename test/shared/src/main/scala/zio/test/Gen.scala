@@ -32,6 +32,9 @@ import scala.math.Numeric.DoubleIsFractional
  * environment `R`. Generators may be random or deterministic.
  */
 final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =>
+  private[test] def samples(n: Option[Int])(implicit trace: Trace): ZStream[R, Nothing, Sample[R, A]] =
+    ZStream.scoped[R](Gen.deterministic.locallyScoped(n.isEmpty)) *>
+      n.fold(sample)(sample.forever.take(_))
 
   /**
    * A symbolic alias for `concat`.
@@ -54,17 +57,19 @@ final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =
    *     values from this generator and then the values from the other one.
    *   - In nondeterministic mode, equivalent to [[Gen.oneOf]].
    */
-  def concat[R1 <: R, A1 >: A](that: Gen[R1, A1])(implicit trace: Trace): Gen[R1, A1] =
-    Gen.dual(Gen(self.sample ++ that.sample), Gen.oneOf(self, that))
+  def concat[R1 <: R, A1 >: A](that: Gen[R1, A1])(implicit trace: Trace): Gen[R1, A1] = Gen.dual(
+    Gen(self.sample ++ that.sample),
+    Gen.oneOf(self, that)
+  )
 
   /**
    * Maps the values produced by this generator with the specified partial
    * function, discarding any values the partial function is not defined at.
    */
-  def collect[B](pf: PartialFunction[A, B])(implicit trace: Trace): Gen[R, B] =
-    self.flatMap { a =>
-      pf.andThen(Gen.const(_)).applyOrElse[A, Gen[Any, B]](a, _ => Gen.empty)
-    }
+  def collect[B](pf: PartialFunction[A, B])(implicit trace: Trace): Gen[R, B] = Gen.dual(
+    Gen(sample.flatMap(_.collect(pf))),
+    Gen(sample.map(_.value).forever.collect(pf).take(1).map(Sample.noShrink))
+  )
 
   /**
    * Filters the values produced by this generator, discarding any values that
@@ -78,7 +83,7 @@ final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =
    * }}}
    */
   def filter(f: A => Boolean)(implicit trace: Trace): Gen[R, A] =
-    self.flatMap(a => if (f(a)) Gen.const(a) else Gen.empty)
+    filterZIO(a => Exit.succeed(f(a)))
 
   /**
    * Filters the values produced by this generator, discarding any values that
@@ -91,26 +96,27 @@ final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =
    * val evens: Gen[Any, Int] = Gen.int.map(_ * 2)
    * }}}
    */
-  def filterZIO[R1 <: R](f: A => ZIO[R1, Nothing, Boolean])(implicit trace: Trace): Gen[R1, A] =
-    self.flatMap(a => Gen.fromZIO(f(a)).flatMap(p => if (p) Gen.const(a) else Gen.empty))
+  def filterZIO[R1 <: R](f: A => ZIO[R1, Nothing, Boolean])(implicit trace: Trace): Gen[R1, A] = Gen.dual(
+    Gen(sample.flatMap(_.filterZIO(f))),
+    Gen(sample.map(_.value).forever.filterZIO(f).take(1).map(Sample.noShrink))
+  )
 
   /**
    * Filters the values produced by this generator, discarding any values that
    * meet the specified predicate.
    */
   def filterNot(f: A => Boolean)(implicit trace: Trace): Gen[R, A] =
-    filter(a => !f(a))
+    filter(!f(_))
 
-  def withFilter(f: A => Boolean)(implicit trace: Trace): Gen[R, A] = filter(f)
+  def withFilter(f: A => Boolean)(implicit trace: Trace): Gen[R, A] =
+    filter(f)
 
   def flatMap[R1 <: R, B](f: A => Gen[R1, B])(implicit trace: Trace): Gen[R1, B] =
-    Gen {
-      self.sample.flatMap { sample =>
-        val values  = f(sample.value).sample
-        val shrinks = Gen(sample.shrink).flatMap(f).sample
-        values.map(_.flatMap(Sample(_, shrinks)))
-      }
-    }
+    Gen(self.sample.flatMap { sample =>
+      val values  = f(sample.value).sample
+      val shrinks = Gen(sample.shrink).flatMap(f).sample
+      values.map(_.flatMap(Sample(_, shrinks)))
+    })
 
   def flatten[R1 <: R, B](implicit ev: A <:< Gen[R1, B], trace: Trace): Gen[R1, B] =
     flatMap(ev)
@@ -149,20 +155,20 @@ final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =
    * Runs the generator and collects all of its values in a list.
    */
   def runCollect(implicit trace: Trace): ZIO[R, Nothing, List[A]] =
-    sample.map(_.value).runCollect.map(_.toList)
+    samples(None).map(_.value).runCollect.map(_.toList)
 
   /**
    * Repeatedly runs the generator and collects the specified number of values
    * in a list.
    */
   def runCollectN(n: Int)(implicit trace: Trace): ZIO[R, Nothing, List[A]] =
-    sample.map(_.value).forever.take(n.toLong).runCollect.map(_.toList)
+    samples(Some(n)).map(_.value).runCollect.map(_.toList)
 
   /**
    * Runs the generator returning the first value of the generator.
    */
   def runHead(implicit trace: Trace): ZIO[R, Nothing, Option[A]] =
-    sample.map(_.value).runHead
+    samples(Some(1)).map(_.value).runHead
 
   /**
    * Composes this generator with the specified generator to create a cartesian
@@ -179,19 +185,10 @@ final case class Gen[-R, +A](sample: ZStream[R, Nothing, Sample[R, A]]) { self =
    */
   def zipWith[R1 <: R, B, C](that: Gen[R1, B])(f: (A, B) => C)(implicit trace: Trace): Gen[R1, C] =
     self.flatMap(a => that.map(b => f(a, b)))
-
-  /**
-   * Mark this generator as nondeterministic. It will taint subsequently
-   * sequenced generators, marking them nondeterministic as well.
-   */
-  def nondeterministic(implicit trace: Trace): Gen[R, A] = Gen(ZStream.unwrap {
-    for (original <- Gen.deterministic.getAndSet(false))
-      yield sample.ensuring(Gen.deterministic.set(original))
-  })
 }
 
 object Gen extends GenZIO with FunctionVariants with TimeVariants {
-  private[zio] val deterministic = FiberRef.unsafe.make(true)(Unsafe.unsafe)
+  private val deterministic = FiberRef.unsafe.make(true)(Unsafe.unsafe)
 
   /**
    * Constructs a new dual generator that can be composed correctly with both
@@ -201,8 +198,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
     deterministic: => Gen[R, A],
     nondeterministic: => Gen[R, A]
   )(implicit trace: Trace): Gen[R, A] = Gen(ZStream.unwrap {
-    for (isDeterministic <- Gen.deterministic.get)
-      yield if (isDeterministic) deterministic.sample else nondeterministic.sample
+    Gen.deterministic.get.map(if (_) deterministic.sample else nondeterministic.sample)
   })
 
   /**
@@ -475,7 +471,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
   def fromIterable[R, A](
     as: Iterable[A],
     shrinker: A => ZStream[R, Nothing, A] = defaultShrinker
-  )(implicit trace: Trace): Gen[R, A] = dual(
+  )(implicit trace: Trace): Gen[R, A] = Gen.dual(
     Gen(ZStream.fromIterable(as).map(Sample.unfold(_)(a => (a, shrinker(a))))),
     Gen.elements(Chunk.fromIterable(as): _*)
   )
@@ -506,7 +502,7 @@ object Gen extends GenZIO with FunctionVariants with TimeVariants {
    * Constructs a generator from an effect that constructs a sample.
    */
   def fromZIOSample[R, A](effect: ZIO[R, Nothing, Sample[R, A]])(implicit trace: Trace): Gen[R, A] =
-    Gen(ZStream.fromZIO(effect)).nondeterministic
+    Gen(ZStream.fromZIO(effect))
 
   /**
    * A generator of floats. Shrinks toward '0'.
