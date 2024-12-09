@@ -1942,20 +1942,20 @@ object ZChannel {
     unwrapScopedWith { scope =>
       for {
         input         <- SingleProducerAsyncInput.make[InErr, InElem, InDone]
+        fiberId       <- ZIO.fiberId
         incoming       = ZChannel.fromInput(input)
-        n             <- ZIO.succeed(n)
-        bufferSize    <- ZIO.succeed(bufferSize)
-        mergeStrategy <- ZIO.succeed(mergeStrategy)
-        outgoing      <- Queue.bounded[ZIO[Env, Either[OutErr, OutDone], OutElem]](bufferSize)
+        n0             = n.toLong
+        bufferSize0    = bufferSize
+        mergeStrategy0 = mergeStrategy
+        outgoing       = Queue.unsafe.bounded[ZIO[Env, Either[OutErr, OutDone], OutElem]](bufferSize0, fiberId)(Unsafe.unsafe)
+        cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
+        lastDone       = Ref.unsafe.make[Option[OutDone]](None)(Unsafe.unsafe)
+        errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+        permits        = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
         _             <- scope.addFinalizer(outgoing.shutdown)
-        cancelers     <- Queue.unbounded[Promise[Nothing, Unit]]
         _             <- scope.addFinalizer(cancelers.shutdown)
-        lastDone      <- Ref.make[Option[OutDone]](None)
-        errorSignal   <- Promise.make[Nothing, Unit]
-        permits       <- Semaphore.make(n.toLong)
         pull          <- (incoming >>> channels).toPullInAlt(scope)
         childScope    <- scope.fork
-        fiberId       <- ZIO.fiberId
         evaluatePull = (pull: ZIO[Env, Either[OutErr, OutDone], OutElem]) =>
                          pull
                            .flatMap(outElem => outgoing.offer(Exit.succeed(outElem)))
@@ -1973,54 +1973,52 @@ object ZChannel {
                                  outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(())
                              }
                            )
-        pullStrategy = mergeStrategy match {
+        pullStrategy = mergeStrategy0 match {
                          case MergeStrategy.BackPressure =>
-                           (fiberId: FiberId) =>
-                             pull.flatMap { channel =>
-                               val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-                               val raceIOs =
+                           pull.flatMap { channel =>
+                             val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+                             val raceIOs =
+                               ZIO.scopedWith { scope =>
+                                 (incoming >>> channel)
+                                   .toPullInAlt(scope)
+                                   .flatMap(evaluatePull)
+                               }
+                             for {
+                               _ <- permits
+                                      .withPermit(latch.succeed(()) *> raceIOs)
+                                      .interruptible
+                                      .forkIn(childScope)
+                               _ <- latch.await
+                             } yield ()
+                           }
+                         case MergeStrategy.BufferSliding =>
+                           pull.flatMap { channel =>
+                             val canceler = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+                             val latch    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+                             for {
+                               size <- cancelers.size
+                               _    <- ZIO.when(size >= n0)(cancelers.take.flatMap(_.succeed(())))
+                               _    <- cancelers.offer(canceler)
+                               raceIOs =
                                  ZIO.scopedWith { scope =>
                                    (incoming >>> channel)
                                      .toPullInAlt(scope)
-                                     .flatMap(evaluatePull)
+                                     .flatMap(evaluatePull(_).race(canceler.await.interruptible))
                                  }
-                               for {
-                                 _ <- permits
-                                        .withPermit(latch.succeed(()) *> raceIOs)
-                                        .interruptible
-                                        .forkIn(childScope)
-                                 _ <- latch.await
-                               } yield ()
-                             }
-                         case MergeStrategy.BufferSliding =>
-                           (fiberId: FiberId) =>
-                             pull.flatMap { channel =>
-                               val canceler = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-                               val latch    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-                               for {
-                                 size <- cancelers.size
-                                 _    <- ZIO.when(size >= n)(cancelers.take.flatMap(_.succeed(())))
-                                 _    <- cancelers.offer(canceler)
-                                 raceIOs =
-                                   ZIO.scopedWith { scope =>
-                                     (incoming >>> channel)
-                                       .toPullInAlt(scope)
-                                       .flatMap(evaluatePull(_).race(canceler.await.interruptible))
-                                   }
-                                 _ <- permits
-                                        .withPermit(latch.succeed(()) *> raceIOs)
-                                        .interruptible
-                                        .forkIn(childScope)
-                                 _ <- latch.await
-                               } yield ()
-                             }
+                               _ <- permits
+                                      .withPermit(latch.succeed(()) *> raceIOs)
+                                      .interruptible
+                                      .forkIn(childScope)
+                               _ <- latch.await
+                             } yield ()
+                           }
                        }
-        _ <- pullStrategy(fiberId).forever
+        _ <- pullStrategy.forever
                .catchAllCause(cause =>
                  cause.failureOrCause match {
                    case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
                    case Left(x: Right[OutErr, OutDone]) =>
-                     permits.withPermits(n.toLong)(ZIO.unit).interruptible *>
+                     permits.withPermits(n0)(ZIO.unit).interruptible *>
                        lastDone.get.flatMap {
                          case Some(lastDone) => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
                          case None           => outgoing.offer(Exit.fail(Right(x.value)))
