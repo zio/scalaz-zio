@@ -671,7 +671,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         _           <- scope.addFinalizer(outgoing.shutdown)
         errorSignal <- Promise.make[Nothing, Unit]
         permits     <- Semaphore.make(n.toLong)
-        failure     <- Ref.make[Cause[OutErr1]](Cause.empty)
+        failure      = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
         pull        <- (queueReader >>> self).toPullInAlt(scope)
         childScope  <- scope.fork
         fiberId     <- ZIO.fiberId
@@ -714,11 +714,13 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             outgoing.take.flatMap(_.await).map {
               case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
               case f: Exit.Failure[Either[Unit, OutDone]] =>
-                def extractFailures = ZChannel.unwrap(failure.get.map(ZChannel.refailCause(_)))
+                val failure0 = failure.unsafe.get(Unsafe)
                 f.cause.failureOrCause match {
-                  case Left(_: Left[Unit, OutDone])    => extractFailures
-                  case Left(x: Right[Unit, OutDone])   => ZChannel.succeedNow(x.value)
-                  case Right(c) if c.isInterruptedOnly => extractFailures
+                  case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
+                  case Left(x: Right[Unit, OutDone]) =>
+                    if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
+                    else ZChannel.refailCause(failure0)
+                  case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
             }
@@ -749,7 +751,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         _           <- scope.addFinalizer(outgoing.shutdown)
         errorSignal <- Promise.make[Nothing, Unit]
         permits     <- Semaphore.make(n.toLong)
-        failure     <- Ref.make[Cause[OutErr1]](Cause.empty)
+        failure      = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
         pull        <- (queueReader >>> self).toPullInAlt(scope)
         childScope  <- scope.fork
         fiberId     <- ZIO.fiberId
@@ -793,11 +795,13 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             outgoing.take.map {
               case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
               case f: Exit.Failure[Either[Unit, OutDone]] =>
-                def extractFailures = ZChannel.unwrap(failure.get.map(ZChannel.refailCause(_)))
+                val failure0 = failure.unsafe.get(Unsafe)
                 f.cause.failureOrCause match {
-                  case Left(_: Left[Unit, OutDone])    => extractFailures
-                  case Left(x: Right[Unit, OutDone])   => ZChannel.succeedNow(x.value)
-                  case Right(c) if c.isInterruptedOnly => extractFailures
+                  case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
+                  case Left(x: Right[Unit, OutDone]) =>
+                    if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
+                    else ZChannel.refailCause(failure0)
+                  case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
             }

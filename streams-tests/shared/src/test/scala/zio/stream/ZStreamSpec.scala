@@ -2722,7 +2722,7 @@ object ZStreamSpec extends ZIOBaseSpec {
                           .exit
               count <- interrupted.get
             } yield assert(count)(equalTo(2)) && assert(result)(fails(equalTo("Boom")))
-          } @@ exceptJS(nonFlaky),
+          } @@ exceptJS(nonFlaky(500)),
           test("propagates correct error with subsequent mapZIOPar call (#4514)") {
             assertZIO(
               ZStream
@@ -2831,7 +2831,7 @@ object ZStreamSpec extends ZIOBaseSpec {
                           .exit
               count <- interrupted.get
             } yield assert(count)(equalTo(2)) && assert(result)(fails(equalTo("Boom")))
-          } @@ exceptJS(nonFlaky),
+          } @@ exceptJS(nonFlaky(500)),
           test("awaits children fibers properly") {
             assertZIO(
               ZStream
