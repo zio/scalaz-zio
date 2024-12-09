@@ -784,34 +784,64 @@ object GenSpec extends ZIOBaseSpec {
           i  <- Gen.fromIterable(1 to 3)
           id <- Gen.uuid
         } yield (i, id)
-        assertZIO(gen.map(_._1).runCollect)(equalTo(List(1, 2, 3))) &&
-        assertZIO(gen.map(_._2).runCollect.map(_.toSet))(hasSize(equalTo(3)))
+
+        val deterministic1    = gen.samples(None).map(_.value._1).runCollect
+        val deterministic2    = gen.samples(None).map(_.value._2).runCollect
+        val nondeterministic1 = gen.samples(Some(3)).map(_.value._1).runCollect
+        val nondeterministic2 = gen.samples(Some(3)).map(_.value._2).runCollect
+
+        assertZIO(deterministic1)(equalTo(Chunk(1, 2, 3))) &&
+        assertZIO(deterministic2.map(_.toSet))(hasSize(equalTo(3))) &&
+        assertZIO(nondeterministic1)(forall(isOneOf(1 to 3))) &&
+        assertZIO(nondeterministic2.map(_.toSet))(hasSize(equalTo(3)))
       },
       test("nondeterministic and then fromIterable") {
         val gen = for {
           id <- Gen.uuid
           i  <- Gen.fromIterable(1 to 3)
         } yield (i, id)
-        assertZIO(gen.runCollect)(hasSize(equalTo(1))) &&
-        assertZIO(gen.map(_._1).runCollectN(3))(forall(isOneOf(1 to 3))) &&
-        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+
+        val deterministic1    = gen.samples(None).map(_.value._1).runCollect
+        val deterministic2    = gen.samples(None).map(_.value._2).runCollect
+        val nondeterministic1 = gen.samples(Some(3)).map(_.value._1).runCollect
+        val nondeterministic2 = gen.samples(Some(3)).map(_.value._2).runCollect
+
+        assertZIO(deterministic1)(equalTo(Chunk(1, 2, 3))) &&
+        assertZIO(deterministic2.map(_.toSet))(hasSize(equalTo(1))) &&
+        assertZIO(nondeterministic1)(forall(isOneOf(1 to 3))) &&
+        assertZIO(nondeterministic2.map(_.toSet))(hasSize(equalTo(3)))
       },
       test("concat and then nondeterministic") {
         val gen = for {
           i  <- Gen.fromIterable(1 to 3) ++ Gen.const(4)
           id <- Gen.uuid
         } yield (i, id)
-        assertZIO(gen.map(_._1).runCollect)(equalTo(List(1, 2, 3, 4))) &&
-        assertZIO(gen.map(_._2).runCollect.map(_.toSet))(hasSize(equalTo(4)))
+
+        val deterministic1    = gen.map(_._1).runCollect
+        val deterministic2    = gen.map(_._2).runCollect
+        val nondeterministic1 = gen.map(_._1).runCollectN(4)
+        val nondeterministic2 = gen.map(_._2).runCollectN(4)
+
+        assertZIO(deterministic1)(equalTo(List(1, 2, 3, 4))) &&
+        assertZIO(deterministic2.map(_.toSet))(hasSize(equalTo(4))) &&
+        assertZIO(nondeterministic1)(forall(isOneOf(1 to 4))) &&
+        assertZIO(nondeterministic2.map(_.toSet))(hasSize(equalTo(4)))
       },
       test("nondeterministic and then concat") {
         val gen = for {
           id <- Gen.uuid
           i  <- Gen.fromIterable(1 to 3) ++ Gen.const(4)
         } yield (i, id)
-        assertZIO(gen.runCollect)(hasSize(equalTo(1))) &&
-        assertZIO(gen.map(_._1).runCollectN(3))(forall(isOneOf(1 to 4))) &&
-        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+
+        val deterministic1    = gen.map(_._1).runCollect
+        val deterministic2    = gen.map(_._2).runCollect
+        val nondeterministic1 = gen.map(_._1).runCollectN(4)
+        val nondeterministic2 = gen.map(_._2).runCollectN(4)
+
+        assertZIO(deterministic1)(equalTo(List(1, 2, 3, 4))) &&
+        assertZIO(deterministic2.map(_.toSet))(hasSize(equalTo(1))) &&
+        assertZIO(nondeterministic1)(forall(isOneOf(1 to 4))) &&
+        assertZIO(nondeterministic2.map(_.toSet))(hasSize(equalTo(4)))
       },
       test("const is deterministic") {
         val gen = for {
@@ -823,11 +853,15 @@ object GenSpec extends ZIOBaseSpec {
       test("infinite iterable works when deterministic") {
         @nowarn("cat=deprecation")
         val gen = for {
-          i <- Gen.fromIterable(Stream.iterate(1)(_ + 1))
+          i  <- Gen.fromIterable(Stream.iterate(1)(_ + 1))
           id <- Gen.uuid.mapZIO(ZIO.succeedNow) // access something deprecated on Scala 2.12
         } yield (i, id)
-        assertZIO(gen.map(_._1).runCollectN(3))(equalTo(List(1, 2, 3))) &&
-        assertZIO(gen.map(_._2).runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+
+        val deterministic1 = gen.samples(None).map(_.value._1).take(3).runCollect
+        val deterministic2 = gen.samples(None).map(_.value._2).take(3).runCollect
+
+        assertZIO(deterministic1)(equalTo(Chunk(1, 2, 3))) &&
+        assertZIO(deterministic2.map(_.toSet))(hasSize(equalTo(3)))
       },
       test("infinite iterable doesn't work when nondeterministic") {
         @nowarn("cat=deprecation")
@@ -837,6 +871,7 @@ object GenSpec extends ZIOBaseSpec {
                  if (n % 15 == 0) throw new IllegalStateException("FizzBuzz") else n
                })
         } yield (i, id)
+
         assertZIO(gen.runCollectN(3).exit)(
           dies(isSubtype[IllegalStateException](hasMessage(equalTo("FizzBuzz"))))
         )
@@ -845,14 +880,24 @@ object GenSpec extends ZIOBaseSpec {
         assertZIO(Gen.boolean.runCollect)(equalTo(List(false, true)))
       },
       test("boolean can be nondeterministic") {
-        assertZIO(Gen.int.flatMap(_ => Gen.boolean).runCollect)(hasSize(equalTo(1)))
+        val gen = Gen.uuid.flatMap(id => Gen.boolean.map(_ => id))
+        assertZIO(gen.runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
       },
       test("option can be deterministic") {
         assertZIO(Gen.option(Gen.boolean).runCollect)(equalTo(List(None, Some(false), Some(true))))
       },
       test("option can be nondeterministic") {
-        assertZIO(Gen.int.flatMap(_ => Gen.option(Gen.boolean)).runCollect)(hasSize(equalTo(1)))
-      }
+        val gen = Gen.option(Gen.uuid).filter(_.isDefined)
+        assertZIO(gen.runCollectN(3).map(_.toSet))(hasSize(equalTo(3)))
+      },
+      test("gen filter doesn't backtrack") {
+        val filteredGen = for {
+          first  <- Gen.int(1, 10).filter(_ == 10)
+          second <- Gen.int(1, 10).filter(_ == 1)
+          third  <- Gen.int(1, 10).filter(_ == 5)
+        } yield s"$first.$second.$third"
+        assertZIO(filteredGen.runHead)(isSome(equalTo("10.1.5")))
+      } @@ TestAspect.repeats(10)
     )
   )
 }

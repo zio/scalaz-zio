@@ -401,7 +401,7 @@ package object test extends CompileVariants {
     sourceLocation: SourceLocation,
     trace: Trace
   ): ZIO[checkConstructor.OutEnvironment, checkConstructor.OutError, TestResult] =
-    TestConfig.samples.flatMap(n => checkStream(rv.sample.forever.take(n.toLong))(a => checkConstructor(test(a))))
+    TestConfig.samples.flatMap(n => checkStream(rv.samples(Some(n)))(a => checkConstructor(test(a))))
 
   /**
    * A version of `check` that accepts two random variables.
@@ -527,7 +527,7 @@ package object test extends CompileVariants {
     sourceLocation: SourceLocation,
     trace: Trace
   ): ZIO[checkConstructor.OutEnvironment, checkConstructor.OutError, TestResult] =
-    checkStream(rv.sample)(a => checkConstructor(test(a)))
+    checkStream(rv.samples(None))(a => checkConstructor(test(a)))
 
   /**
    * A version of `checkAll` that accepts two random variables.
@@ -655,7 +655,7 @@ package object test extends CompileVariants {
     sourceLocation: SourceLocation,
     trace: Trace
   ): ZIO[checkConstructor.OutEnvironment, checkConstructor.OutError, TestResult] =
-    checkStreamPar(rv.sample, parallelism)(a => checkConstructor(test(a)))
+    checkStreamPar(rv.samples(None), parallelism)(a => checkConstructor(test(a)))
 
   /**
    * A version of `checkAllPar` that accepts two random variables.
@@ -802,9 +802,7 @@ package object test extends CompileVariants {
     sourceLocation: SourceLocation,
     trace: Trace
   ): ZIO[checkConstructor.OutEnvironment, checkConstructor.OutError, TestResult] =
-    TestConfig.samples.flatMap(n =>
-      checkStreamPar(rv.sample.forever.take(n.toLong), parallelism)(a => checkConstructor(test(a)))
-    )
+    TestConfig.samples.flatMap(n => checkStreamPar(rv.samples(Some(n)), parallelism)(a => checkConstructor(test(a))))
 
   /**
    * A version of `checkPar` that accepts two random variables.
@@ -1014,7 +1012,7 @@ package object test extends CompileVariants {
         checkConstructor: CheckConstructor[R, In],
         trace: Trace
       ): ZIO[checkConstructor.OutEnvironment, checkConstructor.OutError, TestResult] =
-        checkStream(rv.sample.forever.take(n.toLong))(a => checkConstructor(test(a)))
+        checkStream(rv.samples(Some(n)))(a => checkConstructor(test(a)))
       def apply[R <: ZAny, A, B, In](rv1: Gen[R, A], rv2: Gen[R, B])(
         test: (A, B) => In
       )(implicit
