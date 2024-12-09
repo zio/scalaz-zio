@@ -662,7 +662,7 @@ sealed trait ZIO[-R, +E, +A]
     ev1: A IsSubtypeOfOutput ZIO[R1, E1, B],
     trace: Trace
   ): ZIO[R1, E1, B] =
-    self.asInstanceOf[UIO[ZIO[R1, E1, B]]].flatMap(ZIO.identityFn)
+    self.flatMap(ev1)
 
   /**
    * Returns an effect that swaps the error/success cases. This allows you to
