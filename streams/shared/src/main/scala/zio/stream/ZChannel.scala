@@ -2052,7 +2052,6 @@ object ZChannel {
           consumer.embedInput(input)
         }
       }
-
     }
 
   @deprecated("use mergeAllWith with `MergeStrategy`", "2.1.7")
