@@ -1983,13 +1983,11 @@ object ZChannel {
                                    .toPullInAlt(scope)
                                    .flatMap(evaluatePull)
                                }
-                             for {
-                               _ <- permits
-                                      .withPermit(latch.succeed(()) *> raceIOs)
-                                      .interruptible
-                                      .forkIn(childScope)
-                               _ <- latch.await
-                             } yield ()
+
+                             permits
+                               .withPermit(latch.succeed(()) *> raceIOs)
+                               .interruptible
+                               .forkIn(childScope) *> latch.await
                            }
                          case MergeStrategy.BufferSliding =>
                            pull.flatMap { channel =>
