@@ -6377,6 +6377,21 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           }
         }
     }
+
+  private[zio] def unfoldPull[R, A](
+    runtime: Runtime[R],
+    pull: ZIO[R, Option[Throwable], A]
+  )(implicit trace: Trace, unsafe: Unsafe): Iterator[A] =
+    runtime.unsafe.run(pull) match {
+      case Exit.Success(value) =>
+        Iterator.single(value) ++ unfoldPull(runtime, pull)
+      case Exit.Failure(cause) =>
+        cause.failureOrCause match {
+          case Left(None)    => Iterator.empty
+          case Left(Some(e)) => Exit.fail(e).getOrThrow()
+          case Right(c)      => Exit.failCause(c).getOrThrowFiberFailure()
+        }
+    }
 }
 
 /**

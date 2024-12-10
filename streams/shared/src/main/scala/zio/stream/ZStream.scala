@@ -3466,24 +3466,10 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    * Converts this stream into a `scala.collection.Iterator` wrapped in a scoped
    * [[ZIO]]. The returned iterator will only be valid within the scope.
    */
-  def toIterator(implicit trace: Trace): ZIO[R with Scope, Nothing, Iterator[Either[E, A]]] =
-    for {
-      runtime <- ZIO.runtime[R]
-      pull    <- toPull
-    } yield {
-      def unfoldPull: Iterator[Either[E, A]] =
-        runtime.unsafe.run(pull)(trace, Unsafe.unsafe) match {
-          case Exit.Success(chunk) => chunk.iterator.map(Right(_)) ++ unfoldPull
-          case Exit.Failure(cause) =>
-            cause.failureOrCause match {
-              case Left(None)    => Iterator.empty
-              case Left(Some(e)) => Iterator.single(Left(e))
-              case Right(c)      => throw FiberFailure(c)
-            }
-        }
-
-      unfoldPull
-    }
+  def toIterator(implicit trace: Trace): ZIO[R with Scope, Nothing, Iterator[Either[E, A]]] = for {
+    runtime <- ZIO.runtime[R]
+    pull    <- either.toPull
+  } yield ZIO.unfoldPull(runtime, pull)(trace, Unsafe.unsafe).flatten
 
   /**
    * Returns in a scope a ZIO effect that can be used to repeatedly pull chunks

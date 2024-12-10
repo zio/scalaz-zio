@@ -66,10 +66,7 @@ final case class TestRunner[R, E](executor: TestExecutor[R, E]) { self =>
       def runAsync(spec: Spec[R, E])(k: => Unit)(implicit trace: Trace, unsafe: Unsafe): Unit = {
         val fiber =
           runtime.unsafe.fork(self.run("Test Task name unavailable in this context.", spec))
-        fiber.unsafe.addObserver {
-          case Exit.Success(_) => k
-          case Exit.Failure(c) => throw FiberFailure(c)
-        }
+        fiber.unsafe.addObserver { exit => exit.getOrThrowFiberFailure(); k }
       }
 
       /**
