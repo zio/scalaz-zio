@@ -4546,7 +4546,7 @@ object ZIOSpec extends ZIOBaseSpec {
         for {
           future <- ZIO.fail(new Throwable(new IllegalArgumentException)).toFuture
           result <- ZIO.fromFuture(_ => future).either
-        } yield assert(result)(isLeft(hasSuppressed(exists(hasMessage(containsString("zio-fiber"))))))
+        } yield assert(result)(isLeft(hasSuppressed(exists(hasMessage(containsString("IllegalArgumentException"))))))
       }
     ) @@ zioTag(future),
     suite("resurrect")(
