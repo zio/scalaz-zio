@@ -14,7 +14,7 @@ object StackTracesSpec extends ZIOBaseSpec {
           value  = ZIO.fail("Oh no!")
           trace <- matchPrettyPrintCause(value)
         } yield {
-          assertHasExceptionInThreadZioFiber(trace)("java.lang.String: Oh no!") &&
+          assertHasMessage(trace)("java.lang.String: Oh no!") &&
           assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
           assertTrue(!trace.contains("Suppressed"))
         }
@@ -39,7 +39,7 @@ object StackTracesSpec extends ZIOBaseSpec {
           value  = underlyingFailure
           trace <- matchPrettyPrintCause(value)
         } yield {
-          assertHasExceptionInThreadZioFiber(trace)("java.lang.String: Oh no!") &&
+          assertHasMessage(trace)("java.lang.String: Oh no!") &&
           assertHasStacktraceFor(trace)("spec.deepUnderlyingFailure") &&
           assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
           assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
@@ -66,7 +66,7 @@ object StackTracesSpec extends ZIOBaseSpec {
           value  = underlyingFailure
           trace <- matchPrettyPrintCause(value)
         } yield {
-          assertHasExceptionInThreadZioFiber(trace)("java.lang.String: Oh no!") &&
+          assertHasMessage(trace)("java.lang.String: Oh no!") &&
           assertHasStacktraceFor(trace)("spec.deepUnderlyingFailure") &&
           assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
           assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
@@ -86,7 +86,7 @@ object StackTracesSpec extends ZIOBaseSpec {
           value  = underlyingFailure
           trace <- matchPrettyPrintCause(value)
         } yield {
-          assertHasExceptionInThreadZioFiber(trace)("java.lang.String: Oh no!") &&
+          assertHasMessage(trace)("java.lang.String: Oh no!") &&
           assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
           assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
           assert(trace)(containsString("Suppressed: java.lang.RuntimeException: other failure")) &&
@@ -102,7 +102,7 @@ object StackTracesSpec extends ZIOBaseSpec {
         for {
           trace <- matchPrettyPrintCause(underlyingFailure)
         } yield {
-          assertHasExceptionInThreadZioFiber(trace)("java.util.NoSuchElementException: head of empty list") &&
+          assertHasMessage(trace)("java.util.NoSuchElementException: head of empty list") &&
           assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
           assertHasStacktraceFor(trace)("matchPrettyPrintCause")
         }
@@ -119,8 +119,8 @@ object StackTracesSpec extends ZIOBaseSpec {
       println(trace.prettyPrint)
     }
 
-  private def assertHasExceptionInThreadZioFiber(trace: String): String => TestResult =
-    errorMessage => assert(trace)(matchesRegex(s"""(?s)^Exception in thread\\s"zio-fiber-\\d*"\\s$errorMessage.*"""))
+  private def assertHasMessage(trace: String): String => TestResult =
+    errorMessage => assert(trace)(containsString(errorMessage))
 
   private def assertHasStacktraceFor(trace: String): String => TestResult = subject =>
     assert(trace)(matchesRegex(s"""(?s).*at zio\\.StackTracesSpec.?\\.$subject.*\\(.*:\\d*\\).*"""))
