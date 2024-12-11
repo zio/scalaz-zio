@@ -1005,6 +1005,15 @@ private[zio] object SingleProducerAsyncInput {
       .flatMap(p => Ref.make[State[Err, Elem, Done]](State.Empty(p)))
       .map(new SingleProducerAsyncInput(_))
 
+  object unsafe {
+    def make[Err, Elem, Done](fiberId: FiberId)(implicit trace: Trace): SingleProducerAsyncInput[Err, Elem, Done] = {
+      val promise: Promise[Nothing, Unit]      = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+      val initialState: State[Err, Elem, Done] = State.Empty[Err, Elem, Done](promise)
+      val ref: Ref[State[Err, Elem, Done]]     = Ref.unsafe.make(initialState)(Unsafe.unsafe)
+      new SingleProducerAsyncInput[Err, Elem, Done](ref)
+    }
+  }
+
   sealed trait State[Err, Elem, Done]
   object State {
     case class Empty[Err, Elem, Done](notifyProducer: Promise[Nothing, Unit]) extends State[Err, Elem, Done]
