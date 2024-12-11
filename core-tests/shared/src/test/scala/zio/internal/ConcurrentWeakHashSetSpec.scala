@@ -68,7 +68,8 @@ object ConcurrentWeakHashSetSpec extends ZIOBaseSpec {
       val set  = ConcurrentWeakHashSet[Wrapper[Int]]()
       val refs = List(Wrapper(1), Wrapper(2))
       set.addAll(refs)
-      val allValues = set.iterator.toList.sortBy(_.value)
+      import scala.jdk.CollectionConverters._
+      val allValues = set.iterator.asScala.toList.sortBy(_.value)
       assert(allValues)(equalTo(refs))
     },
     test("removing element with the same index from chain deletes only matched reference") {
@@ -77,7 +78,8 @@ object ConcurrentWeakHashSetSpec extends ZIOBaseSpec {
       corruptedSet.addAll(refs)
       val removed = corruptedSet.remove(Wrapper(4)) // matched index (calculated from hashcode) is the same for 4 and 8
       assertTrue(removed)
-      assert(corruptedSet.toList.map(_.value).sorted)(equalTo(List(0, 1, 2, 3, 5, 6, 7, 8)))
+      import scala.jdk.CollectionConverters._
+      assert(corruptedSet.asScala.toList.map(_.value).sorted)(equalTo(List(0, 1, 2, 3, 5, 6, 7, 8)))
     },
     test("dead references are removed from set") {
       val set = ConcurrentWeakHashSet[Wrapper[Int]]()

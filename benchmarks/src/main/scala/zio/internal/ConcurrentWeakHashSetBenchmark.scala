@@ -175,12 +175,12 @@ private[this] class ConcurrentWeakHashSetIterateBenchmark {
 
   @Benchmark
   def zioIterateSerial(ctx: IterateContext, blackhole: Blackhole): Unit =
-    ctx.zioSet.foreach(element => blackhole.consume(element))
+    ctx.zioSet.forEach(element => blackhole.consume(element))
 
   @Threads(6)
   @Benchmark
   def zioIterateConcurrent(ctx: IterateContext, blackhole: Blackhole): Unit =
-    ctx.zioSet.foreach(element => blackhole.consume(element))
+    ctx.zioSet.forEach(element => blackhole.consume(element))
 
 }
 

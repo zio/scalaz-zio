@@ -5,6 +5,10 @@ import zio.internal.ConcurrentWeakHashSet._
 import java.lang.ref.{ReferenceQueue, WeakReference}
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
+import java.util.function.IntFunction
 
 private[zio] object ConcurrentWeakHashSet {
 
@@ -89,7 +93,7 @@ private[zio] object ConcurrentWeakHashSet {
  */
 private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
   initialCapacity: Int = ConcurrentWeakHashSet.DefaultInitialCapacity
-) extends MutableSetCompat[V] { self =>
+) extends java.util.Set[V] { self =>
 
   private val shift: Int =
     ConcurrentWeakHashSet.calculateShift(this.concurrencyLevel, ConcurrentWeakHashSet.MaxConcurrencyLevel)
@@ -183,7 +187,8 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * @return
    *   specialized iterator that excludes dead references
    */
-  override def iterator: Iterator[V] = new ConcurrentWeakHashSetIterator()
+  override def iterator: java.util.Iterator[V] =
+    new ConcurrentWeakHashSetIterator()
 
   /**
    * Check if the set contains the specified element.
@@ -193,11 +198,11 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * @return
    *   `true` if the set contains the specified element, `false` otherwise
    */
-  override def contains(element: V): Boolean =
-    if (element eq null) false
+  override def contains(element: AnyRef): Boolean =
+    if (element == null) false
     else {
       val reference = getReference(element)
-      (null ne reference) && (null ne reference.get())
+      (reference ne null) && (null ne reference.get())
     }
 
   /**
@@ -245,7 +250,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * @return
    *   `true` if the element was removed, `false` otherwise
    */
-  override def remove(element: V): Boolean =
+  override def remove(element: Object): Boolean =
     this.update(
       element,
       UpdateOperation.RemoveElement,
@@ -270,8 +275,8 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * Enhanced hashing same as in standard ConcurrentHashMap (Wang/Jenkins
    * algorithm)
    */
-  private def getHash(element: V): Int = {
-    var hash = if (element eq null) 0 else element.hashCode()
+  private def getHash(element: AnyRef): Int = {
+    var hash = if (element ne null) element.hashCode() else 0
     hash += (hash << 15) ^ 0xffffcd7d
     hash ^= (hash >>> 10)
     hash += (hash << 3)
@@ -292,7 +297,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * @see
    *   [[ConcurrentWeakHashSet.getSegment]]
    */
-  private def getReference(element: V): RefNode = {
+  private def getReference(element: AnyRef): RefNode = {
     val hash    = this.getHash(element)
     val segment = this.getSegment(hash)
     segment.getReference(element, hash)
@@ -303,7 +308,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * set.
    */
   private def update(
-    element: V,
+    element: AnyRef,
     operation: UpdateOperation,
     restructureBefore: Boolean,
     resize: Boolean,
@@ -328,7 +333,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
     /**
      * Get reference from this segment for given element and hash.
      */
-    def getReference(element: V, hash: Int): RefNode = {
+    def getReference(element: AnyRef, hash: Int): RefNode = {
       if (this.counter.get() == 0) return null
       val localReferences = this.references // read volatile
       val index           = this.getIndex(localReferences, hash)
@@ -345,7 +350,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
     /**
      * Look for reference with given value in the chain.
      */
-    private def findInChain(headReference: RefNode, element: V, hash: Int): RefNode = {
+    private def findInChain(headReference: RefNode, element: AnyRef, hash: Int): RefNode = {
       var currentReference = headReference
       while (currentReference ne null) {
         val value = currentReference.get()
@@ -363,7 +368,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
      */
     def update(
       hash: Int,
-      element: V,
+      element: AnyRef,
       operation: UpdateOperation,
       restructureBefore: Boolean,
       resize: Boolean,
@@ -373,7 +378,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
         this.restructureIfNecessary(resize)
       }
       if (skipIfEmpty && this.counter.get() == 0) {
-        return handleOperation(operation, element.asInstanceOf[AnyRef], hash)
+        return handleOperation(operation, element, hash)
       }
       this.lock()
       try {
@@ -526,7 +531,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
   /**
    * Iterator that excludes dead references.
    */
-  private final class ConcurrentWeakHashSetIterator extends Iterator[V] {
+  private final class ConcurrentWeakHashSetIterator extends java.util.Iterator[V] {
 
     private var segmentIndex: Int          = 0
     private var referenceIndex: Int        = 0
@@ -593,4 +598,25 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
     }
   }
 
+  // java.util.Set methods
+  override def addAll(c: util.Collection[_ <: V]): Boolean = {
+    if (c.isEmpty) false
+    else {
+      this.addAll(c.asInstanceOf[Iterable[V]])
+      true
+    }
+  }
+  override def removeAll(c: util.Collection[_]): Boolean = this.removeIf(_ => true)
+  override def retainAll(c: util.Collection[_]): Boolean = this.removeIf(e => !c.contains(e))
+
+  override def containsAll(c: util.Collection[_]): Boolean =
+    throw new UnsupportedOperationException("containsAll is not supported")
+  override def toArray[T](generator: IntFunction[Array[T with Object]]): Array[T with Object] =
+    throw new UnsupportedOperationException("toArray is not supported")
+  override def toArray: Array[AnyRef]            = {
+    throw new UnsupportedOperationException("toArray is not supported")
+  }
+
+  override def toArray[T](a: Array[T with Object]): Array[T with Object] =
+    throw new UnsupportedOperationException("toArray is not supported")
 }
