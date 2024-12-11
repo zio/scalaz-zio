@@ -1074,7 +1074,6 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 stackIndex = pushStackFrame(flatmap, stackIndex)
 
                 val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
-
                 ops += 1
 
                 if (null eq result)
