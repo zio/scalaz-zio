@@ -1063,23 +1063,27 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case flatmap: FlatMap[Any, Any, Any, Any] =>
               updateLastTrace(flatmap.trace)
 
-              stackIndex = pushStackFrame(flatmap, stackIndex)
-
-              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
-              ops += 1
-
-              if (null eq result)
-                return null
+              if ((flatmap.first eq Exit.unit) || (flatmap.first eq ZIO.unit)) flatmap.successK(())
               else {
-                stackIndex -= 1
-                popStackFrame(stackIndex)
+                stackIndex = pushStackFrame(flatmap, stackIndex)
 
-                result match {
-                  case s: Success[Any] =>
-                    cur = flatmap.successK(s.value)
+                val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
 
-                  case failure =>
-                    cur = failure
+                ops += 1
+
+                if (null eq result)
+                  return null
+                else {
+                  stackIndex -= 1
+                  popStackFrame(stackIndex)
+
+                  result match {
+                    case s: Success[Any] =>
+                      cur = flatmap.successK(s.value)
+
+                    case failure =>
+                      cur = failure
+                  }
                 }
               }
             case stateful: Stateful[Any, Any, Any] =>
