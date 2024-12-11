@@ -1063,7 +1063,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case flatmap: FlatMap[Any, Any, Any, Any] =>
               updateLastTrace(flatmap.trace)
 
-              if ((flatmap.first eq Exit.unit) || (flatmap.first eq ZIO.unit)) flatmap.successK(())
+              val first = flatmap.first
+
+              if ((first eq Exit.unit) || (first eq ZIO.unit)) flatmap.successK(())
+              else if (first eq Exit.none) flatmap.successK(None)
+              else if (first eq Exit.`false`) flatmap.successK(false)
+              else if (first eq Exit.`true`) flatmap.successK(true)
+              else if (first eq Exit.emptyChunk) flatmap.successK(Chunk.empty)
               else {
                 stackIndex = pushStackFrame(flatmap, stackIndex)
 
@@ -1281,6 +1287,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     assert(DisableAssertions, "runLoop must exit with a return statement from within the while loop.")
     null
   }
+
 
   private def sendInterruptSignalToAllChildren(
     children: JavaSet[Fiber.Runtime[_, _]]
