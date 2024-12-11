@@ -24,7 +24,6 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.IntFunction
 import java.util.{Set => JavaSet}
 import scala.annotation.tailrec
 
@@ -1190,15 +1189,23 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               cur = null
 
               while ((cur eq null) && check()) {
-                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth, ops) match {
-                  case s: Success[Any] =>
-                    iterate.process(s.value)
-                  case null =>
-                    return null
-                  case failure =>
-                    cur = failure
+                val body = iterate.body()
+
+                if (body eq ZIO.unit) iterate.process(())
+                else if (body.isInstanceOf[Success[Any]]) iterate.process(body.asInstanceOf[Success[Any]].value)
+                else if (body.isInstanceOf[Failure[Any]]) cur = body
+                else {
+                  val result = runLoop(body, stackIndex, stackIndex, nextDepth, ops)
+
+                  if (null eq result) return null
+                  else {
+                    result match {
+                      case s: Success[Any] => iterate.process(s.value)
+                      case failure         => cur = failure
+                    }
+                  }
+                  ops += 1
                 }
-                ops += 1
               }
 
               stackIndex -= 1
