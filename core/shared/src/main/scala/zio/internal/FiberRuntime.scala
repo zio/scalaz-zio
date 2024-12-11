@@ -1217,15 +1217,26 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               cur = null
 
               while ((cur eq null) && check()) {
-                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth, ops) match {
-                  case s: Success[Any] =>
-                    iterate.process(s.value)
-                  case null =>
-                    return null
-                  case failure =>
-                    cur = failure
+                val body = iterate.body()
+
+                if ((body eq Exit.unit) || (body eq ZIO.unit)) iterate.process(())
+                else if (body eq Exit.none) iterate.process(None)
+                else if (body eq Exit.`false`) iterate.process(false)
+                else if (body eq Exit.`true`) iterate.process(true)
+                else if (body eq Exit.emptyChunk) iterate.process(Chunk.empty)
+                else if (body eq Exit.failNone) cur = Exit.failNone
+                else if (body eq Exit.failUnit) cur = Exit.failUnit
+                else {
+                  runLoop(body, stackIndex, stackIndex, nextDepth, ops) match {
+                    case s: Success[Any] =>
+                      iterate.process(s.value)
+                    case null =>
+                      return null
+                    case failure =>
+                      cur = failure
+                  }
+                  ops += 1
                 }
-                ops += 1
               }
 
               stackIndex -= 1
