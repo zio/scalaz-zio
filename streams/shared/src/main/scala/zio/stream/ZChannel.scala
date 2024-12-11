@@ -1948,7 +1948,7 @@ object ZChannel {
         val outgoing =
           Queue.unsafe.bounded[ZIO[Env, Either[OutErr, OutDone], OutElem]](bufferSize0, fiberId)(Unsafe.unsafe)
         val cancelers   = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
-        val lastDone    = Ref.unsafe.make[Option[OutDone]](None)(Unsafe.unsafe)
+        val lastDone    = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe.unsafe)
         val errorSignal = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
         val permits     = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
 
@@ -1964,8 +1964,8 @@ object ZChannel {
                   outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
                 case Left(x: Right[OutErr, OutDone]) =>
                   lastDone.update {
-                    case Some(lastDone) => Some(f(lastDone, x.value))
-                    case None           => Some(x.value)
+                    case null     => x.value
+                    case lastDone => f(lastDone, x.value)
                   }
                 case Right(cause) =>
                   outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
@@ -2027,8 +2027,8 @@ object ZChannel {
                      case Left(x: Right[OutErr, OutDone]) =>
                        permits.withPermits(n0)(ZIO.unit).interruptible *>
                          lastDone.get.flatMap {
-                           case Some(lastDone) => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
-                           case None           => outgoing.offer(Exit.fail(Right(x.value)))
+                           case null     => outgoing.offer(Exit.fail(Right(x.value)))
+                           case lastDone => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
                          }
                      case Right(cause) => outgoing.offer(Exit.failCause(cause.map(Left(_))))
                    }
