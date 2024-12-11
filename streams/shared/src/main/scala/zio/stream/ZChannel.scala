@@ -2031,7 +2031,7 @@ object ZChannel {
                            case lastDone => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
                          }
                      case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
-                     case Right(cause) => outgoing.offer(Exit.failCause(cause.map(Left(_))))
+                     case Right(cause)                   => outgoing.offer(Exit.failCause(cause.map(Left(_))))
                    }
                  )
                  .raceFirst(awaitErrorSignal(childScope, fiberId)(errorSignal))
