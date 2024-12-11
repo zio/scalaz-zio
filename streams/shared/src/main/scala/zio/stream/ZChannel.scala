@@ -1961,13 +1961,13 @@ object ZChannel {
             .forever
             .catchAllCause(cause =>
               cause.failureOrCause match {
-                case Left(_: Left[OutErr, OutDone]) =>
-                  outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
                 case Left(x: Right[OutErr, OutDone]) =>
                   lastDone.update {
                     case null     => x.value
                     case lastDone => f(lastDone, x.value)
                   }
+                case Left(_: Left[OutErr, OutDone]) =>
+                  outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
                 case Right(cause) =>
                   outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
               }
@@ -2024,13 +2024,13 @@ object ZChannel {
           _ <- pullStrategy(childScope, pull).forever
                  .catchAllCause(cause =>
                    cause.failureOrCause match {
-                     case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
                      case Left(x: Right[OutErr, OutDone]) =>
                        permits.withPermits(n0)(ZIO.unit).interruptible *>
                          lastDone.get.flatMap {
                            case null     => outgoing.offer(Exit.fail(Right(x.value)))
                            case lastDone => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
                          }
+                     case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
                      case Right(cause) => outgoing.offer(Exit.failCause(cause.map(Left(_))))
                    }
                  )
@@ -2042,8 +2042,8 @@ object ZChannel {
               outgoing.take.flatten.foldCause(
                 cause =>
                   cause.failureOrCause match {
-                    case Left(Left(outErr))   => ZChannel.fail(outErr)
                     case Left(Right(outDone)) => ZChannel.succeedNow(outDone)
+                    case Left(Left(outErr))   => ZChannel.fail(outErr)
                     case Right(cause)         => ZChannel.refailCause(cause)
                   },
                 outElem => ZChannel.write(outElem) *> consumer
