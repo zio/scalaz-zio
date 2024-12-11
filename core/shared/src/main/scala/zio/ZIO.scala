@@ -6127,7 +6127,9 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     check: () => Boolean,
     body: () => ZIO[R, E, A],
     process: A => Any
-  ) extends ZIO[R, E, Unit]
+  ) extends ZIO[R, E, Unit] { self =>
+    val k: ZIO.Continuation = ZIO.Continuation { (element: A) => process(element); self }(trace)
+  }
   private[zio] final case class YieldNow(trace: Trace, forceAsync: Boolean) extends ZIO[Any, Nothing, Unit]
 
   sealed trait InterruptibilityRestorer {

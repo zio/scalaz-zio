@@ -1183,13 +1183,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               val check = iterate.check
 
-              val k = // TODO: Push into WhileLoop so we don't have to allocate here
-                ZIO.Continuation({ (element: Any) =>
-                  iterate.process(element)
-                  iterate
-                })(iterate.trace)
-
-              stackIndex = pushStackFrame(k, stackIndex)
+              stackIndex = pushStackFrame(iterate.k, stackIndex)
 
               val nextDepth = currentDepth + 1
 
