@@ -4818,7 +4818,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * not use this method, use [[ZIO.suspend]].
    */
   def suspendSucceed[R, E, A](zio: => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-    ZIO.FlatMap(trace, ZIO.unit, (_: Unit) => zio)
+    ZIO.FlatMap(trace, Exit.unit, (_: Unit) => zio)
 
   def suspendSucceedUnsafe[R, E, A](zio: Unsafe => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
     ZIO.succeedUnsafe(zio).flatMap(identityFn)
