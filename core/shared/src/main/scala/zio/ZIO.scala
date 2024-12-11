@@ -4818,10 +4818,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * not use this method, use [[ZIO.suspend]].
    */
   def suspendSucceed[R, E, A](zio: => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-    ZIO.FlatMap(trace, null, (_: Any) => zio)
+    ZIO.FlatMap(trace, Exit.unit, (_: Any) => zio)
 
   def suspendSucceedUnsafe[R, E, A](zio: Unsafe => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-    ZIO.FlatMap(trace, null, (_: Any) => zio(Unsafe))
+    ZIO.FlatMap(trace, Exit.unit, (_: Any) => zio(Unsafe))
 
   /**
    * Retrieves the `System` service for this workflow.
