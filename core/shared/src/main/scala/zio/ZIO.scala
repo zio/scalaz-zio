@@ -4821,7 +4821,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     ZIO.FlatMap(trace, null, (_: Any) => zio)
 
   def suspendSucceedUnsafe[R, E, A](zio: Unsafe => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-    ZIO.succeedUnsafe(zio).flatMap(identityFn)
+    ZIO.FlatMap(trace, null, (_: Any) => zio(Unsafe))
 
   /**
    * Retrieves the `System` service for this workflow.
