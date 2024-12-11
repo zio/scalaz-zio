@@ -1104,30 +1104,41 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case fold: FoldZIO[Any, Any, Any, Any, Any] =>
               updateLastTrace(fold.trace)
 
-              stackIndex = pushStackFrame(fold, stackIndex)
+              val first = fold.first
 
-              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
-              ops += 1
-
-              if (null eq result)
-                return null
+              if ((first eq Exit.unit) || (first eq ZIO.unit)) fold.successK(())
+              else if (first eq Exit.none) fold.successK(None)
+              else if (first eq Exit.`false`) fold.successK(false)
+              else if (first eq Exit.`true`) fold.successK(true)
+              else if (first eq Exit.emptyChunk) fold.successK(Chunk.empty)
+              else if (first eq Exit.failNone) fold.failureK(Cause.none)
+              else if (first eq Exit.failUnit) fold.failureK(Cause.unit)
               else {
-                stackIndex -= 1
-                popStackFrame(stackIndex)
+                stackIndex = pushStackFrame(fold, stackIndex)
 
-                result match {
-                  case s: Success[Any] =>
-                    cur = fold.successK(s.value)
+                val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
 
-                  case f: Failure[Any] =>
-                    val cause = f.cause
-                    if (shouldInterrupt()) {
-                      cur = Exit.Failure(cause.stripFailures)
-                    } else {
-                      val f = fold.failureK
+                if (null eq result)
+                  return null
+                else {
+                  stackIndex -= 1
+                  popStackFrame(stackIndex)
 
-                      cur = f(cause)
-                    }
+                  result match {
+                    case s: Success[Any] =>
+                      cur = fold.successK(s.value)
+
+                    case f: Failure[Any] =>
+                      val cause = f.cause
+                      if (shouldInterrupt()) {
+                        cur = Exit.Failure(cause.stripFailures)
+                      } else {
+                        val f = fold.failureK
+
+                        cur = f(cause)
+                      }
+                  }
                 }
               }
 
@@ -1287,7 +1298,6 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     assert(DisableAssertions, "runLoop must exit with a return statement from within the while loop.")
     null
   }
-
 
   private def sendInterruptSignalToAllChildren(
     children: JavaSet[Fiber.Runtime[_, _]]
