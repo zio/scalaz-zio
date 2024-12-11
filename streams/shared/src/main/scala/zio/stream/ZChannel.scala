@@ -1940,7 +1940,7 @@ object ZChannel {
     f: (OutDone, OutDone) => OutDone
   )(implicit trace: Trace): ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone] =
     unwrapScopedWith { scope =>
-      ZIO.fiberId.flatMap { fiberId =>
+      ZIO.fiberIdWith { fiberId =>
         val input          = SingleProducerAsyncInput.unsafe.make[InErr, InElem, InDone](fiberId)
         val incoming       = ZChannel.fromInput(input)
         val n0             = n.toLong
