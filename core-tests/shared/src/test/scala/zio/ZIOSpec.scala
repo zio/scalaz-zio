@@ -2257,6 +2257,12 @@ object ZIOSpec extends ZIOBaseSpec {
       test("suspendSucceed must be evaluatable") {
         assertZIO(ZIO.suspendSucceed(ZIO.succeed(42)))(equalTo(42))
       },
+      test("ZIO.suspendSucceed is implemented with a ZIO.unit as first") {
+        ZIO.suspendSucceed(ZIO.succeed(42)) match {
+          case ZIO.FlatMap(_, first, _) => assertTrue(first eq ZIO.unit)
+          case _ => assertNever("ZIO.suspendSucceed is not implemented as a FlatMap")
+        }
+      },
       test("point, bind, map") {
         def fibIo(n: Int): Task[BigInt] =
           if (n <= 1) ZIO.succeed(n)
