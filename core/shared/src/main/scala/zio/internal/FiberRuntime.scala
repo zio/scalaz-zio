@@ -1093,18 +1093,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case fold: FoldZIO[Any, Any, Any, Any, Any] =>
               updateLastTrace(fold.trace)
 
-              @inline def exitFailure(cause: Cause[Any]): ZIO.Erased =
-                if (shouldInterrupt()) Exit.Failure(cause.stripFailures) else fold.failureK(cause)
-
               val first = fold.first
 
               if (first eq ZIO.unit) cur = fold.successK(())
-              else if (first.isInstanceOf[Success[Any]]) cur = fold.successK(first.asInstanceOf[Success[Any]].value)
-              else if (first.isInstanceOf[Failure[Any]]) cur = exitFailure(first.asInstanceOf[Failure[Any]].cause)
               else {
                 stackIndex = pushStackFrame(fold, stackIndex)
 
-                val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
                 ops += 1
 
                 if (null eq result) return null
@@ -1114,7 +1109,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 result match {
                   case s: Success[Any] => cur = fold.successK(s.value)
-                  case f: Failure[Any] => cur = exitFailure(f.cause)
+                  case f: Failure[Any] =>
+                    val cause = f.cause
+                    if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
+                    else cur = fold.failureK(cause)
                 }
               }
 
