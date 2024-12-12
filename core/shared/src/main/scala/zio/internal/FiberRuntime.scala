@@ -1075,14 +1075,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 ops += 1
 
                 if (null eq result) return null
-                else {
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
 
-                  result match {
-                    case s: Success[Any] => cur = flatmap.successK(s.value)
-                    case failure         => cur = failure
-                  }
+                stackIndex -= 1
+                popStackFrame(stackIndex)
+
+                result match {
+                  case s: Success[Any] => cur = flatmap.successK(s.value)
+                  case failure         => cur = failure
                 }
               }
             case stateful: Stateful[Any, Any, Any] =>
@@ -1112,14 +1111,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 ops += 1
 
                 if (null eq result) return null
-                else {
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
 
-                  result match {
-                    case s: Success[Any] => cur = fold.successK(s.value)
-                    case f: Failure[Any] => cur = exitFailure(f.cause)
-                  }
+                stackIndex -= 1
+                popStackFrame(stackIndex)
+
+                result match {
+                  case s: Success[Any] => cur = fold.successK(s.value)
+                  case f: Failure[Any] => cur = exitFailure(f.cause)
                 }
               }
 
@@ -1168,16 +1166,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
                 ops += 1
 
-                if (null eq exit)
-                  return null
-                else {
+                if (null eq exit) return null
 
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
+                stackIndex -= 1
+                popStackFrame(stackIndex)
 
-                  // Go backward, on the stack:
-                  cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
-                }
+                // Go backward, on the stack:
+                cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
               }
 
             case iterate: WhileLoop[Any, Any, Any] =>
