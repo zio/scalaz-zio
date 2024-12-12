@@ -170,8 +170,9 @@ final class FiberRefs private (
 
   private[zio] def getOrNull[A](fiberRef: FiberRef[A]): A = {
     val out = fiberRefLocals.getOrElse(fiberRef, null)
-    if (out eq null) null else out.stack.head.value
-  }.asInstanceOf[A]
+    if (out eq null) null.asInstanceOf[A]
+    else out.stack.head.asInstanceOf[StackEntry[A]].value // asInstanceOf needed to avoid boxing
+  }
 
   /**
    * Joins this collection of fiber refs to the specified collection, as the
