@@ -1093,27 +1093,22 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case fold: FoldZIO[Any, Any, Any, Any, Any] =>
               updateLastTrace(fold.trace)
 
-              val first = fold.first
+              stackIndex = pushStackFrame(fold, stackIndex)
 
-              if (first eq ZIO.unit) cur = fold.successK(())
-              else {
-                stackIndex = pushStackFrame(fold, stackIndex)
+              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
 
-                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
-                ops += 1
+              if (null eq result) return null
 
-                if (null eq result) return null
+              stackIndex -= 1
+              popStackFrame(stackIndex)
 
-                stackIndex -= 1
-                popStackFrame(stackIndex)
-
-                result match {
-                  case s: Success[Any] => cur = fold.successK(s.value)
-                  case f: Failure[Any] =>
-                    val cause = f.cause
-                    if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
-                    else cur = fold.failureK(cause)
-                }
+              result match {
+                case s: Success[Any] => cur = fold.successK(s.value)
+                case f: Failure[Any] =>
+                  val cause = f.cause
+                  if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
+                  else cur = fold.failureK(cause)
               }
 
             case async: Async[Any, Any, Any] =>
