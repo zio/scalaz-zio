@@ -16,18 +16,17 @@
 
 package zio
 
-import zio.internal.{FiberScope, Platform}
+import zio.ZIO.{Grafter, blocking}
+import zio.internal.FiberScope
 import zio.metrics.{MetricLabel, Metrics}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.io.IOException
 import java.util.function.IntFunction
 import scala.annotation.implicitNotFound
-import scala.collection.mutable.{Builder, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
-import scala.util.control.NoStackTrace
-import izumi.reflect.macrortti.LightTypeTag
 
 /**
  * A `ZIO[R, E, A]` value is an immutable value (called an "effect") that
@@ -1308,7 +1307,7 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def race[R1 <: R, E1 >: E, A1 >: A](that: => ZIO[R1, E1, A1])(implicit trace: Trace): ZIO[R1, E1, A1] =
     ZIO.fiberIdWith { parentFiberId =>
-      (self.raceWith(that))(
+      self.raceWith(that)(
         (exit, right) =>
           exit.foldExitZIO[Any, E1, A1](
             cause => right.join.mapErrorCause(cause && _),
@@ -1424,47 +1423,82 @@ sealed trait ZIO[-R, +E, +A]
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
     ZIO.withFiberRuntime[R1, E2, C] { (parentFiber, parentStatus) =>
-      val graft = ZIO.Grafter(parentFiber)
       import java.util.concurrent.atomic.AtomicBoolean
+
+      val parentFiberRefs = parentFiber.getFiberRefs()
+
+      val parentScopeOverride = parentFiberRefs.getOrNull(FiberRef.forkScopeOverride)
+      val parentScope =
+        if ((parentScopeOverride eq null) || (parentScopeOverride eq None)) parentFiber.scope
+        else parentScopeOverride.get
+
+      val graft = new Grafter(parentScope)
 
       implicit val unsafe: Unsafe = Unsafe
 
       val parentRuntimeFlags = parentStatus.runtimeFlags
 
-      @inline def complete[E0, E1, A, B](
-        winner: Fiber.Runtime[E0, A],
-        loser: Fiber.Runtime[E1, B],
-        cont: (Fiber.Runtime[E0, A], Fiber.Runtime[E1, B]) => ZIO[R1, E2, C],
-        ab: AtomicBoolean,
-        cb: ZIO[R1, E2, C] => Any
-      ): Any =
-        if (ab.compareAndSet(true, false)) {
-          cb(cont(winner, loser))
+      def makeChildFiber[R, E1, E2, A, B](
+        effect: ZIO[R, E1, A],
+        childScopeOverride: FiberScope
+      ): internal.FiberRuntime[E1, A] = {
+        val childId        = FiberId.generate(parentFiberRefs)(trace)
+        val childFiberRefs = parentFiberRefs.forkAs(childId) // TODO: Optimize
+
+        val childFiber = internal.FiberRuntime[E1, A](childId, childFiberRefs, parentRuntimeFlags)
+
+        // Call the supervisor who can observe the fork of the child fiber
+        val supervisor = childFiberRefs.getOrDefault(FiberRef.currentSupervisor)
+
+        if (supervisor ne Supervisor.none) {
+          val childEnvironment = childFiberRefs.getOrDefault(FiberRef.currentEnvironment)
+          supervisor.onStart(
+            childEnvironment,
+            effect.asInstanceOf[ZIO[Any, Any, Any]],
+            Some(parentFiber),
+            childFiber
+          )
+
+          childFiber.addObserver(exit => supervisor.onEnd(exit, childFiber))
         }
+
+        val parentScope0 = if (childScopeOverride eq null) parentScope else childScopeOverride
+
+        parentScope0.add(parentFiber, parentRuntimeFlags, childFiber)(trace, unsafe)
+
+        childFiber
+      }
+
+      val leftFiber  = makeChildFiber(self, leftScope)
+      val rightFiber = makeChildFiber(right, rightScope)
 
       val raceIndicator = new AtomicBoolean(true)
 
-      val leftFiber  = ZIO.unsafe.makeChildFiber(trace, self, parentFiber, parentRuntimeFlags, leftScope)
-      val rightFiber = ZIO.unsafe.makeChildFiber(trace, right, parentFiber, parentRuntimeFlags, rightScope)
-
-      val startLeftFiber  = leftFiber.startSuspended()
-      val startRightFiber = rightFiber.startSuspended()
-
       ZIO
         .async[R1, E2, C](
-          { cb =>
+          register = { cb =>
             leftFiber.addObserver { _ =>
-              complete(leftFiber, rightFiber, leftWins, raceIndicator, cb)
+              val winner = leftFiber
+              val loser  = rightFiber
+              val cont   = leftWins
+              if (raceIndicator.compareAndSet(true, false)) {
+                cb(cont(winner, loser))
+              }
             }
 
             rightFiber.addObserver { _ =>
-              complete(rightFiber, leftFiber, rightWins, raceIndicator, cb)
+              val winner = rightFiber
+              val loser  = leftFiber
+              val cont   = rightWins
+              if (raceIndicator.compareAndSet(true, false)) {
+                cb(cont(winner, loser))
+              }
             }
 
-            startLeftFiber(graft.applyOnExit(self))
-            startRightFiber(graft.applyOnExit(right))
+            leftFiber.startConcurrently(graft.applyOnExit(self))
+            rightFiber.startConcurrently(graft.applyOnExit(right))
           },
-          leftFiber.id <> rightFiber.id
+          blockingOn = leftFiber.id <> rightFiber.id
         )
     }
 
@@ -5520,6 +5554,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
       new Grafter(scope)
     }
+
   }
 
   final class IfZIO[R, E](private val b: () => ZIO[R, E, Boolean]) extends AnyVal {

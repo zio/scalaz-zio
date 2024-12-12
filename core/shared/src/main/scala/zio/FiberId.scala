@@ -141,7 +141,7 @@ object FiberId {
      * used in cases that rely on strict ordering of fibers (e.g., in zio-test)
      */
     object Live extends Gen {
-      def make(location: Trace)(implicit unsafe: Unsafe): FiberId.Runtime = {
+      override def make(location: Trace)(implicit unsafe: Unsafe): FiberId.Runtime = {
         val id = ThreadLocalRandom.current().nextInt(Int.MaxValue)
         FiberId.Runtime(id, java.lang.System.currentTimeMillis(), location)
       }
@@ -156,7 +156,7 @@ object FiberId {
      */
     object Monotonic extends Gen {
       private[this] val counter = new java.util.concurrent.atomic.AtomicInteger(0)
-      def make(location: Trace)(implicit unsafe: Unsafe): FiberId.Runtime =
+      override def make(location: Trace)(implicit unsafe: Unsafe): FiberId.Runtime =
         FiberId.Runtime(counter.getAndIncrement(), java.lang.System.currentTimeMillis(), location)
     }
   }
