@@ -5022,7 +5022,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    * Creates a single-valued pure stream
    */
   def succeed[A](a: => A)(implicit trace: Trace): ZStream[Any, Nothing, A] =
-    fromChunk(Chunk.single(a))
+    new ZStream(ZChannel.suspend(ZChannel.write(Chunk.single(a))))
 
   /**
    * Returns a lazily constructed stream.
