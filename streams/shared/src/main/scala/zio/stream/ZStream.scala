@@ -4186,8 +4186,9 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    */
   def fromChunk[O](chunk: => Chunk[O])(implicit trace: Trace): ZStream[Any, Nothing, O] =
     new ZStream(
-      ZChannel.succeed(chunk).flatMap { chunk =>
-        if (chunk.isEmpty) ZChannel.unit else ZChannel.write(chunk)
+      ZChannel.suspend {
+        val chunk0 = chunk
+        if (chunk0.isEmpty) ZChannel.unit else ZChannel.write(chunk0)
       }
     )
 
