@@ -518,7 +518,7 @@ object FiberRef {
           ZIO.withFiberRuntime[Any, Nothing, Unit] { (fiberState, _) =>
             fiberState.setFiberRef(self, value)
 
-            ZIO.unit
+            Exit.unit
           }
 
         // Store the hash code in a val to avoid recomputing it on every access of the FiberRefs map
