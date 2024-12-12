@@ -24,7 +24,6 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.IntFunction
 import java.util.{Set => JavaSet}
 import scala.annotation.tailrec
 
@@ -1066,12 +1065,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               val first = flatmap.first
 
               if (first eq ZIO.unit) cur = flatmap.successK(())
-              else if (first.isInstanceOf[Success[Any]]) cur = flatmap.successK(first.asInstanceOf[Success[Any]].value)
-              else if (first.isInstanceOf[Failure[Any]]) cur = first
               else {
                 stackIndex = pushStackFrame(flatmap, stackIndex)
 
-                val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
+                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
                 ops += 1
 
                 if (null eq result) return null
