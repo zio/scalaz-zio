@@ -1295,22 +1295,26 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
   final def toPullIn(
     scope: => Scope
   )(implicit trace: Trace): ZIO[Env, Nothing, ZIO[Env, OutErr, Either[OutDone, OutElem]]] =
-    ZIO.uninterruptible {
+    ZIO.suspendSucceed {
+      val scope0 = scope
+
       val exec = new ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone](
-        () => self,
-        null,
-        identity[URIO[Env, Any]]
+        initialChannel = () => self,
+        providedEnv = null,
+        executeCloseLastSubstream = ZIO.identityFn
       )
-      for {
-        environment <- ZIO.environment[Env]
-        scope       <- ZIO.succeed(scope)
-        _ <- scope.addFinalizerExit { exit =>
-               val finalizer = exec.close(exit)
-               if (finalizer ne null) finalizer.provideEnvironment(environment)
-               else ZIO.unit
-             }
-      } yield exec
-    }.map { exec =>
+
+      val setFinalizer: ZIO[Env, Nothing, Unit] =
+        ZIO
+          .environmentWithZIO[Env] { environment =>
+            scope0.addFinalizerExit { exit =>
+              val finalizer = exec.close(exit)
+              if (finalizer ne null) finalizer.provideEnvironment(environment)
+              else Exit.unit
+            }
+          }
+          .uninterruptible
+
       def interpret(
         channelState: ChannelExecutor.ChannelState[Env, OutErr]
       ): ZIO[Env, OutErr, Either[OutDone, OutElem]] =
@@ -1324,15 +1328,18 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             ZIO.succeed(Right(exec.getEmit))
           case ChannelState.Effect(zio) =>
             zio *> interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
-          case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
+          case r: ChannelState.Read[Env, OutErr] =>
             ChannelExecutor.readUpstream[Env, OutErr, OutErr, Either[OutDone, OutElem]](
-              r.asInstanceOf[ChannelState.Read[Env, OutErr]],
-              () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]),
-              Exit.failCause
+              r = r,
+              onSuccess = () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]),
+              onFailure = Exit.failCause
             )
         }
 
-      ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+      val pull: ZIO[Env, OutErr, Either[OutDone, OutElem]] =
+        ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+
+      setFinalizer.as(pull)
     }
 
   final def toPullInAlt(
