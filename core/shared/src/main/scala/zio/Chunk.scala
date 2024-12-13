@@ -1273,9 +1273,7 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
       case chunk: Chunk[A]              => chunk
       case iterable if iterable.isEmpty => Empty
       case vector: Vector[A]            => VectorChunk(vector)
-      case arrSeq: mutable.ArraySeq[A] =>
-        val arr = arrSeq.array
-        fromArray(Array.copyAs(arr, arr.length)(arrSeq.elemTag.asInstanceOf[ClassTag[A]]))
+      case arrSeq: mutable.ArraySeq[A]  => fromArraySeq(arrSeq)
       case iterable =>
         val builder = ChunkBuilder.make[A]()
         builder.sizeHint(iterable)
