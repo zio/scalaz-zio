@@ -49,7 +49,8 @@ object ConcurrentWeakHashSetSpecJVM extends ZIOBaseSpec {
 
       // make sure only odd elements are left from full range
       val expected = (0 to sampleSize).filter(_ % 2 == 1).map(Wrapper(_)).toList
-      val actual   = set.iterator.toList.sortBy(_.value)
+      import scala.jdk.CollectionConverters._
+      val actual   = set.iterator.asScala.toList.sortBy(_.value)
       assert(actual)(equalTo(expected))
     }
   )

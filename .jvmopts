@@ -1,1 +1,6 @@
--Dcats.effect.stackTracingMode=full
+# This is a comment
+-Dfile.encoding=UTF8
+-Xms265M
+-Xmx12G
+-XX:+UseG1GC
+
