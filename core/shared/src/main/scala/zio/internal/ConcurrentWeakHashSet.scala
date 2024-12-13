@@ -39,17 +39,6 @@ private[zio] object ConcurrentWeakHashSet {
   }
 
   /**
-   * Access options for the update operation.
-   */
-  private sealed trait AccessOption
-  private object AccessOption {
-    case object RestructureBefore extends AccessOption
-    case object RestructureAfter  extends AccessOption
-    case object SkipIfEmpty       extends AccessOption
-    case object Resize            extends AccessOption
-  }
-
-  /**
    * Supported results of the update operation.
    */
   private sealed trait UpdateOperation
@@ -74,13 +63,6 @@ private[zio] object ConcurrentWeakHashSet {
     v |= v >> 16
     31 - Integer.numberOfLeadingZeros(v + 1)
   }
-
-  private val addAccessOptions: Set[AccessOption] =
-    Set(AccessOption.RestructureBefore, AccessOption.Resize)
-
-  private val removeAccessOptions: Set[AccessOption] =
-    Set(AccessOption.RestructureAfter, AccessOption.SkipIfEmpty)
-
 }
 
 /**
@@ -246,7 +228,13 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    */
   override def add(element: V): Boolean = {
     if (element eq null) throw new IllegalArgumentException("ConcurrentWeakHashSet does not support null elements.")
-    this.update(element, UpdateOperation.AddElement, addAccessOptions)
+    this.update(
+      element,
+      UpdateOperation.AddElement,
+      restructureBefore = true,
+      resize = true,
+      skipIfEmpty = false
+    )
   }
 
   /**
@@ -258,7 +246,13 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    *   `true` if the element was removed, `false` otherwise
    */
   override def remove(element: V): Boolean =
-    this.update(element, UpdateOperation.RemoveElement, removeAccessOptions)
+    this.update(
+      element,
+      UpdateOperation.RemoveElement,
+      restructureBefore = false,
+      resize = false,
+      skipIfEmpty = true
+    )
 
   /**
    * Remove all elements from the set.
@@ -308,10 +302,16 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
    * Perform update operation on matched reference for provided element in the
    * set.
    */
-  private def update(element: V, operation: UpdateOperation, accessOptions: Set[AccessOption]): Boolean = {
+  private def update(
+    element: V,
+    operation: UpdateOperation,
+    restructureBefore: Boolean,
+    resize: Boolean,
+    skipIfEmpty: Boolean
+  ): Boolean = {
     val hash    = this.getHash(element)
     val segment = this.getSegment(hash)
-    segment.update(hash, element, operation, accessOptions)
+    segment.update(hash, element, operation, restructureBefore, resize, skipIfEmpty)
   }
 
   /**
@@ -361,12 +361,18 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
      * Perform update operation on matched reference for provided element in the
      * set.
      */
-    def update(hash: Int, element: V, operation: UpdateOperation, accessOptions: Set[AccessOption]): Boolean = {
-      val resize = accessOptions.contains(AccessOption.Resize)
-      if (accessOptions.contains(AccessOption.RestructureBefore)) {
+    def update(
+      hash: Int,
+      element: V,
+      operation: UpdateOperation,
+      restructureBefore: Boolean,
+      resize: Boolean,
+      skipIfEmpty: Boolean
+    ): Boolean = {
+      if (restructureBefore) {
         this.restructureIfNecessary(resize)
       }
-      if (accessOptions.contains(AccessOption.SkipIfEmpty) && this.counter.get() == 0) {
+      if (skipIfEmpty && this.counter.get() == 0) {
         return handleOperation(operation, element.asInstanceOf[AnyRef], hash)
       }
       this.lock()
@@ -377,7 +383,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
         handleOperation(operation, element.asInstanceOf[AnyRef], hash, matchedRef, head, index)
       } finally {
         this.unlock()
-        if (accessOptions.contains(AccessOption.RestructureAfter)) {
+        if (!restructureBefore) {
           this.restructureIfNecessary(resize)
         }
       }
@@ -465,8 +471,8 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
 
         val restructured = if (resizing) new Array[RefNode](restructureSize) else this.references
 
-        var idx         = 0
-        val length      = this.references.length
+        var idx    = 0
+        val length = this.references.length
         while (idx < length) {
           var currentRef = this.references(idx)
           if (!resizing) {
