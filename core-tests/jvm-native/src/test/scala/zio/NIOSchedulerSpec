@@ -1,0 +1,62 @@
+package zio
+
+import zio.test._
+import zio.test.Assertion._
+import zio.duration._
+import zio.clock._
+
+object NIOSchedulerSpec extends DefaultRunnableSpec {
+  def spec: ZSpec[Environment, Failure] = {
+    suite("NIOSchedulerSpec")(
+      testM("schedule a task to be executed at a specified interval") {
+        for {
+          scheduler <- NIOScheduler.make(4)
+          fiberRef <- Ref.make(0)
+          _ <- ZIO.foreach_(1 to 1000) { _ =>
+                 scheduler.schedule(new Runnable {
+                   override def run(): Unit = {
+                     fiberRef.update(_ + 1).runNow()
+                   }
+                 }, 1.millisecond)
+               }
+          _ <- ZIO.sleep(2.seconds)
+          count <- fiberRef.get
+          _ <- scheduler.shutdown
+        } yield assert(count)(equalTo(1000))
+      },
+      testM("handle non-blocking I/O operations efficiently") {
+        for {
+          scheduler <- NIOScheduler.make(4)
+          serverSocketChannel <- ZIO.effectTotal(ServerSocketChannel.open())
+          _ <- serverSocketChannel.bind(new java.net.InetSocketAddress(8080))
+          _ <- scheduler.registerChannel(serverSocketChannel, SelectionKey.OP_ACCEPT, { key: SelectionKey =>
+            val serverSocketChannel = key.channel().asInstanceOf[ServerSocketChannel]
+            val socketChannel = serverSocketChannel.accept()
+            if (socketChannel != null) {
+              println("Accepted connection")
+              socketChannel.configureBlocking(false)
+              socketChannel.register(selector, SelectionKey.OP_READ, { key: SelectionKey =>
+                val socketChannel = key.channel().asInstanceOf[SocketChannel]
+                val buffer = java.nio.ByteBuffer.allocate(1024)
+                val bytesRead = socketChannel.read(buffer)
+                if (bytesRead > 0) {
+                  println(s"Read $bytesRead bytes")
+                }
+              })
+            }
+          })
+          _ <- scheduler.drainTaskQueue.fork
+          _ <- ZIO.effectTotal {
+            val socket = new java.net.Socket("localhost", 8080)
+            val outputStream = socket.getOutputStream
+            outputStream.write("Hello, world!".getBytes)
+            outputStream.flush()
+            socket.close()
+          }
+          _ <- ZIO.sleep(1.second)
+          _ <- scheduler.shutdown
+        } yield assertCompletes
+      }
+    ).provideSomeLayer[ZEnv](ZLayer.succeed(Executors.newScheduledThreadPool(4)))
+  }
+}
