@@ -662,7 +662,7 @@ sealed trait ZIO[-R, +E, +A]
     ev1: A IsSubtypeOfOutput ZIO[R1, E1, B],
     trace: Trace
   ): ZIO[R1, E1, B] =
-    self.flatMap(a => ev1(a))
+    self.flatMap(ev1)
 
   /**
    * Returns an effect that swaps the error/success cases. This allows you to
@@ -2823,10 +2823,9 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def addFinalizerExit[R](
     finalizer: Exit[Any, Any] => URIO[R, Any]
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, Any] =
-    ZIO.environmentWithZIO[R] { environment =>
-      ZIO.scopeWith { scope =>
-        scope.addFinalizerExit(exit => finalizer(exit).provideEnvironment(environment))
-      }
+    ZIO.environmentWithZIO[R & Scope] { env =>
+      env.getScope
+        .addFinalizerExit(exit => finalizer(exit).provideEnvironment(env))
     }
 
   /**
@@ -3181,6 +3180,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   /**
    * Returns an effect from a [[zio.Exit]] value.
    */
+  @deprecated(
+    "For suspending a side-effecting method that produces an Exit, use `ZIO.suspendSucceed` instead.",
+    "2.1.14"
+  )
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): IO[E, A] =
     ZIO.suspendSucceed(r)
 
@@ -4644,7 +4647,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Returns the current scope.
    */
   def scope(implicit trace: Trace): ZIO[Scope, Nothing, Scope] =
-    ZIO.service[Scope]
+    scopeWith(ZIO.successFn)
 
   /**
    * Scopes all resources used in this effect to the lifetime of the effect,
@@ -4672,7 +4675,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Accesses the current scope and uses it to perform the specified effect.
    */
   def scopeWith[R, E, A](f: Scope => ZIO[R, E, A])(implicit trace: Trace): ZIO[R with Scope, E, A] =
-    ZIO.serviceWithZIO[Scope](f)
+    FiberRef.currentEnvironment.getWith(env => f(env.asInstanceOf[ZEnvironment[Scope]].getScope))
 
   /**
    * Returns a new scoped workflow that runs finalizers added to the scope of
@@ -5663,7 +5666,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     def apply[A](
       f: Service => A
     )(implicit tagged: Tag[Service], trace: Trace): ZIO[Service, Nothing, A] =
-      ZIO.serviceWithZIO(service => ZIO.succeed(f(service)))
+      ZIO.serviceWithZIO(service => Exit.succeed(f(service)))
   }
 
   final class ServiceWithZIOPartiallyApplied[Service](private val dummy: Boolean = true) extends AnyVal {
@@ -6148,7 +6151,9 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     check: () => Boolean,
     body: () => ZIO[R, E, A],
     process: A => Any
-  ) extends ZIO[R, E, Unit]
+  ) extends ZIO[R, E, Unit] { self =>
+    val k: ZIO.Continuation = ZIO.Continuation { (element: A) => process(element); self }(trace)
+  }
   private[zio] final case class YieldNow(trace: Trace, forceAsync: Boolean) extends ZIO[Any, Nothing, Unit]
 
   sealed trait InterruptibilityRestorer {
@@ -6853,8 +6858,8 @@ object Exit extends Serializable {
   private[zio] val `false`: Exit[Nothing, Boolean]           = Success(false)
   private[zio] val none: Exit[Nothing, Option[Nothing]]      = Success(None)
   private[zio] val emptyChunk: Exit[Nothing, Chunk[Nothing]] = Success(Chunk.empty)
-  private[zio] val failNone: Exit[Option[Nothing], Nothing]  = Failure(Cause.fail(None))
-  private[zio] val failUnit: Exit[Unit, Nothing]             = Failure(Cause.fail(()))
+  private[zio] val failNone: Exit[Option[Nothing], Nothing]  = Failure(Cause.none)
+  private[zio] val failUnit: Exit[Unit, Nothing]             = Failure(Cause.unit)
 
   private[zio] val empty: Exit[Nothing, Nothing] = Exit.failCause[Nothing](Cause.empty)
 }

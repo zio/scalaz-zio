@@ -24,7 +24,6 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.IntFunction
 import java.util.{Set => JavaSet}
 import scala.annotation.tailrec
 
@@ -1063,23 +1062,23 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             case flatmap: FlatMap[Any, Any, Any, Any] =>
               updateLastTrace(flatmap.trace)
 
-              stackIndex = pushStackFrame(flatmap, stackIndex)
+              val first = flatmap.first
 
-              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
-              ops += 1
-
-              if (null eq result)
-                return null
+              if (first eq ZIO.unit) cur = flatmap.successK(())
               else {
+                stackIndex = pushStackFrame(flatmap, stackIndex)
+
+                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
+
+                if (null eq result) return null
+
                 stackIndex -= 1
                 popStackFrame(stackIndex)
 
                 result match {
-                  case s: Success[Any] =>
-                    cur = flatmap.successK(s.value)
-
-                  case failure =>
-                    cur = failure
+                  case s: Success[Any] => cur = flatmap.successK(s.value)
+                  case failure         => cur = failure
                 }
               }
             case stateful: Stateful[Any, Any, Any] =>
@@ -1099,26 +1098,17 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
               ops += 1
 
-              if (null eq result)
-                return null
-              else {
-                stackIndex -= 1
-                popStackFrame(stackIndex)
+              if (null eq result) return null
 
-                result match {
-                  case s: Success[Any] =>
-                    cur = fold.successK(s.value)
+              stackIndex -= 1
+              popStackFrame(stackIndex)
 
-                  case f: Failure[Any] =>
-                    val cause = f.cause
-                    if (shouldInterrupt()) {
-                      cur = Exit.Failure(cause.stripFailures)
-                    } else {
-                      val f = fold.failureK
-
-                      cur = f(cause)
-                    }
-                }
+              result match {
+                case s: Success[Any] => cur = fold.successK(s.value)
+                case f: Failure[Any] =>
+                  val cause = f.cause
+                  if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
+                  else cur = fold.failureK(cause)
               }
 
             case async: Async[Any, Any, Any] =>
@@ -1166,16 +1156,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
                 ops += 1
 
-                if (null eq exit)
-                  return null
-                else {
+                if (null eq exit) return null
 
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
+                stackIndex -= 1
+                popStackFrame(stackIndex)
 
-                  // Go backward, on the stack:
-                  cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
-                }
+                // Go backward, on the stack:
+                cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
               }
 
             case iterate: WhileLoop[Any, Any, Any] =>
@@ -1183,13 +1170,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               val check = iterate.check
 
-              val k = // TODO: Push into WhileLoop so we don't have to allocate here
-                ZIO.Continuation({ (element: Any) =>
-                  iterate.process(element)
-                  iterate
-                })(iterate.trace)
-
-              stackIndex = pushStackFrame(k, stackIndex)
+              stackIndex = pushStackFrame(iterate.k, stackIndex)
 
               val nextDepth = currentDepth + 1
 

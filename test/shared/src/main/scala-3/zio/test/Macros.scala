@@ -157,8 +157,13 @@ object SmartAssertMacros {
         val res = transformAs(body.asExprOf[TestLens[v]])(lhs)
         res.asInstanceOf[Expr[TestArrow[Any, A]]]
 
-      case Unseal(Inlined(a, b, expr)) =>
-        Inlined(a, b, transform(expr.asExprOf[A]).asTerm).asExprOf[zio.test.TestArrow[Any, A]]
+      case Unseal(tree @ Inlined(a, b, expr)) =>
+        // https://github.com/zio/zio/issues/8571
+        // always make sure to set the span on an Inlined tree back to its pre-inlining position since
+        // the implicit PositionContext gets its 'start' argument from the pre-inlinining position.
+        val preMacroExpansionSpan = getSpan(tree)
+        val arrow                 = Inlined(a, b, transform(expr.asExprOf[A]).asTerm).asExprOf[zio.test.TestArrow[Any, A]]
+        '{ $arrow.span($preMacroExpansionSpan) }
 
       case Unseal(Apply(Select(lhs, op @ (">" | ">=" | "<" | "<=")), List(rhs))) =>
         def tpesPriority(tpe: TypeRepr): Int =

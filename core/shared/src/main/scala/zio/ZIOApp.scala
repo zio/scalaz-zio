@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * applications. For a simpler version that uses the default ZIO environment see
  * `ZIOAppDefault`.
  */
-trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific { self =>
+trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific {
+  self =>
   private[zio] val shuttingDown = new AtomicBoolean(false)
 
   implicit def environmentTag: EnvironmentTag[Environment]
@@ -53,6 +54,7 @@ trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific { self =>
    */
   final def <>(that: ZIOApp)(implicit trace: Trace): ZIOApp = {
     def combine[A: EnvironmentTag, B: EnvironmentTag]: EnvironmentTag[A with B] = EnvironmentTag[A with B]
+
     ZIOApp(self.run.zipPar(that.run), self.bootstrap +!+ that.bootstrap)(
       combine[this.Environment, that.Environment](this.environmentTag, that.environmentTag)
     )
@@ -72,7 +74,9 @@ trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific { self =>
     ZIO.succeed {
       if (!shuttingDown.getAndSet(true)) {
         try Platform.exit(code.code)(Unsafe.unsafe)
-        catch { case _: SecurityException => }
+        catch {
+          case _: SecurityException =>
+        }
       }
     }
 
@@ -100,9 +104,7 @@ trait ZIOApp extends ZIOAppPlatformSpecific with ZIOAppVersionSpecific { self =>
         val dumpFibers =
           () => runtime.unsafe.run(Fiber.dumpAll)(trace, Unsafe.unsafe).getOrThrowFiberFailure()(Unsafe.unsafe)
 
-        if (System.os.isWindows) {
-          Platform.addSignalHandler("INT", dumpFibers)(Unsafe.unsafe)
-        } else {
+        if (!System.os.isWindows) {
           Platform.addSignalHandler("INFO", dumpFibers)(Unsafe.unsafe)
           Platform.addSignalHandler("USR1", dumpFibers)(Unsafe.unsafe)
         }
@@ -119,10 +121,13 @@ object ZIOApp {
    */
   class Proxy(val app: ZIOApp) extends ZIOApp {
     type Environment = app.Environment
+
     final def bootstrap: ZLayer[ZIOAppArgs, Any, Environment] =
       app.bootstrap
+
     override final def run: ZIO[Environment with ZIOAppArgs with Scope, Any, Any] =
       app.run
+
     implicit final def environmentTag: EnvironmentTag[Environment] =
       app.environmentTag
   }
@@ -137,9 +142,12 @@ object ZIOApp {
   )(implicit tagged: EnvironmentTag[R]): ZIOApp =
     new ZIOApp {
       type Environment = R
+
       def environmentTag: EnvironmentTag[Environment] = tagged
-      def bootstrap                                   = bootstrap0
-      def run                                         = run0
+
+      def bootstrap = bootstrap0
+
+      def run = run0
     }
 
   /**
