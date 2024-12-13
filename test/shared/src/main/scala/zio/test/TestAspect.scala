@@ -497,7 +497,7 @@ object TestAspect extends TimeoutVariants {
       ): ZIO[R, TestFailure[E], TestSuccess] =
         test.foldZIO(
           failure =>
-            if (assertion(failure)) TestSuccess.Succeeded.emptyExit
+            if (assertion(failure)) TestSuccess.succeedEmptyExit
             else Exit.fail(TestFailure.die(new RuntimeException("did not fail as expected"))),
           _ => Exit.fail(TestFailure.die(new RuntimeException("did not fail as expected")))
         )

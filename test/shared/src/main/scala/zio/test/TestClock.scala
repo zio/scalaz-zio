@@ -21,6 +21,7 @@ import zio._
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.io.IOException
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime, OffsetDateTime, ZoneId}
 import java.util.concurrent.TimeUnit
@@ -489,9 +490,9 @@ object TestClock extends Serializable {
    * used time but has not adjusted the `TestClock`, and `Done` if a test has
    * adjusted the `TestClock` or the warning message has already been displayed.
    */
-  sealed abstract class WarningData
+  private[TestClock] sealed abstract class WarningData
 
-  object WarningData {
+  private object WarningData {
 
     case object Start                                      extends WarningData
     final case class Pending(cancelWarning: () => Boolean) extends WarningData
@@ -516,9 +517,9 @@ object TestClock extends Serializable {
     val done: WarningData = Done
   }
 
-  sealed abstract class SuspendedWarningData
+  private[TestClock] sealed abstract class SuspendedWarningData
 
-  object SuspendedWarningData {
+  private object SuspendedWarningData {
 
     case object Start                                      extends SuspendedWarningData
     final case class Pending(cancelWarning: () => Boolean) extends SuspendedWarningData

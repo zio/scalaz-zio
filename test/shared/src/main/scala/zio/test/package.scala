@@ -324,7 +324,7 @@ package object test extends CompileVariants {
                        },
                      assert =>
                        if (assert.isFailure) Exit.fail(TestFailure.Assertion(assert))
-                       else TestSuccess.Succeeded.emptyExit
+                       else TestSuccess.succeedEmptyExit
                    )
                    .intoPromise(promise)
                    .forkDaemon
@@ -949,7 +949,7 @@ package object test extends CompileVariants {
    * Creates an ignored test result.
    */
   val ignored: UIO[TestSuccess] =
-    TestSuccess.Ignored.emptyExit
+    TestSuccess.ignoredEmptyExit
 
   /**
    * Passes platform specific information to the specified function, which will

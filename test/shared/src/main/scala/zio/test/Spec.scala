@@ -456,7 +456,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
         Spec.test(
           b.mapError(TestFailure.fail).flatMap { b =>
             if (b) test
-            else Annotations.annotate(TestAnnotation.ignored, 1) *> TestSuccess.Ignored.emptyExit
+            else Annotations.annotate(TestAnnotation.ignored, 1) *> TestSuccess.ignoredEmptyExit
           },
           annotations
         )

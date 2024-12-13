@@ -69,7 +69,7 @@ class ZIOTestClassRunner(descriptor: ZIOTestClassDescriptor) {
               .map(_ => Spec.TestCase(test, annotations))
               .getOrElse(
                 // filtered out
-                Spec.TestCase(TestSuccess.Ignored.emptyExit, annotations)
+                Spec.TestCase(TestSuccess.ignoredEmptyExit, annotations)
               )
         }
 
