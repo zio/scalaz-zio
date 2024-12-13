@@ -282,11 +282,21 @@ object ZSinkSpec extends ZIOBaseSpec {
             assertZIO((stream ++ stream).rechunk(3).run(sink))(equalTo(List(1, 2, 3, 4)))
           }
         ),
-        test("head")(
-          check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
-            val headOpt = ZStream.fromChunks(chunks: _*).run(ZSink.head[Int])
-            assertZIO(headOpt)(equalTo(chunks.flatMap(_.toSeq).headOption))
-          }
+        suite("head")(
+          test("basic")(
+            check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
+              val headOpt = ZStream.fromChunks(chunks: _*).run(ZSink.head[Int])
+              assertZIO(headOpt)(equalTo(chunks.flatMap(_.toSeq).headOption))
+            }
+          ),
+          test("error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.head)
+                .either
+                .runCollect
+            }(equalTo(Chunk(Right(2), Right(3))))
+          )
         ),
         test("last")(
           check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
