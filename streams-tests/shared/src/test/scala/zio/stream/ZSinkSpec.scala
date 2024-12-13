@@ -183,7 +183,7 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .map(_._2)
             )(equalTo(Chunk(11)))
           },
-          test("combined with head, tranduced") {
+          test("combined with head, transduced") {
             assertZIO(
               ZStream(0, 0, 0, 1, 0, 0, 2)
                 .rechunk(3)
@@ -203,6 +203,25 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .runCollect
             )(equalTo(Chunk(3, 4, 5, 1, 2, 3, 4, 5)))
           ),
+          test("correct leftovers behavior") {
+            assertZIO(
+              ZStream
+                .range(0, 20, chunkSize = 3)
+                .run(ZSink.dropWhileZIO((i: Int) => ZIO.succeed(i <= 10)).collectLeftover)
+                .map(_._2)
+            )(equalTo(Chunk(11)))
+          },
+          test("combined with head, transduced") {
+            assertZIO(
+              ZStream(0, 0, 0, 1, 0, 0, 2)
+                .rechunk(3)
+                .transduce {
+                  ZSink.dropWhileZIO((i: Int) => ZIO.succeed(i == 0)) *> ZSink.head[Int]
+                }
+                .take(10)
+                .runCollect
+            )(equalTo(Chunk(Some(1), Some(2))))
+          },
           test("error")(
             assertZIO {
               (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
