@@ -508,33 +508,37 @@ object TestAspect extends TimeoutVariants {
    * [[TestAnnotation.fibers]]. Applied by default in [[ZIOSpecAbstract]]. This
    * aspect is required for the proper functioning of `TestClock.adjust`.
    */
-  lazy val fibers: TestAspectPoly =
+  lazy val fibers: TestAspectPoly = {
     new PerTest.Poly {
+      private implicit val trace: Trace = Trace.empty
+
+      private val acquire = ZIO.succeed(new AtomicReference(SortedSet.empty[Fiber.Runtime[Any, Any]])).tap { ref =>
+        Annotations.annotate(TestAnnotation.fibers, Right(Chunk(ref)))
+      }
+
+      private val release = Annotations.get(TestAnnotation.fibers).flatMap {
+        case Right(refs) =>
+          val refs0 = refs.map(_.get()).filter(_.nonEmpty)
+          val n = refs0.size match {
+            case 0 => 0
+            case 1 => refs0.head.size
+            case _ =>
+              val set = mutable.HashSet.empty[Fiber.Runtime[Any, Any]]
+              refs0.foreach(set ++= _)
+              set.size
+          }
+          Annotations.annotate(TestAnnotation.fibers, Left(n))
+        case Left(_) => Exit.unit
+      }
+
       def perTest[R, E](
         test: ZIO[R, TestFailure[E], TestSuccess]
-      )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] = {
-        val acquire = ZIO.succeed(new AtomicReference(SortedSet.empty[Fiber.Runtime[Any, Any]])).tap { ref =>
-          Annotations.annotate(TestAnnotation.fibers, Right(Chunk(ref)))
+      )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
+        ZIO.acquireReleaseWith(acquire)(_ => release) {
+          Supervisor.fibersIn(_).flatMap(test.supervised(_))
         }
-        val release = Annotations.get(TestAnnotation.fibers).flatMap {
-          case Right(refs) =>
-            val refs0 = refs.map(_.get()).filter(_.nonEmpty)
-            val n = refs0.size match {
-              case 0 => 0
-              case 1 => refs0.head.size
-              case _ =>
-                val set = mutable.HashSet.empty[Fiber.Runtime[Any, Any]]
-                refs0.foreach(set ++= _)
-                set.size
-            }
-            Annotations.annotate(TestAnnotation.fibers, Left(n))
-          case Left(_) => Exit.unit
-        }
-        ZIO.acquireReleaseWith(acquire)(_ => release) { ref =>
-          Supervisor.fibersIn(ref).flatMap(supervisor => test.supervised(supervisor))
-        }
-      }
     }
+  }
 
   /**
    * An aspect that retries a test until success, with a default limit, for use
