@@ -229,6 +229,14 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .either
                 .runCollect
             }(equalTo(Chunk(Right(3), Left("Aie"))))
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 2) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropWhileZIO[Any, String, Int](x => ZIO.succeed(x < 3)))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
           )
         ),
         suite("ensuring") {
@@ -289,13 +297,21 @@ object ZSinkSpec extends ZIOBaseSpec {
               assertZIO(headOpt)(equalTo(chunks.flatMap(_.toSeq).headOption))
             }
           ),
-          test("error")(
+          test("late error")(
             assertZIO {
               (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
                 .pipeThrough(ZSink.head)
                 .either
                 .runCollect
             }(equalTo(Chunk(Right(2), Right(3))))
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream.fail("Aie") ++ ZStream(1, 2, 3) ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.head)
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
           )
         ),
         test("last")(
