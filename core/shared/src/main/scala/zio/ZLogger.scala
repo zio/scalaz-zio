@@ -120,13 +120,12 @@ object ZLogger {
     spans0: List[LogSpan],
     annotations: Map[String, String]
   ) => {
-    val sb = new StringBuilder()
+    // For why 256 here, see https://github.com/zio/zio/pull/9416#discussion_r1886208534
+    val sb = new StringBuilder(256)
 
     val _ = context
 
     val now = java.time.Instant.now()
-
-    val nowMillis = java.lang.System.currentTimeMillis()
 
     sb.append("timestamp=")
       .append(now.toString())
@@ -138,13 +137,15 @@ object ZLogger {
       .append(message0())
       .append("\"")
 
-    if ((cause ne null) && cause != Cause.empty) {
+    if ((cause ne null) && (cause ne Cause.empty)) {
       sb.append(" cause=\"")
         .append(cause.prettyPrint)
         .append("\"")
     }
 
     if (spans0.nonEmpty) {
+      val nowMillis = java.lang.System.currentTimeMillis()
+
       sb.append(" ")
 
       val it    = spans0.iterator
@@ -161,20 +162,17 @@ object ZLogger {
       }
     }
 
-    trace match {
-      case Trace(location, file, line) =>
-        sb.append(" location=")
+    val parsedTarce = Trace.parseOrNull(trace)
+    if (parsedTarce ne null) {
+      val location = parsedTarce._1
+      val file     = parsedTarce._2
+      val line     = parsedTarce._3
 
-        appendQuoted(location, sb)
-
-        sb.append(" file=")
-
-        appendQuoted(file, sb)
-
-        sb.append(" line=")
-          .append(line)
-
-      case _ =>
+      sb.append(" location=")
+      appendQuoted(location, sb)
+      sb.append(" file=")
+      appendQuoted(file, sb)
+      sb.append(" line=").append(line)
     }
 
     if (annotations.nonEmpty) {

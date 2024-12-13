@@ -14,7 +14,9 @@ object Tracer {
     type Type = String
     val empty: Type with Traced = "".intern().asInstanceOf[Type with Traced]
 
-    def unapply(trace: Type): Option[(String, String, Int)] = TracerUtils.parse(trace)
+    def unapply(trace: Type): Option[(String, String, Int)] = Option(parseOrNull(trace))
+
+    private[zio] def parseOrNull(trace: Type): (String, String, Int) = TracerUtils.parse(trace)
 
     def apply(location: String, file: String, line: Int): Type with Traced =
       createTrace(location, file, line).asInstanceOf[Type with Traced]
@@ -29,5 +31,6 @@ sealed trait Tracer {
   type Type <: AnyRef
   val empty: Type with Tracer.Traced
   def unapply(trace: Type): Option[(String, String, Int)]
+  private[zio] def parseOrNull(trace: Type): (String, String, Int)
   def apply(location: String, file: String, line: Int): Type with Tracer.Traced
 }

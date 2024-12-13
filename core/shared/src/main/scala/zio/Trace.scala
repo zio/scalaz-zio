@@ -24,16 +24,22 @@ object Trace {
   def apply(location: String, file: String, line: Int): Trace =
     Tracer.instance(location, file, line)
 
-  def equalIgnoreLocation(left: Trace, right: Trace): Boolean =
-    (left, right) match {
-      case (Trace(_, leftFile, leftLine), Trace(_, rightFile, rightLine)) =>
-        leftFile == rightFile && leftLine == rightLine
-      case _ =>
-        false
-    }
+  def equalIgnoreLocation(left: Trace, right: Trace): Boolean = {
+    val leftParsed = parseOrNull(left)
+    if (leftParsed eq null) return false
 
-  val empty: Trace =
-    Tracer.instance.empty
+    val rightParsed = parseOrNull(right)
+    if (rightParsed eq null) return false
+
+    val leftFile  = leftParsed._2
+    val leftLine  = leftParsed._3
+    val rightFile = rightParsed._2
+    val rightLine = rightParsed._3
+
+    leftFile == rightFile && leftLine == rightLine
+  }
+
+  val empty: Trace = Tracer.instance.empty
 
   def fromJava(stackTraceElement: StackTraceElement): Trace =
     Trace(
@@ -42,18 +48,24 @@ object Trace {
       stackTraceElement.getLineNumber
     )
 
-  def toJava(trace: Trace): Option[StackTraceElement] =
-    trace match {
-      case Trace(location, file, line) =>
-        val last = location.lastIndexOf(".")
+  def toJava(trace: Trace): Option[StackTraceElement] = {
+    val parsed = parseOrNull(trace)
+    if (parsed eq null) None
+    else {
+      val location = parsed._1
+      val file     = parsed._2
+      val line     = parsed._3
 
-        val (before, after) = if (last < 0) ("", "." + location) else location.splitAt(last)
+      val last = location.lastIndexOf('.')
 
-        Some(new StackTraceElement(before, after.drop(1), file, line))
+      val (before, after) = if (last < 0) ("", "." + location) else location.splitAt(last)
 
-      case _ => None
+      Some(new StackTraceElement(before, after.drop(1), file, line))
     }
+  }
 
-  def unapply(trace: Trace): Option[(String, String, Int)] =
-    Tracer.instance.unapply(trace)
+  def unapply(trace: Trace): Option[(String, String, Int)] = Option(parseOrNull(trace))
+
+  private[zio] def parseOrNull(trace: Trace): (String, String, Int) = Tracer.instance.parseOrNull(trace)
+
 }
