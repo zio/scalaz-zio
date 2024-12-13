@@ -103,7 +103,7 @@ object TestClock extends Serializable {
    * Delays for a short period of time.
    */
   private[this] val delay: UIO[Unit] =
-    ClockLive.sleep(5.milliseconds)(Trace.empty)
+    ClockLive.sleep(10.millis)(Trace.empty)
 
   final case class Test(
     clockState: Ref.Atomic[TestClock.Data],
@@ -210,17 +210,21 @@ object TestClock extends Serializable {
      * on or after the duration, the fiber will automatically be resumed.
      */
     def sleep(duration: => Duration)(implicit trace: Trace): UIO[Unit] =
-      for {
-        promise <- Promise.make[Nothing, Unit]
-        shouldAwait <- clockState.modify { data =>
-                         val end = data.instant.plus(duration)
-                         if (end.isAfter(data.instant))
-                           (true, data.copy(sleeps = (end, promise) :: data.sleeps))
-                         else
-                           (false, data)
-                       }
-        _ <- if (shouldAwait) warningStart *> promise.await else promise.succeed(())
-      } yield ()
+      ZIO.suspendSucceedUnsafe { implicit unsafe =>
+        val duration0 = duration
+        if (duration0 <= Duration.Zero) Exit.unit
+        else if (duration0 == Duration.Infinity) ZIO.never
+        else {
+          clockState.unsafe.modify { data =>
+            val end = data.instant.plus(duration0)
+            if (end.isAfter(data.instant)) {
+              val promise = Promise.unsafe.make[Nothing, Unit](FiberId.None)
+              (warningStart *> promise.await, data.copy(sleeps = (end, promise) :: data.sleeps))
+            } else
+              (Exit.unit, data)
+          }
+        }
+      }
 
     /**
      * Returns a list of the times at which all queued effects are scheduled to

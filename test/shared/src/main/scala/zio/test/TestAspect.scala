@@ -754,7 +754,7 @@ object TestAspect extends TimeoutVariants {
   }
 
   private def nonFlakyImpl[R, E](test: ZIO[R, TestFailure[E], TestSuccess])(n: Int)(implicit trace: Trace) =
-    test *> test.tap(_ => Annotations.annotate(TestAnnotation.repeated, 1)).repeatN(n - 1)
+    test *> (ZIO.yieldNow *> test).tap(_ => Annotations.annotate(TestAnnotation.repeated, 1)).repeatN(n - 1)
 
   /**
    * Constructs an aspect that requires a test to not terminate within the

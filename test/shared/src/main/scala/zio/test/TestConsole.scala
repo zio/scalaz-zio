@@ -16,7 +16,7 @@
 
 package zio.test
 
-import zio.{&, Chunk, Console, Exit, FiberRef, IO, Ref, Trace, UIO, URIO, Unsafe, ZIO, ZLayer}
+import zio._
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
