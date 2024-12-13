@@ -361,7 +361,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
       case LabeledCase(label, spec) => LabeledCase(label, spec)
       case ScopedCase(scoped) =>
         ScopedCase[R0, E, Spec[R0, E]](
-          scoped.provideSomeEnvironment[R0 with Scope](in => f(in).add[Scope](in.get[Scope]))
+          scoped.provideSomeEnvironment[R0 with Scope](in => f(in).unsafe.addScope(in.getScope)(Unsafe))
         )
       case MultipleCase(specs)         => MultipleCase(specs)
       case TestCase(test, annotations) => TestCase(test.provideSomeEnvironment(f), annotations)
@@ -456,7 +456,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
         Spec.test(
           b.mapError(TestFailure.fail).flatMap { b =>
             if (b) test
-            else Annotations.annotate(TestAnnotation.ignored, 1).as(TestSuccess.Ignored())
+            else Annotations.annotate(TestAnnotation.ignored, 1) *> TestSuccess.Ignored.emptyExit
           },
           annotations
         )

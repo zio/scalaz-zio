@@ -6535,8 +6535,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def mapExit[A1](f: A => A1): Exit[E, A1] =
     self match {
-      case Success(v)     => Exit.succeed(f(v))
-      case e @ Failure(_) => e
+      case Success(v)    => Exit.succeed(f(v))
+      case e: Failure[E] => e
     }
 
   /**
@@ -6629,7 +6629,11 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   /**
    * Discards the value.
    */
-  final def unitExit: Exit[E, Unit] = asExit(())
+  final def unitExit: Exit[E, Unit] =
+    self match {
+      case _: Success[?] => Exit.unit
+      case f: Failure[E] => f
+    }
 
   /**
    * Returns an untraced exit value.

@@ -18,7 +18,7 @@ package zio
 
 import zio.internal.stacktracer.{SourceLocation, Tracer}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import zio.stream.{ZChannel, ZSink, ZStream}
+import zio.stream.{ZSink, ZStream}
 import zio.test.ReporterEventRenderer.ConsoleEventRenderer
 import zio.test.Spec.LabeledCase
 
@@ -52,19 +52,20 @@ package object test extends CompileVariants {
   type TestEnvironment = Annotations with Live with Sized with TestConfig
 
   object TestEnvironment {
+    private val sizedLive  = Sized.live(100)(Trace.empty)
+    private val configLive = TestConfig.live(100, 100, 200, 1000)(Trace.empty)
+
     val any: ZLayer[TestEnvironment, Nothing, TestEnvironment] =
       ZLayer.environment[TestEnvironment](Tracer.newTrace)
     val live: ZLayer[Clock with Console with System with Random, Nothing, TestEnvironment] = {
       implicit val trace = Tracer.newTrace
-      Annotations.live ++
-        Live.default ++
-        Sized.live(100) ++
-        ((Live.default ++ Annotations.live) >>> TestClock.default) ++
-        TestConfig.live(100, 100, 200, 1000) ++
-        ((Live.default ++ Annotations.live) >>> TestConsole.debug) ++
-        TestRandom.deterministic ++
-        TestSystem.default
-
+      (Annotations.live +!+ Live.default) >+>
+        (sizedLive +!+
+          TestClock.default +!+
+          configLive +!+
+          TestConsole.debug +!+
+          TestRandom.deterministic +!+
+          TestSystem.default)
     }
   }
 
@@ -80,12 +81,14 @@ package object test extends CompileVariants {
     )
   }
 
-  private def testFiberRefGen(implicit trace: Trace): ULayer[Unit] =
+  private val testFiberRefGen: ULayer[Unit] = {
+    implicit val trace = Trace.empty
     ZLayer.scoped(FiberRef.currentFiberIdGenerator.locallyScoped(FiberId.Gen.Monotonic))
+  }
 
   val testEnvironment: ZLayer[Any, Nothing, TestEnvironment] = {
     implicit val trace = Tracer.newTrace
-    liveEnvironment >>> (TestEnvironment.live ++ testFiberRefGen)
+    testFiberRefGen >>> liveEnvironment >>> TestEnvironment.live
   }
 
   /**
@@ -100,7 +103,7 @@ package object test extends CompileVariants {
    * Retrieves the `TestClock` service for this test.
    */
   def testClock(implicit trace: Trace): UIO[TestClock] =
-    testClockWith(ZIO.succeed(_))
+    testClockWith(ZIO.successFn)
 
   /**
    * Retrieves the `TestClock` service for this test and uses it to run the
@@ -113,7 +116,7 @@ package object test extends CompileVariants {
    * Retrieves the `TestConsole` service for this test.
    */
   def testConsole(implicit trace: Trace): UIO[TestConsole] =
-    testConsoleWith(ZIO.succeed(_))
+    testConsoleWith(ZIO.successFn)
 
   /**
    * Retrieves the `TestConsole` service for this test and uses it to run the
@@ -126,7 +129,7 @@ package object test extends CompileVariants {
    * Retrieves the `TestRandom` service for this test.
    */
   def testRandom(implicit trace: Trace): UIO[TestRandom] =
-    testRandomWith(ZIO.succeed(_))
+    testRandomWith(ZIO.successFn)
 
   /**
    * Retrieves the `TestRandom` service for this test and uses it to run the
@@ -139,7 +142,7 @@ package object test extends CompileVariants {
    * Retrieves the `TestSystem` service for this test.
    */
   def testSystem(implicit trace: Trace): UIO[TestSystem] =
-    testSystemWith(ZIO.succeed(_))
+    testSystemWith(ZIO.successFn)
 
   /**
    * Retrieves the `TestSystem` service for this test and uses it to run the
@@ -152,7 +155,7 @@ package object test extends CompileVariants {
    * Retrieves the `Annotations` service for this test.
    */
   def annotations(implicit trace: Trace): UIO[Annotations] =
-    annotationsWith(ZIO.succeed(_))
+    annotationsWith(ZIO.successFn)
 
   /**
    * Retrieves the `Annotations` service for this test and uses it to run the
@@ -165,7 +168,7 @@ package object test extends CompileVariants {
    * Retrieves the `Live` service for this test.
    */
   def live(implicit trace: Trace): UIO[Live] =
-    liveWith(ZIO.succeed(_))
+    liveWith(ZIO.successFn)
 
   /**
    * Retrieves the `Live` service for this test and uses it to run the specified
@@ -178,7 +181,7 @@ package object test extends CompileVariants {
    * Retrieves the `Sized` service for this test.
    */
   def sized(implicit trace: Trace): UIO[Sized] =
-    sizedWith(ZIO.succeed(_))
+    sizedWith(ZIO.successFn)
 
   /**
    * Retrieves the `Sized` service for this test and uses it to run the
@@ -191,7 +194,7 @@ package object test extends CompileVariants {
    * Retrieves the `TestConfig` service for this test.
    */
   def testConfig(implicit trace: Trace): UIO[TestConfig] =
-    testConfigWith(ZIO.succeed(_))
+    testConfigWith(ZIO.successFn)
 
   /**
    * Retrieves the `TestConfig` service for this test and uses it to run the
@@ -312,43 +315,39 @@ package object test extends CompileVariants {
     ): ZIO[R, TestFailure[E], TestSuccess] =
       for {
         promise <- Promise.make[TestFailure[E], TestSuccess]
-        child <- ZIO
-                   .suspendSucceed(assertion)
+        child <- assertion
                    .foldCauseZIO(
                      cause =>
                        cause.dieOption match {
-                         case Some(TestResult.Exit(assert)) => ZIO.fail(TestFailure.Assertion(assert))
-                         case _                             => ZIO.fail(TestFailure.Runtime(cause))
+                         case Some(TestResult.Exit(assert)) => Exit.fail(TestFailure.Assertion(assert))
+                         case _                             => Exit.fail(TestFailure.Runtime(cause))
                        },
                      assert =>
-                       if (assert.isFailure)
-                         ZIO.fail(TestFailure.Assertion(assert))
-                       else
-                         ZIO.succeed(TestSuccess.Succeeded())
+                       if (assert.isFailure) Exit.fail(TestFailure.Assertion(assert))
+                       else TestSuccess.Succeeded.emptyExit
                    )
                    .intoPromise(promise)
                    .forkDaemon
         result <- promise.await
-        _      <- child.inheritAll
-        _ <- ZIO.whenDiscard(child.isAlive()) {
-               for {
-                 fiber <- ZIO
-                            .logWarning({
-                              val quotedLabel = "\"" + label + "\""
-                              s"Warning: ZIO Test is attempting to interrupt fiber " +
-                                s"${child.id} forked in test $quotedLabel due to automatic, " +
-                                "supervision, but interruption has taken more than 10 " +
-                                "seconds to complete. This may indicate a resource leak. " +
-                                "Make sure you are not forking a fiber in an " +
-                                "uninterruptible region."
-                            })
-                            .delay(10.seconds)
-                            .withClock(Clock.ClockLive)
-                            .interruptible
-                            .forkDaemon
-                            .onExecutor(Runtime.defaultExecutor)
-                 _ <- (child.interrupt *> fiber.interrupt).forkDaemon.onExecutor(Runtime.defaultExecutor)
-               } yield ()
+        _ <- ZIO.whenZIODiscard(child.hasChildrenAlive) {
+               implicit val unsafe: Unsafe = Unsafe
+               val cancelWarning = Clock.globalScheduler.schedule(
+                 () =>
+                   Runtime.default.unsafe.run(
+                     ZIO
+                       .logWarning({
+                         val quotedLabel = "\"" + label + "\""
+                         s"Warning: ZIO Test is attempting to interrupt fiber " +
+                           s"${child.id} forked in test $quotedLabel due to automatic, " +
+                           "supervision, but interruption has taken more than 10 " +
+                           "seconds to complete. This may indicate a resource leak. " +
+                           "Make sure you are not forking a fiber in an " +
+                           "uninterruptible region."
+                       })
+                   ),
+                 10.seconds
+               )
+               (child.interrupt *> ZIO.succeed(cancelWarning())).forkDaemon
              }
       } yield result
   }
@@ -930,11 +929,10 @@ package object test extends CompileVariants {
    * A `Runner` that provides a default testable environment.
    */
   lazy val defaultTestRunner: TestRunner[TestEnvironment, Any] = {
-    implicit val trace = Trace.empty
     TestRunner(
       TestExecutor.default(
         testEnvironment,
-        Scope.default ++ testEnvironment,
+        Scope.default +!+ testEnvironment,
         ExecutionEventSink.live(Console.ConsoleLive, ConsoleEventRenderer),
         ZTestEventHandler.silent // The default test runner handles its own events, writing their output to the provided sink.
       )
@@ -951,7 +949,7 @@ package object test extends CompileVariants {
    * Creates an ignored test result.
    */
   val ignored: UIO[TestSuccess] =
-    ZIO.succeed(TestSuccess.Ignored())(Trace.empty)
+    TestSuccess.Ignored.emptyExit
 
   /**
    * Passes platform specific information to the specified function, which will
@@ -1070,16 +1068,18 @@ package object test extends CompileVariants {
     test: A => ZIO[R1, E, TestResult]
   )(implicit trace: Trace): ZIO[R1, E, TestResult] =
     testConfigWith { testConfig =>
-      val flag = Ref.unsafe.make(false)(Unsafe.unsafe)
-      warningEmptyGen(flag) *> shrinkStream {
-        stream.zipWithIndex.mapZIO { case (initial, index) =>
-          flag.set(true) *> initial.foreach(input =>
-            (test(input) @@ testConfig.checkAspect)
-              .map(_.setGenFailureDetails(GenFailureDetails(initial.value, input, index)))
-              .either
-          )
-        }
-      }(testConfig.shrinks)
+      warningEmptyGen { cancelWarning =>
+        shrinkStream {
+          stream.zipWithIndex.mapZIO { case (initial, index) =>
+            cancelWarning()
+            initial.foreach(input =>
+              (test(input) @@ testConfig.checkAspect)
+                .map(_.setGenFailureDetails(GenFailureDetails(initial.value, input, index)))
+                .either
+            )
+          }
+        }(testConfig.shrinks)
+      }
     }
 
   private def shrinkStream[R, R1 <: R, E, A](
@@ -1104,28 +1104,34 @@ package object test extends CompileVariants {
     test: A => ZIO[R1, E, TestResult]
   )(implicit trace: Trace): ZIO[R1, E, TestResult] =
     testConfigWith { testConfig =>
-      shrinkStream {
-        stream.zipWithIndex
-          .mapZIOPar(parallelism) { case (initial, index) =>
-            initial.foreach { input =>
-              (test(input) @@ testConfig.checkAspect)
-                .map(_.setGenFailureDetails(GenFailureDetails(initial.value, input, index)))
-                .either
-            // convert test failures to failures to terminate parallel tests on first failure
-            }.flatMap(sample => sample.value.fold(_ => ZIO.fail(sample), _ => ZIO.succeed(sample)))
-          // move failures back into success channel for shrinking logic
-          }
-          .catchAll(ZStream.succeed(_))
-      }(testConfig.shrinks)
+      warningEmptyGen { cancelWarning =>
+        shrinkStream {
+          stream.zipWithIndex
+            .mapZIOPar(parallelism) { case (initial, index) =>
+              cancelWarning()
+              initial.foreach { input =>
+                (test(input) @@ testConfig.checkAspect)
+                  .map(_.setGenFailureDetails(GenFailureDetails(initial.value, input, index)))
+                  .either
+              // convert test failures to failures to terminate parallel tests on first failure
+              }.flatMap(sample => sample.value.fold(_ => ZIO.fail(sample), _ => ZIO.succeed(sample)))
+            // move failures back into success channel for shrinking logic
+            }
+            .catchAll(ZStream.succeed(_))
+        }(testConfig.shrinks)
+      }
     }
 
-  private def warningEmptyGen(flag: Ref[Boolean])(implicit trace: Trace): UIO[Unit] =
-    Live
-      .live(ZIO.logWarning(warning).unlessZIODiscard(flag.get).delay(5.seconds))
-      .interruptible
-      .fork
-      .onExecutor(Runtime.defaultExecutor)
-      .unit
+  private def warningEmptyGen[R, E, A](
+    f: (() => Boolean) => ZIO[R, E, A]
+  )(implicit trace: Trace): ZIO[R, E, A] =
+    ZIO.suspendSucceedUnsafe { implicit unsafe =>
+      val cancel = Clock.globalScheduler.schedule(
+        () => Runtime.default.unsafe.run(ZIO.logWarning(warning)),
+        5.seconds
+      )
+      f(cancel).onInterrupt(ZIO.succeed(cancel()))
+    }
 
   private val warning =
     "Warning: A check / checkAll / checkN generator did not produce any test cases, " +

@@ -599,6 +599,14 @@ object Fiber extends FiberPlatformSpecific {
      */
     private[zio] def getRunningExecutor(): Option[Executor]
 
+    /**
+     * Boolean flag which indicates whether the fiber contains children that are
+     * currently running
+     *
+     * '''NOTE''': This method is safe to invoke from any fiber
+     */
+    private[zio] def hasChildrenAlive(implicit trace: Trace): UIO[Boolean]
+
     private[zio] def isAlive(): Boolean
 
     /**

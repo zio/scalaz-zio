@@ -16,7 +16,7 @@
 
 package zio.test
 
-import zio.{Chunk, Console, FiberRef, IO, Ref, Trace, UIO, URIO, Unsafe, ZIO, ZLayer}
+import zio.{&, Chunk, Console, Exit, FiberRef, IO, Ref, Trace, UIO, URIO, Unsafe, ZIO, ZLayer}
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
@@ -227,14 +227,14 @@ object TestConsole extends Serializable {
     trace: Trace
   ): ZLayer[Live with Annotations, Nothing, TestConsole] =
     ZLayer.scoped {
-      for {
-        live        <- ZIO.service[Live]
-        annotations <- ZIO.service[Annotations]
-        ref         <- ZIO.succeed(Ref.unsafe.make(data)(Unsafe.unsafe))
-        debugRef    <- FiberRef.make(debug)
-        test         = Test(ref, live, annotations, debugRef)
-        _           <- ZIO.withConsoleScoped(test)
-      } yield test
+      ZIO.environmentWithZIO[Live & Annotations] { env =>
+        val live        = env.get[Live]
+        val annotations = env.get[Annotations]
+        val ref         = Ref.unsafe.make(data)(Unsafe)
+        val debugRef    = FiberRef.unsafe.make(debug)(Unsafe)
+        val test        = Test(ref, live, annotations, debugRef)
+        ZIO.withConsoleScoped(test).as(test)
+      }
     }
 
   val any: ZLayer[TestConsole, Nothing, TestConsole] =

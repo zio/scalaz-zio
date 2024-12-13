@@ -84,11 +84,9 @@ object Annotations {
   val live: ULayer[Annotations] = {
     implicit val trace = Tracer.newTrace
     ZLayer.scoped {
-      for {
-        ref        <- ZIO.succeed(Unsafe.unsafe(Ref.unsafe.make(TestAnnotationMap.empty)(_)))
-        annotations = Test(ref)
-        _          <- withAnnotationsScoped(annotations)
-      } yield annotations
+      val ref         = Unsafe.unsafe(Ref.unsafe.make(TestAnnotationMap.empty)(_))
+      val annotations = Test(ref)
+      withAnnotationsScoped(annotations).as(annotations)
     }
   }
 

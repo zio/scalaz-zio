@@ -21,6 +21,8 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.test.render.ConsoleRenderer
 import zio._
 
+import java.util.concurrent.TimeUnit
+
 /**
  * A `TestExecutor[R, E]` is capable of executing specs that require an
  * environment `R` and may fail with an `E`.
@@ -28,7 +30,10 @@ import zio._
 abstract class TestExecutor[+R, E] {
   def run(fullyQualifiedName: String, spec: Spec[R, E], defExec: ExecutionStrategy)(implicit trace: Trace): UIO[Summary]
 }
+
 object TestExecutor {
+  private[this] val exitRightUnit = Exit.succeed(Right(()))
+  private[this] val exitLeftUnit  = Exit.succeed(Left(()))
 
   // Used to override the default shutdown for a suite so we don't have to wait 60 seconds in some tests.
   // Might be useful to make public at some point
@@ -71,55 +76,58 @@ object TestExecutor {
                     scope
                       .extend(managed.flatMap(loop(labels, _, exec, ancestors, sectionId)))
                       .onExit { exit =>
+                        implicit val unsafe: Unsafe = Unsafe
+                        val latch                   = Promise.unsafe.make[Nothing, Either[Unit, Unit]](FiberId.None)
                         for {
-                          timeout <- overrideShutdownTimeout.get.map(_.getOrElse(60.seconds))
-                          warning <-
-                            ZIO
-                              .logWarning({
-                                "Warning: ZIO Test is attempting to close the scope of suite " +
-                                  s"${labels.reverse.mkString(" - ")} in $fullyQualifiedName, " +
-                                  s"but closing the scope has taken more than ${timeout.toSeconds} seconds to " +
-                                  "complete. This may indicate a resource leak."
-                              })
-                              .delay(timeout)
-                              .withClock(ClockLive)
-                              .interruptible
-                              .forkDaemon
-                          finalizer <- scope.close(exit).ensuring(warning.interrupt).forkDaemon
-                          exit      <- warning.await
-                          _         <- finalizer.join.when(exit.isInterrupted)
+                          timeoutOpt <- overrideShutdownTimeout.get
+                          cancelWarning = {
+                            val timeout = timeoutOpt.getOrElse(60.seconds)
+                            Clock.globalScheduler.schedule(
+                              () => {
+                                Runtime.default.unsafe.run(
+                                  ZIO
+                                    .logWarning({
+                                      "Warning: ZIO Test is attempting to close the scope of suite " +
+                                        s"${labels.reverse.mkString(" - ")} in $fullyQualifiedName, " +
+                                        s"but closing the scope has taken more than ${timeout.toSeconds} seconds to " +
+                                        "complete. This may indicate a resource leak."
+                                    })
+                                )
+                                latch.unsafe.done(exitLeftUnit)
+                              },
+                              timeout
+                            )
+                          }
+                          finalizer <- scope
+                                         .close(exit)
+                                         .ensuring(ZIO.succeed {
+                                           latch.unsafe.done(exitRightUnit)
+                                           cancelWarning(): Unit
+                                         })
+                                         .forkDaemon
+                          exit <- latch.await
+                          _    <- finalizer.join.whenDiscard(exit.isRight)
                         } yield ()
                       }
                   }.catchAllCause { e =>
-                    val event =
-                      ExecutionEvent.RuntimeFailure(sectionId, labels, TestFailure.Runtime(e), ancestors)
-
+                    val event = ExecutionEvent.RuntimeFailure(sectionId, labels, TestFailure.Runtime(e), ancestors)
                     processEvent(event)
                   }
 
                 case Spec.MultipleCase(specs) =>
                   ZIO.uninterruptibleMask(restore =>
-                    for {
-                      newMultiSectionId <- SuiteId.newRandom
-                      newAncestors       = sectionId :: ancestors
-                      start              = ExecutionEvent.SectionStart(labels, newMultiSectionId, newAncestors)
-                      _                 <- processEvent(start)
-                      end                = ExecutionEvent.SectionEnd(labels, newMultiSectionId, newAncestors)
-                      _ <-
-                        restore(
-                          ZIO.foreachExec(specs)(exec)(spec =>
-                            loop(labels, spec, exec, newAncestors, newMultiSectionId)
-                          )
-                        )
-                          .ensuring(
-                            processEvent(end)
-                          )
-                    } yield ()
+                    SuiteId.newRandom.flatMap { newMultiSectionId =>
+                      val newAncestors = sectionId :: ancestors
+                      val start        = ExecutionEvent.SectionStart(labels, newMultiSectionId, newAncestors)
+                      val end          = ExecutionEvent.SectionEnd(labels, newMultiSectionId, newAncestors)
+                      val run          = ZIO.foreachExec(specs)(exec)(loop(labels, _, exec, newAncestors, newMultiSectionId))
+                      processEvent(start) *> restore(run).exitWith(exit => processEvent(end) *> exit.unitExit)
+                    }
                   )
                 case Spec.TestCase(
                       test,
                       staticAnnotations: TestAnnotationMap
-                    ) => {
+                    ) =>
                   val testResultZ = (for {
                     _ <-
                       processEvent(
@@ -131,34 +139,31 @@ object TestExecutor {
                           fullyQualifiedName
                         )
                       )
-                    result  <- Live.withLive(test)(_.timed).either
-                    duration = result.map(_._1.toMillis).fold(_ => 1L, identity)
-                    event =
-                      ExecutionEvent
-                        .Test(
-                          labels,
-                          result.map(_._2),
-                          staticAnnotations ++ extractAnnotations(result.map(_._2)),
-                          ancestors,
-                          duration,
-                          sectionId,
-                          fullyQualifiedName
-                        )
-                  } yield event).catchAllCause { e =>
+                    start  <- ClockLive.currentTime(TimeUnit.MILLISECONDS)
+                    result <- Live.live(test).either
+                    end    <- ClockLive.currentTime(TimeUnit.MILLISECONDS)
+                  } yield {
+                    ExecutionEvent
+                      .Test(
+                        labels,
+                        result,
+                        staticAnnotations ++ extractAnnotations(result),
+                        ancestors,
+                        end - start,
+                        sectionId,
+                        fullyQualifiedName
+                      )
+                  }).catchAllCause { e =>
                     val event = ExecutionEvent.RuntimeFailure(sectionId, labels, TestFailure.Runtime(e), ancestors)
                     ConsoleRenderer.render(e, labels).foreach(cr => println("CR: " + cr))
-                    ZIO.succeed(event)
+                    Exit.succeed(event)
                   }
-                  for {
-                    testResult <- testResultZ
-                    _          <- processEvent(testResult)
-                  } yield ()
-                }
+                  testResultZ.flatMap(processEvent)
               }
 
             val scopedSpec =
               (spec @@ TestAspect.aroundTest(
-                ZTestLogger.default.build.as((x: TestSuccess) => ZIO.succeed(x))
+                ZTestLogger.default.build.as(ZIO.successFn[TestSuccess])
               )).annotated
                 .provideSomeLayer[R](freshLayerPerSpec)
                 .provideLayerShared(sharedSpecLayer.tapErrorCause { e =>
@@ -172,9 +177,7 @@ object TestExecutor {
                   )
                 })
 
-            val topLevelFlush = ExecutionEvent.TopLevelFlush(
-              topParent
-            )
+            val topLevelFlush = ExecutionEvent.TopLevelFlush(topParent)
 
             ZIO.scoped(loop(List.empty, scopedSpec, defExec, List.empty, topParent)) *>
               processEvent(topLevelFlush) *>

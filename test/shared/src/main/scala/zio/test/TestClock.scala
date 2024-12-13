@@ -16,14 +16,17 @@
 
 package zio.test
 
+import zio.Clock.ClockLive
 import zio._
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import java.io.IOException
+
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime, OffsetDateTime, ZoneId}
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.immutable.SortedSet
+import scala.collection.mutable
 
 /**
  * `TestClock` makes it easy to deterministically and efficiently test effects
@@ -94,6 +97,12 @@ trait TestClock extends Clock with Restorable {
 }
 
 object TestClock extends Serializable {
+
+  /**
+   * Delays for a short period of time.
+   */
+  private[this] val delay: UIO[Unit] =
+    ClockLive.sleep(5.milliseconds)(Trace.empty)
 
   final case class Test(
     clockState: Ref.Atomic[TestClock.Data],
@@ -255,8 +264,11 @@ object TestClock extends Serializable {
      * `TestClock` but a fiber is not suspending.
      */
     private[TestClock] def suspendedWarningDone(implicit trace: Trace): UIO[Unit] =
-      suspendedWarningState.updateSomeZIO[Any, Nothing] { case SuspendedWarningData.Pending(fiber) =>
-        fiber.interrupt.as(SuspendedWarningData.start)
+      suspendedWarningState.updateSomeZIO { case SuspendedWarningData.Pending(cancel) =>
+        ZIO.succeed {
+          cancel()
+          SuspendedWarningData.start
+        }
       }
 
     /**
@@ -264,27 +276,29 @@ object TestClock extends Serializable {
      * is not advancing the `TestClock`.
      */
     private[TestClock] def warningDone(implicit trace: Trace): UIO[Unit] =
-      warningState.updateSomeZIO[Any, Nothing] {
-        case WarningData.Start          => ZIO.succeed(WarningData.done)
-        case WarningData.Pending(fiber) => fiber.interrupt.as(WarningData.done)
+      warningState.updateSomeZIO {
+        case WarningData.Pending(cancelWarning) =>
+          ZIO.succeed {
+            cancelWarning()
+            WarningData.done
+          }
+        case WarningData.Start => Exit.succeed(WarningData.done)
       }
 
     /**
      * Polls until all descendants of this fiber are done or suspended.
      */
-    private def awaitSuspended(implicit trace: Trace): UIO[Unit] =
-      suspendedWarningStart *>
-        suspended
-          .zipWith(live.provide(ZIO.sleep(10.milliseconds)) *> suspended)(_ == _)
-          .filterOrFail(identity)(())
+    private def awaitSuspended(implicit trace: Trace): UIO[Unit] = ZIO.suspendSucceed {
+      val ref = new AtomicBoolean(false)
+      ClockLive.sleep(1.milli) *> // Give a chance to all the fibers to spawn
+        freeze
+          .zipWith(delay *> freeze) { (l, r) =>
+            if (l == r) Exit.unit
+            else ZIO.whenDiscard(ref.compareAndSet(false, true))(suspendedWarningStart) *> Exit.failUnit
+          }
           .eventually *>
-        suspendedWarningDone
-
-    /**
-     * Delays for a short period of time.
-     */
-    private def delay(implicit trace: Trace): UIO[Unit] =
-      live.provide(ZIO.sleep(5.milliseconds))
+        ZIO.whenDiscard(ref.get())(suspendedWarningDone)
+    }
 
     /**
      * Captures a "snapshot" of the identifier and status of all fibers in this
@@ -293,15 +307,18 @@ object TestClock extends Serializable {
      * synchronize on the status of multiple fibers at the same time this
      * snapshot may not be fully consistent.
      */
-    private def freeze(implicit trace: Trace): IO[Unit, Map[FiberId, Fiber.Status]] =
+    private def freeze(implicit trace: Trace): IO[Unit, collection.Map[FiberId, Fiber.Status]] =
       supervisedFibers.flatMap { fibers =>
-        ZIO.foldLeft(fibers)(Map.empty[FiberId, Fiber.Status]) { (map, fiber) =>
-          fiber.status.flatMap {
-            case done @ Fiber.Status.Done                    => ZIO.succeed(map.updated(fiber.id, done))
-            case suspended @ Fiber.Status.Suspended(_, _, _) => ZIO.succeed(map.updated(fiber.id, suspended))
-            case _                                           => ZIO.fail(())
+        val map = mutable.HashMap.empty[FiberId, Fiber.Status]
+        ZIO
+          .foreachDiscard(fibers) { fiber =>
+            fiber.status.flatMap {
+              case d @ Fiber.Status.Done             => map.update(fiber.id, d); Exit.unit
+              case suspended: Fiber.Status.Suspended => map.update(fiber.id, suspended); Exit.unit
+              case _                                 => Exit.failUnit
+            }
           }
-        }
+          .as(map)
       }
 
     /**
@@ -309,13 +326,12 @@ object TestClock extends Serializable {
      */
     def supervisedFibers(implicit trace: Trace): UIO[SortedSet[Fiber.Runtime[Any, Any]]] =
       ZIO.fiberIdWith { fiberId =>
-        annotations.get(TestAnnotation.fibers).flatMap {
-          case Left(_) => ZIO.succeed(SortedSet.empty[Fiber.Runtime[Any, Any]])
+        annotations.get(TestAnnotation.fibers).map {
+          case Left(_) => SortedSet.empty
           case Right(refs) =>
-            ZIO
-              .foreach(refs)(ref => ZIO.succeed(ref.get))
-              .map(_.foldLeft(SortedSet.empty[Fiber.Runtime[Any, Any]])(_ ++ _))
-              .map(_.filter(_.id != fiberId))
+            val builder = SortedSet.newBuilder[Fiber.Runtime[Any, Any]]
+            refs.foreach(_.get().foreach(f => if (f.id != fiberId) builder += f))
+            builder.result()
         }
       }
 
@@ -333,21 +349,11 @@ object TestClock extends Serializable {
             case _ => (None, Data(end, data.sleeps, data.timeZone))
           }
         }.flatMap {
-          case None => ZIO.unit
+          case None => Exit.unit
           case Some((end, promise)) =>
-            promise.succeed(()) *>
-              ZIO.yieldNow *>
-              run(_ => end)
+            promise.unsafe.done(Exit.unit)(Unsafe)
+            ZIO.yieldNow *> run(_ => end)
         }
-
-    /**
-     * Returns whether all descendants of this fiber are done or suspended.
-     */
-    private def suspended(implicit trace: Trace): IO[Unit, Map[FiberId, Fiber.Status]] =
-      freeze.zip(delay *> freeze).flatMap { case (first, last) =>
-        if (first == last) ZIO.succeed(first)
-        else ZIO.fail(())
-      }
 
     /**
      * Forks a fiber that will display a warning message if a test is advancing
@@ -355,14 +361,13 @@ object TestClock extends Serializable {
      */
     private def suspendedWarningStart(implicit trace: Trace): UIO[Unit] =
       suspendedWarningState.updateSomeZIO { case SuspendedWarningData.Start =>
-        for {
-          fiber <- live.provide {
-                     ZIO
-                       .logWarning(suspendedWarning)
-                       .zipRight(suspendedWarningState.set(SuspendedWarningData.done))
-                       .delay(5.seconds)
-                   }.interruptible.fork
-        } yield SuspendedWarningData.pending(fiber)
+        ZIO.succeedUnsafe { implicit unsafe =>
+          val f = ZIO
+            .logWarning(suspendedWarning)
+            .zipRight(suspendedWarningState.set(SuspendedWarningData.done))
+          val cancel = Clock.globalScheduler.schedule(() => Runtime.default.unsafe.run(f), 5.seconds)
+          SuspendedWarningData.pending(cancel)
+        }
       }
 
     /**
@@ -371,13 +376,11 @@ object TestClock extends Serializable {
      */
     private def warningStart(implicit trace: Trace): UIO[Unit] =
       warningState.updateSomeZIO { case WarningData.Start =>
-        for {
-          fiber <- live
-                     .provide(ZIO.logWarning(warning).delay(5.seconds))
-                     .interruptible
-                     .fork
-                     .onExecutor(Runtime.defaultExecutor)
-        } yield WarningData.pending(fiber)
+        ZIO.succeedUnsafe { implicit unsafe =>
+          val f      = ZIO.logWarning(warning)
+          val cancel = Clock.globalScheduler.schedule(() => Runtime.default.unsafe.run(f), 5.seconds)
+          WarningData.pending(cancel)
+        }
       }
 
   }
@@ -392,16 +395,16 @@ object TestClock extends Serializable {
     trace: Trace
   ): ZLayer[Annotations with Live, Nothing, TestClock] =
     ZLayer.scoped {
-      for {
-        live                  <- ZIO.service[Live]
-        annotations           <- ZIO.service[Annotations]
-        clockState            <- ZIO.succeed(Ref.unsafe.make(data)(Unsafe.unsafe))
-        warningState          <- Ref.Synchronized.make(WarningData.start)
-        suspendedWarningState <- Ref.Synchronized.make(SuspendedWarningData.start)
-        test                   = Test(clockState, live, annotations, warningState, suspendedWarningState)
-        _                     <- ZIO.withClockScoped(test)
-        _                     <- ZIO.addFinalizer(test.warningDone *> test.suspendedWarningDone)
-      } yield test
+      ZIO.environmentWithZIO { env =>
+        val live                  = env.get[Live]
+        val annotations           = env.get[Annotations]
+        val scope                 = env.getScope
+        val warningState          = Ref.Synchronized.unsafe.make(WarningData.start)(Unsafe)
+        val suspendedWarningState = Ref.Synchronized.unsafe.make(SuspendedWarningData.start)(Unsafe)
+        val clockState            = Ref.unsafe.make(data)(Unsafe)
+        val test                  = Test(clockState, live, annotations, warningState, suspendedWarningState)
+        ZIO.withClockScoped(test) *> scope.addFinalizer(test.warningDone *> test.suspendedWarningDone).as(test)
+      }
     }
 
   val any: ZLayer[TestClock, Nothing, TestClock] =
@@ -490,9 +493,9 @@ object TestClock extends Serializable {
 
   object WarningData {
 
-    case object Start                                         extends WarningData
-    final case class Pending(fiber: Fiber[IOException, Unit]) extends WarningData
-    case object Done                                          extends WarningData
+    case object Start                                      extends WarningData
+    final case class Pending(cancelWarning: () => Boolean) extends WarningData
+    case object Done                                       extends WarningData
 
     /**
      * State indicating that a test has not used time.
@@ -504,7 +507,7 @@ object TestClock extends Serializable {
      * `TestClock` with a reference to the fiber that will display the warning
      * message.
      */
-    def pending(fiber: Fiber[IOException, Unit]): WarningData = Pending(fiber)
+    def pending(cancel: () => Boolean): WarningData = Pending(cancel)
 
     /**
      * State indicating that a test has used time or the warning message has
@@ -517,9 +520,9 @@ object TestClock extends Serializable {
 
   object SuspendedWarningData {
 
-    case object Start                                         extends SuspendedWarningData
-    final case class Pending(fiber: Fiber[IOException, Unit]) extends SuspendedWarningData
-    case object Done                                          extends SuspendedWarningData
+    case object Start                                      extends SuspendedWarningData
+    final case class Pending(cancelWarning: () => Boolean) extends SuspendedWarningData
+    case object Done                                       extends SuspendedWarningData
 
     /**
      * State indicating that a test has not adjusted the clock.
@@ -531,7 +534,7 @@ object TestClock extends Serializable {
      * running with a reference to the fiber that will display the warning
      * message.
      */
-    def pending(fiber: Fiber[IOException, Unit]): SuspendedWarningData = Pending(fiber)
+    def pending(cancelToken: () => Boolean): SuspendedWarningData = Pending(cancelToken)
 
     /**
      * State indicating that the warning message has already been displayed.

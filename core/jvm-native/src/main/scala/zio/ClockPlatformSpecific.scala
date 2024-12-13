@@ -61,9 +61,10 @@ private[zio] trait ClockPlatformSpecific {
       }
   }
 
-  private[this] def makeService(): ScheduledExecutorService = {
+  private[this] def makeService(): ScheduledThreadPoolExecutor = {
     val service = new ScheduledThreadPoolExecutor(1, new NamedThreadFactory("zio-timer", true))
     service.setRemoveOnCancelPolicy(true)
+    service.setMaximumPoolSize(1)
     service
   }
 }

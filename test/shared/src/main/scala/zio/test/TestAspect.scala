@@ -21,9 +21,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable.SortedSet
-import zio.test.TestAspectPoly
-import zio.System.env
-import zio.test.TestAspectAtLeastR
+import scala.collection.mutable
 
 /**
  * A `TestAspect` is an aspect that can be weaved into specs. You can think of
@@ -113,7 +111,7 @@ object TestAspect extends TimeoutVariants {
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
         test.exit
-          .zipWith(effect.catchAllCause(cause => ZIO.fail(TestFailure.Runtime(cause))).exit)(_ <* _)
+          .zipWith(effect.catchAllCause(cause => Exit.fail(TestFailure.Runtime(cause))).exit)(_ <* _)
           .unexit
     }
 
@@ -160,7 +158,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R <: R0, E >: E0](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        test.tapErrorCause(_ => effect.catchAllCause(cause => ZIO.fail(TestFailure.Runtime(cause))))
+        test.tapErrorCause(_ => effect.catchAllCause(cause => Exit.fail(TestFailure.Runtime(cause))))
     }
 
   /**
@@ -172,7 +170,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R <: R0, E >: E0](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        test.tap(_ => effect.catchAllCause(cause => ZIO.fail(TestFailure.Runtime(cause))))
+        test.tap(_ => effect.catchAllCause(cause => Exit.fail(TestFailure.Runtime(cause))))
     }
 
   /**
@@ -195,7 +193,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R <: R0, E >: E0](test: ZIO[R, TestFailure[E], TestSuccess])(implicit
         trace: Trace
       ): ZIO[R, TestFailure[E], TestSuccess] =
-        ZIO.acquireReleaseWith(before.catchAllCause(c => ZIO.fail(TestFailure.Runtime(c))))(after)(_ => test)
+        ZIO.acquireReleaseWith(before.catchAllCause(c => Exit.fail(TestFailure.Runtime(c))))(after)(_ => test)
     }
 
   /**
@@ -262,7 +260,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R <: R0, E >: E0](test: ZIO[R, TestFailure[E], TestSuccess])(implicit
         trace: Trace
       ): ZIO[R, TestFailure[E], TestSuccess] =
-        effect.catchAllCause(cause => ZIO.fail(TestFailure.failCause(cause))) *> test
+        effect.catchAllCause(cause => Exit.fail(TestFailure.failCause(cause))) *> test
     }
 
   /**
@@ -499,9 +497,9 @@ object TestAspect extends TimeoutVariants {
       ): ZIO[R, TestFailure[E], TestSuccess] =
         test.foldZIO(
           failure =>
-            if (assertion(failure)) ZIO.succeed(TestSuccess.Succeeded())
-            else ZIO.fail(TestFailure.die(new RuntimeException("did not fail as expected"))),
-          _ => ZIO.fail(TestFailure.die(new RuntimeException("did not fail as expected")))
+            if (assertion(failure)) TestSuccess.Succeeded.emptyExit
+            else Exit.fail(TestFailure.die(new RuntimeException("did not fail as expected"))),
+          _ => Exit.fail(TestFailure.die(new RuntimeException("did not fail as expected")))
         )
     }
 
@@ -520,13 +518,17 @@ object TestAspect extends TimeoutVariants {
         }
         val release = Annotations.get(TestAnnotation.fibers).flatMap {
           case Right(refs) =>
-            ZIO
-              .foreach(refs)(ref => ZIO.succeed(ref.get))
-              .map(_.foldLeft(SortedSet.empty[Fiber.Runtime[Any, Any]])(_ ++ _).size)
-              .tap { n =>
-                Annotations.annotate(TestAnnotation.fibers, Left(n))
-              }
-          case Left(_) => ZIO.unit
+            val refs0 = refs.map(_.get()).filter(_.nonEmpty)
+            val n = refs0.size match {
+              case 0 => 0
+              case 1 => refs0.head.size
+              case _ =>
+                val set = mutable.HashSet.empty[Fiber.Runtime[Any, Any]]
+                refs0.foreach(set ++= _)
+                set.size
+            }
+            Annotations.annotate(TestAnnotation.fibers, Left(n))
+          case Left(_) => Exit.unit
         }
         ZIO.acquireReleaseWith(acquire)(_ => release) { ref =>
           Supervisor.fibersIn(ref).flatMap(supervisor => test.supervised(supervisor))
@@ -543,9 +545,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R, E](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        TestConfig.retries.flatMap { n =>
-          test.catchAll(_ => test.tapError(_ => Annotations.annotate(TestAnnotation.retried, 1)).retryN(n - 1))
-        }
+        TestConfig.retries.flatMap(flakyImpl(test))
     }
     restoreTestEnvironment >>> flaky
   }
@@ -559,10 +559,13 @@ object TestAspect extends TimeoutVariants {
       def perTest[R, E](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        test.catchAll(_ => test.tapError(_ => Annotations.annotate(TestAnnotation.retried, 1)).retryN(n - 1))
+        flakyImpl(test)(n)
     }
     restoreTestEnvironment >>> flaky
   }
+
+  private def flakyImpl[R, E](test: ZIO[R, TestFailure[E], TestSuccess])(n: Int)(implicit trace: Trace) =
+    test.catchAll(_ => test.tapError(_ => Annotations.annotate(TestAnnotation.retried, 1)).retryN(n - 1))
 
   /**
    * An aspect that runs each test on its own separate fiber.
@@ -731,9 +734,7 @@ object TestAspect extends TimeoutVariants {
       def perTest[R, E](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        TestConfig.repeats.flatMap { n =>
-          test *> test.tap(_ => Annotations.annotate(TestAnnotation.repeated, 1)).repeatN(n - 1)
-        }
+        TestConfig.repeats.flatMap(nonFlakyImpl(test))
     }
     restoreTestEnvironment >>> nonFlaky
   }
@@ -747,10 +748,13 @@ object TestAspect extends TimeoutVariants {
       def perTest[R, E](
         test: ZIO[R, TestFailure[E], TestSuccess]
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
-        test *> test.tap(_ => Annotations.annotate(TestAnnotation.repeated, 1)).repeatN(n - 1)
+        nonFlakyImpl(test)(n)
     }
     restoreTestEnvironment >>> nonFlaky
   }
+
+  private def nonFlakyImpl[R, E](test: ZIO[R, TestFailure[E], TestSuccess])(n: Int)(implicit trace: Trace) =
+    test *> test.tap(_ => Annotations.annotate(TestAnnotation.repeated, 1)).repeatN(n - 1)
 
   /**
    * Constructs an aspect that requires a test to not terminate within the
@@ -1081,8 +1085,8 @@ object TestAspect extends TimeoutVariants {
       )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
         test.flatMap {
           case TestSuccess.Ignored(_) =>
-            ZIO.fail(TestFailure.Runtime(Cause.die(new RuntimeException("Test was ignored."))))
-          case x => ZIO.succeed(x)
+            Exit.fail(TestFailure.Runtime(Cause.die(new RuntimeException("Test was ignored."))))
+          case x => Exit.succeed(x)
         }
     }
 
@@ -1122,7 +1126,7 @@ object TestAspect extends TimeoutVariants {
           TestTimeoutException(s"Timeout of ${duration.render} exceeded.")
         Live
           .withLive(test)(_.either.disconnect.timeout(duration).flatMap {
-            case None         => ZIO.fail(TestFailure.Runtime(Cause.die(timeoutFailure)))
+            case None         => Exit.fail(TestFailure.Runtime(Cause.die(timeoutFailure)))
             case Some(result) => ZIO.fromEither(result)
           })
       }
@@ -1164,12 +1168,7 @@ object TestAspect extends TimeoutVariants {
   lazy val withLiveClock: TestAspectPoly =
     new TestAspectPoly {
       def some[R, E](spec: Spec[R, E])(implicit trace: Trace): Spec[R, E] = {
-        val layer = ZLayer.scoped {
-          for {
-            clock <- live(ZIO.clock)
-            _     <- ZIO.withClockScoped(clock)
-          } yield ()
-        }
+        val layer = ZLayer.scoped(live(ZIO.clock).flatMap(ZIO.withClockScoped(_)))
         spec.provideSomeLayer[R](layer)
       }
     }
@@ -1180,12 +1179,7 @@ object TestAspect extends TimeoutVariants {
   lazy val withLiveConsole: TestAspectPoly =
     new TestAspectPoly {
       def some[R, E](spec: Spec[R, E])(implicit trace: Trace): Spec[R, E] = {
-        val layer = ZLayer.scoped {
-          for {
-            console <- live(ZIO.console)
-            _       <- ZIO.withConsoleScoped(console)
-          } yield ()
-        }
+        val layer = ZLayer.scoped(live(ZIO.console).flatMap(ZIO.withConsoleScoped(_)))
         spec.provideSomeLayer[R](layer)
       }
     }
@@ -1205,12 +1199,7 @@ object TestAspect extends TimeoutVariants {
   lazy val withLiveRandom: TestAspectPoly =
     new TestAspectPoly {
       def some[R, E](spec: Spec[R, E])(implicit trace: Trace): Spec[R, E] = {
-        val layer = ZLayer.scoped {
-          for {
-            random <- live(ZIO.random)
-            _      <- ZIO.withRandomScoped(random)
-          } yield ()
-        }
+        val layer = ZLayer.scoped(live(ZIO.random).flatMap(ZIO.withRandomScoped(_)))
         spec.provideSomeLayer[R](layer)
       }
     }
@@ -1221,12 +1210,7 @@ object TestAspect extends TimeoutVariants {
   lazy val withLiveSystem: TestAspectPoly =
     new TestAspectPoly {
       def some[R, E](spec: Spec[R, E])(implicit trace: Trace): Spec[R, E] = {
-        val layer = ZLayer.scoped {
-          for {
-            system <- live(ZIO.system)
-            _      <- ZIO.withSystemScoped(system)
-          } yield ()
-        }
+        val layer = ZLayer.scoped(live(ZIO.system).flatMap(ZIO.withSystemScoped(_)))
         spec.provideSomeLayer[R](layer)
       }
     }

@@ -19,7 +19,6 @@ package zio.test
 import org.portablescala.reflect.annotation.EnableReflectiveInstantiation
 import zio._
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import zio.test.render.ConsoleRenderer
 
 @EnableReflectiveInstantiation
 abstract class ZIOSpecAbstract extends ZIOApp with ZIOSpecAbstractVersionSpecific {
@@ -100,17 +99,11 @@ abstract class ZIOSpecAbstract extends ZIOApp with ZIOSpecAbstractVersionSpecifi
     val filteredSpec: Spec[Environment with TestEnvironment with Scope, Any] = FilteredSpec(spec, testArgs)
 
     for {
-      runtime <-
-        ZIO.runtime[
-          TestEnvironment with Scope
-        ]
-
-      scopeEnv: ZEnvironment[Scope] = runtime.environment
-      perTestLayer = (ZLayer.succeedEnvironment(scopeEnv) ++ liveEnvironment) >>>
-                       (TestEnvironment.live ++ ZLayer.environment[Scope])
-
+      environment                  <- ZIO.environment[TestEnvironment & Scope & Environment]
+      scopeEnv: ZEnvironment[Scope] = environment
+      perTestLayer =
+        (ZLayer.succeedEnvironment(scopeEnv) ++ liveEnvironment) >>> (TestEnvironment.live ++ ZLayer.environment[Scope])
       executionEventSinkLayer = ExecutionEventSink.live(console, testArgs.testEventRenderer)
-      environment            <- ZIO.environment[Environment]
       runner =
         TestRunner(
           TestExecutor
@@ -121,9 +114,8 @@ abstract class ZIOSpecAbstract extends ZIOApp with ZIOSpecAbstractVersionSpecifi
               testEventHandler
             )
         )
-      randomId <- ZIO.withRandom(Random.RandomLive)(Random.nextInt).map("test_case_" + _)
-      summary <-
-        runner.run(randomId, aspects.foldLeft(filteredSpec)(_ @@ _) @@ TestAspect.fibers)
+      randomId <- Random.RandomLive.nextInt.map("test_case_" + _)
+      summary  <- runner.run(randomId, aspects.foldLeft(filteredSpec)(_ @@ _) @@ TestAspect.fibers)
     } yield summary
   }
 
@@ -146,7 +138,7 @@ abstract class ZIOSpecAbstract extends ZIOApp with ZIOSpecAbstractVersionSpecifi
       TestExecutor
         .default[Environment, Any](
           ZLayer.succeedEnvironment(castedRuntime.environment),
-          testEnvironment ++ Scope.default,
+          testEnvironment +!+ Scope.default,
           ZLayer.succeedEnvironment(castedRuntime.environment) >>> ExecutionEventSink.live,
           testEventHandler
         )
