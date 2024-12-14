@@ -599,24 +599,13 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
   }
 
   // java.util.Set methods
-  override def addAll(c: util.Collection[_ <: V]): Boolean = {
-    if (c.isEmpty) false
-    else {
-      this.addAll(c.asInstanceOf[Iterable[V]])
-      true
-    }
-  }
-  override def removeAll(c: util.Collection[_]): Boolean = this.removeIf(_ => true)
-  override def retainAll(c: util.Collection[_]): Boolean = this.removeIf(e => !c.contains(e))
+  override def addAll(c: util.Collection[_ <: V]): Boolean = ???
+  override def removeAll(c: util.Collection[_]): Boolean = ???
+  override def retainAll(c: util.Collection[_]): Boolean = ???
 
-  override def containsAll(c: util.Collection[_]): Boolean =
-    throw new UnsupportedOperationException("containsAll is not supported")
-  override def toArray[T](generator: IntFunction[Array[T with Object]]): Array[T with Object] =
-    throw new UnsupportedOperationException("toArray is not supported")
-  override def toArray: Array[AnyRef]            = {
-    throw new UnsupportedOperationException("toArray is not supported")
-  }
+  override def containsAll(c: util.Collection[_]): Boolean = ???
+  override def toArray[T](generator: IntFunction[Array[T with Object]]): Array[T with Object] = ???
+  override def toArray: Array[AnyRef]            = ???
 
-  override def toArray[T](a: Array[T with Object]): Array[T with Object] =
-    throw new UnsupportedOperationException("toArray is not supported")
+  override def toArray[T](a: Array[T with Object]): Array[T with Object] = ???
 }
