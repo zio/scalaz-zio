@@ -18,6 +18,7 @@ package zio.test
 
 import zio.Clock.ClockLive
 import zio._
+import zio.internal.FiberRuntime
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
@@ -26,7 +27,7 @@ import java.time.{Instant, LocalDateTime, OffsetDateTime, ZoneId}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.immutable.SortedSet
-import scala.collection.mutable
+import scala.collection.{mutable => mu}
 
 /**
  * `TestClock` makes it easy to deterministically and efficiently test effects
@@ -288,19 +289,32 @@ object TestClock extends Serializable {
      */
     private def awaitSuspended(implicit trace: Trace): UIO[Unit] =
       ZIO.suspendSucceed {
-        // We poll for the suspended fibers, and we exit when their state has stabilized for 5 milliseconds.
-        // This is done to ensure that we do not accidentally consider a fiber that is suspended on
-        // a ZIO.yieldNow or async operation as suspended
         val ref = new AtomicBoolean(false)
-        val f   = ClockLive.sleep(1.milli) *> freeze
-        f.flatMap { head =>
-          f.flatMap { r =>
-            if (head == r) Exit.unit
+
+        def allSuspendedUnchanged(
+          l: mu.HashMap[FiberId, Fiber.Status],
+          r: mu.HashMap[FiberId, Fiber.Status]
+        ): Boolean = {
+          val it = r.iterator
+          while (it.hasNext) {
+            val rkv = it.next()
+            val lv  = l.getOrElse(rkv._1, null) // If missing, it means it transitioned to Done so we can ignore it
+            if (lv != rkv._2) return false
+          }
+          true
+        }
+
+        // Sleep and yield a few times to give suspended fibers a chance to resume
+        val f = ClockLive.sleep(1.milli) *> ZIO.yieldNow.replicateZIODiscard(5) *> freeze
+
+        f.zipWith(f)(allSuspendedUnchanged)
+          .flatMap {
+            if (_) ZIO.succeed(ref.get)
             else if (ref.compareAndSet(false, true)) suspendedWarningStart *> Exit.failUnit
             else Exit.failUnit
-          }.replicateZIODiscard(3)
-        }.eventually *>
-          ZIO.whenDiscard(ref.get())(suspendedWarningDone)
+          }
+          .eventually
+          .flatMap(ZIO.whenDiscard(_)(suspendedWarningDone))
       }
 
     /**
@@ -310,19 +324,25 @@ object TestClock extends Serializable {
      * synchronize on the status of multiple fibers at the same time this
      * snapshot may not be fully consistent.
      */
-    private val freeze: IO[Unit, collection.Map[FiberId, Fiber.Status]] = {
+    private val freeze: IO[Unit, mu.HashMap[FiberId, Fiber.Status]] = {
       implicit val trace: Trace = Trace.empty
-      supervisedFibers.flatMap { fibers =>
-        val map = mutable.HashMap.empty[FiberId, Fiber.Status]
-        ZIO
-          .foreachDiscard(fibers) { fiber =>
-            fiber.status.flatMap {
-              case s: Fiber.Status.Suspended => ZIO.succeed(map.update(fiber.id, s))
-              case Fiber.Status.Done         => Exit.unit
-              case _                         => Exit.failUnit
+      ZIO.fiberIdWith { fiberId =>
+        annotations.get(TestAnnotation.fibers).flatMap {
+          case Left(_) => Exit.succeed(mu.HashMap.empty)
+          case Right(refs) =>
+            val map  = mu.HashMap.empty[FiberId, Fiber.Status]
+            val it   = refs.iterator.flatMap(_.get())
+            var fail = false
+            while (it.hasNext && !fail) {
+              val f = it.next().asInstanceOf[FiberRuntime[Any, Any]]
+              if (f.id ne fiberId) f.getStatus() match {
+                case s: Fiber.Status.Suspended => map.update(f.id, s)
+                case Fiber.Status.Done         => ()
+                case _                         => fail = true
+              }
             }
-          }
-          .as(map)
+            if (fail) Exit.failUnit else Exit.succeed(map)
+        }
       }
     }
 
