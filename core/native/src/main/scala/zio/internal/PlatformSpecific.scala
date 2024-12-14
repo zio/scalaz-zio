@@ -77,7 +77,7 @@ private[zio] trait PlatformSpecific {
   final def newConcurrentMap[A, B]()(implicit unsafe: zio.Unsafe): JMap[A, B] =
     new ConcurrentHashMap[A, B]()
 
-  final def newConcurrentWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
+  final def newConcurrentWeakSet[A <: AnyRef]()(implicit unsafe: zio.Unsafe): JSet[A] =
     new ConcurrentWeakHashSet[A]()
 
   final def newWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =

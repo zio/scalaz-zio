@@ -16,7 +16,7 @@
 
 package zio
 
-import zio.ZIO.{Grafter, blocking}
+import zio.ZIO.{Grafter, RaceElection, blocking}
 import zio.internal.FiberScope
 import zio.metrics.{MetricLabel, Metrics}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
@@ -1417,8 +1417,7 @@ sealed trait ZIO[-R, +E, +A]
    * higher-level operators like `race`.
    */
   private final def raceFibersWith[R1 <: R, ER, E2, B, C](right: ZIO[R1, ER, B])(
-    leftWins: (Fiber.Runtime[E, A], Fiber.Runtime[ER, B]) => ZIO[R1, E2, C],
-    rightWins: (Fiber.Runtime[ER, B], Fiber.Runtime[E, A]) => ZIO[R1, E2, C],
+    cont: RaceElection => ZIO[R1, E2, C],
     leftScope: FiberScope = null,
     rightScope: FiberScope = null
   )(implicit trace: Trace): ZIO[R1, E2, C] =
@@ -1478,20 +1477,14 @@ sealed trait ZIO[-R, +E, +A]
         .async[R1, E2, C](
           register = { cb =>
             leftFiber.addObserver { _ =>
-              val winner = leftFiber
-              val loser  = rightFiber
-              val cont   = leftWins
               if (raceIndicator.compareAndSet(true, false)) {
-                cb(cont(winner, loser))
+                cb(cont(RaceElection.LeftWin(winner = leftFiber, loser = rightFiber)))
               }
             }
 
             rightFiber.addObserver { _ =>
-              val winner = rightFiber
-              val loser  = leftFiber
-              val cont   = rightWins
               if (raceIndicator.compareAndSet(true, false)) {
-                cb(cont(winner, loser))
+                cb(cont(RaceElection.RightWin(loser = leftFiber, winner = rightFiber)))
               }
             }
 
@@ -1511,22 +1504,22 @@ sealed trait ZIO[-R, +E, +A]
     leftDone: (Exit[E, A], Fiber[E1, B]) => ZIO[R1, E2, C],
     rightDone: (Exit[E1, B], Fiber[E, A]) => ZIO[R1, E2, C]
   )(implicit trace: Trace): ZIO[R1, E2, C] =
-    self.raceFibersWith(that)(
-      (winner, loser) =>
-        winner.await.flatMap {
+    self.raceFibersWith(that) {
+      case r: RaceElection.LeftWin[E, A, E1, B] =>
+        r.winner.await.flatMap {
           case exit: Exit.Success[?] =>
-            winner.inheritAll *> leftDone(exit, loser)
+            r.winner.inheritAll *> leftDone(exit, r.loser)
           case exit: Exit.Failure[_] =>
-            leftDone(exit, loser)
-        },
-      (winner, loser) =>
-        winner.await.flatMap {
-          case exit: Exit.Success[B] =>
-            winner.inheritAll *> rightDone(exit, loser)
-          case exit: Exit.Failure[E1] =>
-            rightDone(exit, loser)
+            leftDone(exit, r.loser)
         }
-    )
+      case r: RaceElection.RightWin[E, A, E1, B] =>
+        r.winner.await.flatMap {
+          case exit: Exit.Success[B] =>
+            r.winner.inheritAll *> rightDone(exit, r.loser)
+          case exit: Exit.Failure[E1] =>
+            rightDone(exit, r.loser)
+        }
+    }
 
   /**
    * Keeps some of the errors, and terminates the fiber with the rest
@@ -2686,6 +2679,12 @@ sealed trait ZIO[-R, +E, +A]
 }
 
 object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific {
+  sealed trait RaceElection
+  object RaceElection {
+    final case class LeftWin[E0, A, ER, B](winner: Fiber.Runtime[E0, A], loser: Fiber.Runtime[ER, B])  extends RaceElection
+    final case class RightWin[E0, A, ER, B](loser: Fiber.Runtime[E0, A], winner: Fiber.Runtime[ER, B]) extends RaceElection
+  }
+
   private[zio] object unsafe {
     def fork[R, E1, E2, A, B](
       trace: Trace,
@@ -5590,20 +5589,22 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     ): ZIO[R, E, B1] =
       ZIO.fiberIdWith { parentFiberId =>
         self.raceFibersWith[R, Nothing, E, Unit, B1](ZIO.sleep(duration).interruptible)(
-          (winner, loser) =>
-            winner.await.flatMap {
-              case Exit.Success(a) =>
-                winner.inheritAll *> loser.interruptAs(parentFiberId).as(f(a))
-              case Exit.Failure(cause) =>
-                winner.inheritAll *> loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
-            },
-          (winner, loser) =>
-            winner.await.flatMap {
-              case _: Exit.Success[?] =>
-                loser.inheritAll *> loser.interruptAs(parentFiberId).as(b())
-              case Exit.Failure(cause) =>
-                loser.inheritAll *> loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
-            },
+          {
+            case r: ZIO.RaceElection.LeftWin[E, A, Nothing, Unit] =>
+              r.winner.await.flatMap {
+                case Exit.Success(a) =>
+                  r.winner.inheritAll *> r.loser.interruptAs(parentFiberId).as(f(a))
+                case Exit.Failure(cause) =>
+                  r.winner.inheritAll *> r.loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
+              }
+            case r: RaceElection.RightWin[E, A, Nothing, Unit] =>
+              r.winner.await.flatMap {
+                case _: Exit.Success[?] =>
+                  r.loser.inheritAll *> r.loser.interruptAs(parentFiberId).as(b())
+                case Exit.Failure(cause) =>
+                  r.loser.inheritAll *> r.loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
+              }
+          },
           null,
           FiberScope.global
         )
