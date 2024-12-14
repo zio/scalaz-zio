@@ -1,0 +1,3135 @@
+--- Execution profile ---
+Total samples       : 912
+
+--- 680000000 ns (7.46%), 68 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 490000000 ns (5.37%), 49 samples
+  [ 0] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 1] G1ParScanThreadState::trim_queue_to_threshold
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 350000000 ns (3.84%), 35 samples
+  [ 0] _platform_memset
+  [ 1] G1CMConcurrentMarkingTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 340000000 ns (3.73%), 34 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 330000000 ns (3.62%), 33 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 270000000 ns (2.96%), 27 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 260000000 ns (2.85%), 26 samples
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ScanHRForRegionClosure::scan_memregion
+  [ 2] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 3] G1ScanHRForRegionClosure::do_heap_region
+  [ 4] G1RemSet::scan_heap_roots
+  [ 5] G1EvacuateRegionsTask::scan_roots
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 240000000 ns (2.63%), 24 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBoundedDispatch<G1ScanCardClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 2] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 220000000 ns (2.41%), 22 samples
+  [ 0] G1CMTask::make_reference_grey
+  [ 1] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] void G1CMTask::process_grey_task_entry<true>
+  [ 3] G1CMTask::drain_local_queue
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 200000000 ns (2.19%), 20 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 2] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 3] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 4] G1ParScanThreadState::trim_queue_to_threshold
+  [ 5] G1ScanHRForRegionClosure::scan_memregion
+  [ 6] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 7] G1ScanHRForRegionClosure::do_heap_region
+  [ 8] G1RemSet::scan_heap_roots
+  [ 9] G1EvacuateRegionsTask::scan_roots
+  [10] G1EvacuateRegionsBaseTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 180000000 ns (1.97%), 18 samples
+  [ 0] GenericTaskQueueSet<GenericTaskQueue<G1TaskQueueEntry, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+  [ 1] G1CMTask::do_marking_step
+  [ 2] G1CMConcurrentMarkingTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 170000000 ns (1.86%), 17 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 2] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 140000000 ns (1.54%), 14 samples
+  [ 0] java.util.WeakHashMap$Entry.<init>
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 7] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [12] java.lang.reflect.Method.invoke
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] java.util.concurrent.FutureTask.run
+  [16] java.util.concurrent.Executors$RunnableAdapter.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [19] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [20] java.lang.Thread.runWith
+  [21] java.lang.Thread.run
+
+--- 140000000 ns (1.54%), 14 samples
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 130000000 ns (1.43%), 13 samples
+  [ 0] ReferenceProcessor::process_discovered_list_work
+  [ 1] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 2] G1STWRefProcProxyTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 130000000 ns (1.43%), 13 samples
+  [ 0] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 1] G1ParScanThreadState::trim_queue_to_threshold
+  [ 2] G1ParScanThreadState::steal_and_trim_queue
+  [ 3] G1ParEvacuateFollowersClosure::do_void
+  [ 4] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 5] G1EvacuateRegionsBaseTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 120000000 ns (1.32%), 12 samples
+  [ 0] GenericTaskQueueSet<OverflowTaskQueue<ScannerTask, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 4] G1STWRefProcProxyTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 120000000 ns (1.32%), 12 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 110000000 ns (1.21%), 11 samples
+  [ 0] SpinPause
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 110000000 ns (1.21%), 11 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 100000000 ns (1.10%), 10 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 90000000 ns (0.99%), 9 samples
+  [ 0] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 1] G1ScanHRForRegionClosure::scan_memregion
+  [ 2] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 3] G1ScanHRForRegionClosure::do_heap_region
+  [ 4] G1RemSet::scan_heap_roots
+  [ 5] G1EvacuateRegionsTask::scan_roots
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 90000000 ns (0.99%), 9 samples
+  [ 0] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 1] G1ParScanThreadState::trim_queue_to_threshold
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 90000000 ns (0.99%), 9 samples
+  [ 0] java_lang_ref_Reference::is_referent_field
+  [ 1] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 2] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 3] ReferenceProcessor::process_discovered_list_work
+  [ 4] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 5] G1STWRefProcProxyTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ScanCardClosure, true>
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] G1PostEvacuateCollectionSetCleanupTask2::RedirtyLoggedCardsTask::do_work
+  [ 1] G1BatchedTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] G1CMTask::make_reference_grey
+  [ 2] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 3] void G1CMTask::process_grey_task_entry<true>
+  [ 4] G1CMTask::drain_local_queue
+  [ 5] G1CMTask::do_marking_step
+  [ 6] G1CMConcurrentMarkingTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 80000000 ns (0.88%), 8 samples
+  [ 0] ReferenceProcessor::discover_reference
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 2] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 3] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 4] G1ParScanThreadState::trim_queue_to_threshold
+  [ 5] G1ScanHRForRegionClosure::scan_memregion
+  [ 6] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 7] G1ScanHRForRegionClosure::do_heap_region
+  [ 8] G1RemSet::scan_heap_roots
+  [ 9] G1EvacuateRegionsTask::scan_roots
+  [10] G1EvacuateRegionsBaseTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 70000000 ns (0.77%), 7 samples
+  [ 0] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 1] G1ScanHRForRegionClosure::scan_memregion
+  [ 2] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 3] G1ScanHRForRegionClosure::do_heap_region
+  [ 4] G1RemSet::scan_heap_roots
+  [ 5] G1EvacuateRegionsTask::scan_roots
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 70000000 ns (0.77%), 7 samples
+  [ 0] GenericTaskQueueSet<OverflowTaskQueue<ScannerTask, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 70000000 ns (0.77%), 7 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 60000000 ns (0.66%), 6 samples
+  [ 0] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 1] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 2] ReferenceProcessor::process_discovered_list_work
+  [ 3] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 4] G1STWRefProcProxyTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 60000000 ns (0.66%), 6 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 60000000 ns (0.66%), 6 samples
+  [ 0] __psynch_cvwait
+  [ 1] PlatformMonitor::wait
+  [ 2] Monitor::wait_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 60000000 ns (0.66%), 6 samples
+  [ 0] RedirtyLoggedCardTableEntryClosure::do_card_ptr
+  [ 1] G1PostEvacuateCollectionSetCleanupTask2::RedirtyLoggedCardsTask::do_work
+  [ 2] G1BatchedTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 1] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 2] ReferenceProcessor::discover_reference
+  [ 3] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 4] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 5] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 6] G1ParScanThreadState::trim_queue_to_threshold
+  [ 7] G1ScanHRForRegionClosure::scan_memregion
+  [ 8] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 9] G1ScanHRForRegionClosure::do_heap_region
+  [10] G1RemSet::scan_heap_roots
+  [11] G1EvacuateRegionsTask::scan_roots
+  [12] G1EvacuateRegionsBaseTask::work
+  [13] WorkerThread::run
+  [14] Thread::call_run
+  [15] thread_native_entry
+  [16] _pthread_start
+  [17] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] void OopOopIterateBoundedDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ConcurrentRefineOopClosure, false>
+  [ 2] G1RemSet::refine_card_concurrently
+  [ 3] G1DirtyCardQueueSet::refine_buffer
+  [ 4] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 5] G1PrimaryConcurrentRefineThread::do_refinement_step
+  [ 6] G1ConcurrentRefineThread::run_service
+  [ 7] ConcurrentGCThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] void OopOopIterateDispatch<G1RootRegionScanClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 2] G1ConcurrentMark::scan_root_region
+  [ 3] G1CMRootRegionScanTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ParEvacuateFollowersClosure::do_void
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] G1MergeHeapRootsTask::G1MergeLogBufferCardsClosure::do_card_ptr
+  [ 1] G1MergeHeapRootsTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] G1CMTask::drain_local_queue
+  [ 1] G1CMTask::do_marking_step
+  [ 2] G1CMConcurrentMarkingTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 50000000 ns (0.55%), 5 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ParScanThreadState::steal_and_trim_queue
+  [ 5] G1ParEvacuateFollowersClosure::do_void
+  [ 6] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] G1STWIsAliveClosure::do_object_b
+  [ 1] ReferenceProcessor::discover_reference
+  [ 2] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 3] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 4] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 5] G1ParScanThreadState::trim_queue_to_threshold
+  [ 6] G1ScanHRForRegionClosure::scan_memregion
+  [ 7] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 8] G1ScanHRForRegionClosure::do_heap_region
+  [ 9] G1RemSet::scan_heap_roots
+  [10] G1EvacuateRegionsTask::scan_roots
+  [11] G1EvacuateRegionsBaseTask::work
+  [12] WorkerThread::run
+  [13] Thread::call_run
+  [14] thread_native_entry
+  [15] _pthread_start
+  [16] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanCardClosure, AlwaysContains>
+  [ 2] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 3] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanCardClosure, AlwaysContains>
+  [ 1] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 2] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ParScanThreadState::steal_and_trim_queue
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 2] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] TaskTerminator::offer_termination
+  [ 1] G1ParEvacuateFollowersClosure::do_void
+  [ 2] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 3] G1EvacuateRegionsBaseTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 40000000 ns (0.44%), 4 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 4] HeapRegionManager::par_iterate
+  [ 5] G1RebuildRSAndScrubTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] __psynch_mutexwait
+  [ 1] _pthread_mutex_firstfit_lock_slow
+  [ 2] Mutex::lock_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] java_lang_ref_Reference::is_referent_field
+  [ 1] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 2] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 3] ReferenceProcessor::process_discovered_list_work
+  [ 4] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 5] G1STWRefProcProxyTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ConcurrentRefineOopClosure, false>
+  [ 2] G1RemSet::refine_card_concurrently
+  [ 3] G1DirtyCardQueueSet::refine_buffer
+  [ 4] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 5] G1PrimaryConcurrentRefineThread::do_refinement_step
+  [ 6] G1ConcurrentRefineThread::run_service
+  [ 7] ConcurrentGCThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 1] G1ScanHRForRegionClosure::scan_memregion
+  [ 2] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 3] G1ScanHRForRegionClosure::do_heap_region
+  [ 4] G1RemSet::scan_heap_roots
+  [ 5] G1EvacuateRegionsTask::scan_roots
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] java.lang.ref.Reference.<init>
+  [ 1] java.lang.ref.WeakReference.<init>
+  [ 2] java.util.WeakHashMap$Entry.<init>
+  [ 3] java.util.WeakHashMap.put
+  [ 4] java.util.Collections$SetFromMap.add
+  [ 5] java.util.Collections$SynchronizedCollection.add
+  [ 6] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 8] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 9] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [11] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [13] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [14] java.lang.reflect.Method.invoke
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.Executors$RunnableAdapter.call
+  [19] java.util.concurrent.FutureTask.run
+  [20] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [21] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [22] java.lang.Thread.runWith
+  [23] java.lang.Thread.run
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void OopOopIterateBoundedDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_large_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_humongous_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] __psynch_mutexwait
+  [ 1] _pthread_mutex_firstfit_lock_slow
+  [ 2] Mutex::lock_without_safepoint_check
+  [ 3] G1CMMarkStack::par_pop_chunk
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] G1ParScanThreadState::steal_and_trim_queue
+  [ 1] G1ParEvacuateFollowersClosure::do_void
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 2] HeapRegionManager::par_iterate
+  [ 3] G1RebuildRSAndScrubTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] __psynch_cvwait
+  [ 1] PlatformMonitor::wait
+  [ 2] Monitor::wait_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 6] G1STWRefProcProxyTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] void OopOopIterateDispatch<G1RootRegionScanClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] G1ConcurrentMark::scan_root_region
+  [ 2] G1CMRootRegionScanTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] java.util.Collections$SynchronizedCollection.add
+  [ 1] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 2] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 3] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 4] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 5] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 6] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 7] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [ 8] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [ 9] java.lang.reflect.Method.invoke
+  [10] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [11] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [12] java.util.concurrent.FutureTask.run
+  [13] java.util.concurrent.Executors$RunnableAdapter.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [16] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [17] java.lang.Thread.runWith
+  [18] java.lang.Thread.run
+
+--- 30000000 ns (0.33%), 3 samples
+  [ 0] _platform_memset
+  [ 1] MarkBitMap::do_clear
+  [ 2] G1ClearBitMapTask::G1ClearBitmapHRClosure::do_heap_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1ClearBitMapTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1SATBMarkQueueSet::filter
+  [ 1] SATBMarkQueueSet::enqueue_known_active
+  [ 2] java.util.WeakHashMap.transfer
+  [ 3] java.util.WeakHashMap.resize
+  [ 4] java.util.WeakHashMap.put
+  [ 5] java.util.Collections$SetFromMap.add
+  [ 6] java.util.Collections$SynchronizedCollection.add
+  [ 7] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 8] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 9] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [10] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [11] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [12] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [13] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [14] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [15] java.lang.reflect.Method.invoke
+  [16] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [17] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.Executors$RunnableAdapter.call
+  [20] java.util.concurrent.FutureTask.run
+  [21] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [22] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [23] java.lang.Thread.runWith
+  [24] java.lang.Thread.run
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate_fields<narrowOop, G1RebuildRemSetClosure, AlwaysContains>
+  [ 1] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 4] HeapRegionManager::par_iterate
+  [ 5] G1RebuildRSAndScrubTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] __psynch_cvwait
+  [ 1] PlatformMonitor::wait
+  [ 2] Monitor::wait_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] java.util.WeakHashMap.put
+  [ 1] java.util.Collections$SetFromMap.add
+  [ 2] java.util.Collections$SynchronizedCollection.add
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] java.lang.ref.Reference.<init>
+  [ 1] java.lang.ref.WeakReference.<init>
+  [ 2] java.util.WeakHashMap$Entry.<init>
+  [ 3] java.util.WeakHashMap.put
+  [ 4] java.util.Collections$SetFromMap.add
+  [ 5] java.util.Collections$SynchronizedCollection.add
+  [ 6] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 8] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 9] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [11] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [13] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [14] java.lang.reflect.Method.invoke
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.Executors$RunnableAdapter.call
+  [19] java.util.concurrent.FutureTask.run
+  [20] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [21] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [22] java.lang.Thread.runWith
+  [23] java.lang.Thread.run
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] java.util.WeakHashMap.expungeStaleEntries
+  [ 1] java.util.WeakHashMap.getTable
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void G1CMTask::process_grey_task_entry<true>
+  [ 1] G1CMBitMapClosure::do_addr
+  [ 2] G1CMBitMap::iterate
+  [ 3] G1CMTask::do_marking_step
+  [ 4] G1CMConcurrentMarkingTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1MergeHeapRootsTask::work
+  [ 1] WorkerThread::run
+  [ 2] Thread::call_run
+  [ 3] thread_native_entry
+  [ 4] _pthread_start
+  [ 5] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1SATBMarkQueueSet::filter
+  [ 1] SATBMarkQueueSet::enqueue_known_active
+  [ 2] jdk.internal.misc.Unsafe.weakCompareAndSetReference
+  [ 3] java.lang.invoke.VarHandleReferences$FieldInstanceReadWrite.weakCompareAndSet
+  [ 4] java.lang.invoke.VarHandleGuards.guard_LLL_Z
+  [ 5] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 6] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 7] zio.internal.AddContext.createCachedKey
+  [ 8] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 9] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [10] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [11] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [12] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [13] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [14] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [15] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [16] java.lang.reflect.Method.invoke
+  [17] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [18] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [19] java.util.concurrent.FutureTask.run
+  [20] java.util.concurrent.Executors$RunnableAdapter.call
+  [21] java.util.concurrent.FutureTask.run
+  [22] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [23] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [24] java.lang.Thread.runWith
+  [25] java.lang.Thread.run
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] ReferenceProcessor::preclean_discovered_reflist
+  [ 1] ReferenceProcessor::preclean_discovered_references
+  [ 2] G1ConcurrentMark::preclean
+  [ 3] G1ConcurrentMarkThread::subphase_preclean
+  [ 4] G1ConcurrentMarkThread::phase_mark_loop
+  [ 5] G1ConcurrentMarkThread::concurrent_mark_cycle_do
+  [ 6] G1ConcurrentMarkThread::run_service
+  [ 7] ConcurrentGCThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1CMTask::do_marking_step
+  [ 1] G1CMConcurrentMarkingTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] ReferenceProcessor::discover_reference
+  [ 1] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1CMOopClosure, AlwaysContains>
+  [ 2] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 3] void G1CMTask::process_grey_task_entry<true>
+  [ 4] G1CMBitMapClosure::do_addr
+  [ 5] G1CMBitMap::iterate
+  [ 6] G1CMTask::do_marking_step
+  [ 7] G1CMConcurrentMarkingTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] java_lang_ref_Reference::is_referent_field
+  [ 1] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 2] ReferenceProcessor::discover_reference
+  [ 3] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1CMOopClosure, AlwaysContains>
+  [ 4] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 5] void G1CMTask::process_grey_task_entry<true>
+  [ 6] G1CMBitMapClosure::do_addr
+  [ 7] G1CMBitMap::iterate
+  [ 8] G1CMTask::do_marking_step
+  [ 9] G1CMConcurrentMarkingTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1CMBitMap::iterate
+  [ 1] G1CMTask::do_marking_step
+  [ 2] G1CMConcurrentMarkingTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] void G1CMTask::process_grey_task_entry<true>
+  [ 2] G1CMBitMapClosure::do_addr
+  [ 3] G1CMBitMap::iterate
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBoundedDispatch<G1ScanCardClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 2] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ParScanThreadState::steal_and_trim_queue
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] __psynch_cvsignal
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ScanHRForRegionClosure::scan_memregion
+  [ 2] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 3] G1ScanHRForRegionClosure::do_heap_region
+  [ 4] G1RemSet::scan_heap_roots
+  [ 5] G1EvacuateRegionsTask::scan_roots
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ParEvacuateFollowersClosure::do_void
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] java_lang_ref_Reference::is_referent_field
+  [ 1] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 2] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 3] ReferenceProcessor::process_discovered_list_work
+  [ 4] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 5] G1CMRefProcProxyTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ConcurrentRefineOopClosure, false>
+  [ 1] G1RemSet::refine_card_concurrently
+  [ 2] G1DirtyCardQueueSet::refine_buffer
+  [ 3] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 4] G1ConcurrentRefineThread::run_service
+  [ 5] ConcurrentGCThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void OopOopIterateBoundedDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ConcurrentRefineOopClosure, false>
+  [ 2] G1RemSet::refine_card_concurrently
+  [ 3] G1DirtyCardQueueSet::refine_buffer
+  [ 4] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 5] G1ConcurrentRefineThread::run_service
+  [ 6] ConcurrentGCThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1PostEvacuateCollectionSetCleanupTask2::RedirtyLoggedCardsTask::do_work
+  [ 1] G1BatchedTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 4] HeapRegionManager::par_iterate
+  [ 5] G1RebuildRSAndScrubTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] G1CMBitMapClosure::do_addr
+  [ 1] G1CMTask::do_marking_step
+  [ 2] G1CMConcurrentMarkingTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ParScanThreadState::steal_and_trim_queue
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 20000000 ns (0.22%), 2 samples
+  [ 0] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<282726ull, G1BarrierSet>, (AccessInternal::BarrierType)0, 282726ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1CMRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] _platform_bzero
+  [ 1] G1CMConcurrentMarkingTask::work
+  [ 2] WorkerThread::run
+  [ 3] Thread::call_run
+  [ 4] thread_native_entry
+  [ 5] _pthread_start
+  [ 6] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 2] HeapRegionManager::par_iterate
+  [ 3] G1RebuildRSAndScrubTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate_in_unparsable<G1ScanCardClosure>
+  [ 2] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] __gettimeofday
+  [ 1] PlatformMonitor::wait
+  [ 2] Monitor::wait_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateBoundedDispatch<G1ScanCardClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ScanCardClosure, true>
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] void G1CMTask::process_grey_task_entry<true>
+  [ 3] G1CMTask::drain_local_queue
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] sys_icache_invalidate
+  [ 1] InlineCacheBuffer::create_transition_stub
+  [ 2] CompiledIC::set_to_clean
+  [ 3] SharedRuntime::reresolve_call_site
+  [ 4] SharedRuntime::handle_wrong_method
+  [ 5] java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.signalAll
+  [ 6] java.util.concurrent.CyclicBarrier.nextGeneration
+  [ 7] java.util.concurrent.CyclicBarrier.dowait
+  [ 8] java.util.concurrent.CyclicBarrier.await
+  [ 9] org.openjdk.jmh.runner.BenchmarkHandler.getWorkerData
+  [10] org.openjdk.jmh.runner.BenchmarkHandler.access$300
+  [11] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] java.util.concurrent.FutureTask.run
+  [14] java.util.concurrent.Executors$RunnableAdapter.call
+  [15] java.util.concurrent.FutureTask.run
+  [16] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [17] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [18] java.lang.Thread.runWith
+  [19] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<286822ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 286822ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] G1RemSet::refine_card_concurrently
+  [ 2] G1DirtyCardQueueSet::refine_buffer
+  [ 3] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 4] G1PrimaryConcurrentRefineThread::do_refinement_step
+  [ 5] G1ConcurrentRefineThread::run_service
+  [ 6] ConcurrentGCThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] oopDesc::obj_field_put_raw
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1CMRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1MergeHeapRootsTask::work
+  [ 1] WorkerThread::run
+  [ 2] Thread::call_run
+  [ 3] thread_native_entry
+  [ 4] _pthread_start
+  [ 5] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CMSubjectToDiscoveryClosure::do_object_b
+  [ 1] ReferenceProcessor::discover_reference
+  [ 2] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1CMOopClosure, AlwaysContains>
+  [ 3] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 4] void G1CMTask::process_grey_task_entry<true>
+  [ 5] G1CMBitMapClosure::do_addr
+  [ 6] G1CMBitMap::iterate
+  [ 7] G1CMTask::do_marking_step
+  [ 8] G1CMConcurrentMarkingTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 1] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 2] ReferenceProcessor::discover_reference
+  [ 3] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 4] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 5] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 6] G1ParScanThreadState::trim_queue_to_threshold
+  [ 7] G1ScanHRForRegionClosure::scan_memregion
+  [ 8] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 9] G1ScanHRForRegionClosure::do_heap_region
+  [10] G1RemSet::scan_heap_roots
+  [11] G1EvacuateRegionsTask::scan_roots
+  [12] G1EvacuateRegionsBaseTask::work
+  [13] WorkerThread::run
+  [14] Thread::call_run
+  [15] thread_native_entry
+  [16] _pthread_start
+  [17] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ParScanThreadState::trim_queue_to_threshold
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ConcurrentRefineOopClosure, false>
+  [ 2] G1RemSet::refine_card_concurrently
+  [ 3] G1DirtyCardQueueSet::refine_buffer
+  [ 4] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 5] G1PrimaryConcurrentRefineThread::do_refinement_step
+  [ 6] G1ConcurrentRefineThread::run_service
+  [ 7] ConcurrentGCThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_to_container
+  [ 1] G1CardSet::add_card
+  [ 2] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 6] HeapRegionManager::par_iterate
+  [ 7] G1RebuildRSAndScrubTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 1] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 2] ReferenceProcessor::process_discovered_list_work
+  [ 3] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 4] G1STWRefProcProxyTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSetHashTable::get_or_add
+  [ 1] G1CardSet::add_card
+  [ 2] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 6] HeapRegionManager::par_iterate
+  [ 7] G1RebuildRSAndScrubTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] void G1CMTask::process_grey_task_entry<true>
+  [ 2] G1CMTask::drain_local_queue
+  [ 3] G1CMTask::do_marking_step
+  [ 4] G1CMConcurrentMarkingTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_to_array
+  [ 1] G1CardSet::add_to_howl
+  [ 2] G1CardSet::add_card
+  [ 3] void G1CardSet::iterate_cards_during_transfer<G1TransferCard>
+  [ 4] G1CardSet::add_card
+  [ 5] void OopOopIterateBoundedDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+  [ 6] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_large_object
+  [ 7] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_humongous_region
+  [ 8] HeapRegionManager::par_iterate
+  [ 9] G1RebuildRSAndScrubTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.WeakHashMap.hash
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 7] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [12] java.lang.reflect.Method.invoke
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] java.util.concurrent.FutureTask.run
+  [16] java.util.concurrent.Executors$RunnableAdapter.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [19] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [20] java.lang.Thread.runWith
+  [21] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ConcurrentRefineOopClosure, false>
+  [ 2] G1RemSet::refine_card_concurrently
+  [ 3] G1DirtyCardQueueSet::refine_buffer
+  [ 4] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 5] G1ConcurrentRefineThread::run_service
+  [ 6] ConcurrentGCThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 2] zio.internal.AddContext.createCachedKey
+  [ 3] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 6] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [11] java.lang.reflect.Method.invoke
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] java.util.concurrent.FutureTask.run
+  [15] java.util.concurrent.Executors$RunnableAdapter.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [18] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [19] java.lang.Thread.runWith
+  [20] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] SpinPause
+  [ 1] FreeListAllocator::try_transfer_pending
+  [ 2] G1CardSet::add_to_howl
+  [ 3] G1CardSet::add_card
+  [ 4] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 6] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 7] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 8] HeapRegionManager::par_iterate
+  [ 9] G1RebuildRSAndScrubTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ReferenceProcessor::process_discovered_list_work
+  [ 1] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 2] G1STWRefProcProxyTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ParScanThreadState::steal_and_trim_queue
+  [ 5] G1ParEvacuateFollowersClosure::do_void
+  [ 6] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] G1CMSATBBufferClosure::do_buffer
+  [ 2] SATBMarkQueueSet::apply_closure_to_completed_buffer
+  [ 3] G1CMTask::drain_satb_buffers
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] __psynch_mutexwait
+  [ 1] _pthread_mutex_firstfit_lock_slow
+  [ 2] _pthread_cond_wait
+  [ 3] PlatformMonitor::wait
+  [ 4] Monitor::wait_without_safepoint_check
+  [ 5] TaskTerminator::offer_termination
+  [ 6] G1ParEvacuateFollowersClosure::do_void
+  [ 7] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.WeakHashMap.transfer
+  [ 1] java.util.WeakHashMap.resize
+  [ 2] java.util.WeakHashMap.put
+  [ 3] java.util.Collections$SetFromMap.add
+  [ 4] java.util.Collections$SynchronizedCollection.add
+  [ 5] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 8] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [13] java.lang.reflect.Method.invoke
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] java.util.concurrent.FutureTask.run
+  [17] java.util.concurrent.Executors$RunnableAdapter.call
+  [18] java.util.concurrent.FutureTask.run
+  [19] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [20] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [21] java.lang.Thread.runWith
+  [22] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] void G1CMTask::process_grey_task_entry<true>
+  [ 3] G1CMTask::drain_local_queue
+  [ 4] G1CMBitMapClosure::do_addr
+  [ 5] G1CMBitMap::iterate
+  [ 6] G1CMTask::do_marking_step
+  [ 7] G1CMConcurrentMarkingTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void G1ScanCardClosure::do_oop_work<narrowOop>
+  [ 1] HeapWordImpl** HeapRegion::do_oops_on_memregion_in_humongous<G1ScanCardClosure, true>
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 2] HeapRegionManager::par_iterate
+  [ 3] G1RebuildRSAndScrubTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ReferenceProcessor::discover_reference
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 2] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 3] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 4] G1ParScanThreadState::trim_queue_to_threshold
+  [ 5] G1ScanHRForRegionClosure::scan_memregion
+  [ 6] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 7] G1ScanHRForRegionClosure::do_heap_region
+  [ 8] G1RemSet::scan_heap_roots
+  [ 9] G1EvacuateRegionsTask::scan_roots
+  [10] G1EvacuateRegionsBaseTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] G1ConcurrentMark::scan_root_region
+  [ 2] G1CMRootRegionScanTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] GenericTaskQueueSet<OverflowTaskQueue<ScannerTask, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] OopIterateClosure::reference_iteration_mode
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1RootRegionScanClosure, AlwaysContains>
+  [ 2] void OopOopIterateDispatch<G1RootRegionScanClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 3] G1ConcurrentMark::scan_root_region
+  [ 4] G1CMRootRegionScanTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] jdk.internal.misc.Unsafe.compareAndSetReference
+  [ 1] java.lang.invoke.VarHandleReferences$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LLL_Z
+  [ 3] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 4] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 5] zio.internal.AddContext.createCachedKey
+  [ 6] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 8] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 9] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [11] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [13] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [14] java.lang.reflect.Method.invoke
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.Executors$RunnableAdapter.call
+  [19] java.util.concurrent.FutureTask.run
+  [20] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [21] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [22] java.lang.Thread.runWith
+  [23] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ClassLoaderData::oops_do
+  [ 1] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] void G1CMTask::process_grey_task_entry<true>
+  [ 3] G1CMTask::drain_local_queue
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_card
+  [ 1] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 4] HeapRegionManager::par_iterate
+  [ 5] G1RebuildRSAndScrubTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] pthread_mutex_unlock
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1BarrierSet::write_ref_field_post_slow
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1CMRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void InstanceRefKlass::oop_oop_iterate_fields<narrowOop, G1RebuildRemSetClosure, AlwaysContains>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] tlv_get_addr
+  [ 1] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1CMOopClosure, AlwaysContains>
+  [ 2] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 3] void G1CMTask::process_grey_task_entry<true>
+  [ 4] G1CMTask::drain_local_queue
+  [ 5] G1CMTask::do_marking_step
+  [ 6] G1CMConcurrentMarkingTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_card
+  [ 1] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 5] HeapRegionManager::par_iterate
+  [ 6] G1RebuildRSAndScrubTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CMTask::make_reference_grey
+  [ 1] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 2] void G1CMTask::process_grey_task_entry<true>
+  [ 3] G1CMTask::drain_local_queue
+  [ 4] G1CMBitMapClosure::do_addr
+  [ 5] G1CMBitMap::iterate
+  [ 6] G1CMTask::do_marking_step
+  [ 7] G1CMConcurrentMarkingTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] zio.internal.AddContext.idx
+  [ 1] zio.internal.AddContext.createCachedKey
+  [ 2] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 3] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 4] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 5] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 6] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 7] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [ 8] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [ 9] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [10] java.lang.reflect.Method.invoke
+  [11] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [12] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [13] java.util.concurrent.FutureTask.run
+  [14] java.util.concurrent.Executors$RunnableAdapter.call
+  [15] java.util.concurrent.FutureTask.run
+  [16] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [17] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [18] java.lang.Thread.runWith
+  [19] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] SpinPause
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ReferenceProcessor::process_discovered_list_work
+  [ 1] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 2] G1CMRefProcProxyTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 1] G1ParScanThreadState::trim_queue_to_threshold
+  [ 2] G1ScanHRForRegionClosure::scan_memregion
+  [ 3] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 4] G1ScanHRForRegionClosure::do_heap_region
+  [ 5] G1RemSet::scan_heap_roots
+  [ 6] G1EvacuateRegionsTask::scan_roots
+  [ 7] G1EvacuateRegionsBaseTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void G1CMTask::process_grey_task_entry<true>
+  [ 1] G1CMTask::do_marking_step
+  [ 2] G1CMConcurrentMarkingTask::work
+  [ 3] WorkerThread::run
+  [ 4] Thread::call_run
+  [ 5] thread_native_entry
+  [ 6] _pthread_start
+  [ 7] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] __psynch_mutexwait
+  [ 1] _pthread_mutex_firstfit_lock_slow
+  [ 2] Mutex::lock_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1CMTask::do_marking_step
+  [ 5] G1CMConcurrentMarkingTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::discover_reference
+  [ 2] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 3] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 4] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 5] G1ParScanThreadState::trim_queue_to_threshold
+  [ 6] G1ScanHRForRegionClosure::scan_memregion
+  [ 7] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 8] G1ScanHRForRegionClosure::do_heap_region
+  [ 9] G1RemSet::scan_heap_roots
+  [10] G1EvacuateRegionsTask::scan_roots
+  [11] G1EvacuateRegionsBaseTask::work
+  [12] WorkerThread::run
+  [13] Thread::call_run
+  [14] thread_native_entry
+  [15] _pthread_start
+  [16] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CMIsAliveClosure::do_object_b
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1CMRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] mach_absolute_time
+  [ 1] os::elapsedTime
+  [ 2] G1CMTask::do_marking_step
+  [ 3] G1CMConcurrentMarkingTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_to_container
+  [ 1] G1CardSet::add_card
+  [ 2] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 5] HeapRegionManager::par_iterate
+  [ 6] G1RebuildRSAndScrubTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java_lang_ref_Reference::is_referent_field
+  [ 1] AccessBarrierSupport::resolve_unknown_oop_ref_strength
+  [ 2] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 3] ReferenceProcessor::discover_reference
+  [ 4] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1CMOopClosure, AlwaysContains>
+  [ 5] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 6] void G1CMTask::process_grey_task_entry<true>
+  [ 7] G1CMBitMapClosure::do_addr
+  [ 8] G1CMBitMap::iterate
+  [ 9] G1CMTask::do_marking_step
+  [10] G1CMConcurrentMarkingTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] _pthread_mutex_firstfit_lock_slow
+  [ 1] Mutex::lock_without_safepoint_check
+  [ 2] G1CMMarkStack::par_pop_chunk
+  [ 3] G1CMTask::do_marking_step
+  [ 4] G1CMConcurrentMarkingTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<286822ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 286822ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::balance_queues
+  [ 2] ReferenceProcessor::process_soft_weak_final_refs
+  [ 3] ReferenceProcessor::process_discovered_references
+  [ 4] G1ConcurrentMark::weak_refs_work
+  [ 5] G1ConcurrentMark::remark
+  [ 6] VM_G1PauseConcurrent::doit
+  [ 7] VM_Operation::evaluate
+  [ 8] VMThread::evaluate_operation
+  [ 9] VMThread::inner_execute
+  [10] VMThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1RemSet::refine_card_concurrently
+  [ 1] G1DirtyCardQueueSet::refine_buffer
+  [ 2] G1DirtyCardQueueSet::refine_completed_buffer_concurrently
+  [ 3] G1PrimaryConcurrentRefineThread::do_refinement_step
+  [ 4] G1ConcurrentRefineThread::run_service
+  [ 5] ConcurrentGCThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] __psynch_cvwait
+  [ 1] PlatformMonitor::wait
+  [ 2] Monitor::wait_without_safepoint_check
+  [ 3] TaskTerminator::offer_termination
+  [ 4] G1ParEvacuateFollowersClosure::do_void
+  [ 5] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 6] G1EvacuateRegionsBaseTask::work
+  [ 7] WorkerThread::run
+  [ 8] Thread::call_run
+  [ 9] thread_native_entry
+  [10] _pthread_start
+  [11] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 2] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 3] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 4] G1ParScanThreadState::trim_queue_to_threshold
+  [ 5] G1ScanHRForRegionClosure::scan_memregion
+  [ 6] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 7] G1ScanHRForRegionClosure::do_heap_region
+  [ 8] G1RemSet::scan_heap_roots
+  [ 9] G1EvacuateRegionsTask::scan_roots
+  [10] G1EvacuateRegionsBaseTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] SpinPause
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1CMTask::do_marking_step
+  [ 3] G1CMConcurrentMarkingTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ObjArrayAllocator::initialize
+  [ 1] HeapRegion::fill_range_with_dead_objects
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 4] HeapRegionManager::par_iterate
+  [ 5] G1RebuildRSAndScrubTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] G1CMTask::make_reference_grey
+  [ 2] void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 3] void G1CMTask::process_grey_task_entry<true>
+  [ 4] G1CMTask::drain_local_queue
+  [ 5] G1CMBitMapClosure::do_addr
+  [ 6] G1CMBitMap::iterate
+  [ 7] G1CMTask::do_marking_step
+  [ 8] G1CMConcurrentMarkingTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CopyingKeepAliveClosure::do_oop
+  [ 1] ReferenceProcessor::process_discovered_list_work
+  [ 2] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 3] G1STWRefProcProxyTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ConcurrentMark::mark_in_bitmap
+  [ 1] void InstanceRefKlass::oop_oop_iterate_discovery<narrowOop, G1RootRegionScanClosure, AlwaysContains>
+  [ 2] void OopOopIterateDispatch<G1RootRegionScanClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 3] G1ConcurrentMark::scan_root_region
+  [ 4] G1CMRootRegionScanTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] java.util.WeakHashMap$Entry.<init>
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 5] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 6] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 7] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [ 8] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [ 9] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [10] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [11] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [12] java.lang.reflect.Method.invoke
+  [13] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [14] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [15] java.util.concurrent.FutureTask.run
+  [16] java.util.concurrent.Executors$RunnableAdapter.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [19] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [20] java.lang.Thread.runWith
+  [21] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ZThread::~ZThread
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<286822ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 286822ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::preclean_discovered_reflist
+  [ 2] ReferenceProcessor::preclean_discovered_references
+  [ 3] G1ConcurrentMark::preclean
+  [ 4] G1ConcurrentMarkThread::subphase_preclean
+  [ 5] G1ConcurrentMarkThread::phase_mark_loop
+  [ 6] G1ConcurrentMarkThread::concurrent_mark_cycle_do
+  [ 7] G1ConcurrentMarkThread::run_service
+  [ 8] ConcurrentGCThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+  [ 1] ReferenceProcessor::discover_reference
+  [ 2] void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+  [ 3] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 4] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 5] G1ParScanThreadState::trim_queue_to_threshold
+  [ 6] G1ScanHRForRegionClosure::scan_memregion
+  [ 7] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 8] G1ScanHRForRegionClosure::do_heap_region
+  [ 9] G1RemSet::scan_heap_roots
+  [10] G1EvacuateRegionsTask::scan_roots
+  [11] G1EvacuateRegionsBaseTask::work
+  [12] WorkerThread::run
+  [13] Thread::call_run
+  [14] thread_native_entry
+  [15] _pthread_start
+  [16] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_to_howl
+  [ 1] G1CardSet::add_card
+  [ 2] G1CardSet::transfer_cards_in_howl
+  [ 3] G1CardSet::add_to_howl
+  [ 4] G1CardSet::add_card
+  [ 5] void InstanceRefKlass::oop_oop_iterate_fields<narrowOop, G1RebuildRemSetClosure, AlwaysContains>
+  [ 6] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 7] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 8] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 9] HeapRegionManager::par_iterate
+  [10] G1RebuildRSAndScrubTask::work
+  [11] WorkerThread::run
+  [12] Thread::call_run
+  [13] thread_native_entry
+  [14] _pthread_start
+  [15] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CMTask::make_reference_grey
+  [ 1] SATBMarkQueueSet::apply_closure_to_completed_buffer
+  [ 2] G1CMTask::drain_satb_buffers
+  [ 3] G1CMTask::do_marking_step
+  [ 4] G1CMConcurrentMarkingTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] CodeBuffer::CodeBuffer
+  [ 1] Compiler::compile_method
+  [ 2] CompileBroker::invoke_compiler_on_method
+  [ 3] CompileBroker::compiler_thread_loop
+  [ 4] JavaThread::thread_main_inner
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+  [ 1] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 2] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 3] HeapRegionManager::par_iterate
+  [ 4] G1RebuildRSAndScrubTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 1] G1ParScanThreadState::steal_and_trim_queue
+  [ 2] G1ParEvacuateFollowersClosure::do_void
+  [ 3] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 4] G1EvacuateRegionsBaseTask::work
+  [ 5] WorkerThread::run
+  [ 6] Thread::call_run
+  [ 7] thread_native_entry
+  [ 8] _pthread_start
+  [ 9] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] PtrQueueSet::try_enqueue
+  [ 1] G1RedirtyCardsLocalQueueSet::enqueue
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] jdk.internal.misc.Unsafe.weakCompareAndSetReference
+  [ 1] java.lang.invoke.VarHandleReferences$FieldInstanceReadWrite.weakCompareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LLL_Z
+  [ 3] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 4] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 5] zio.internal.AddContext.createCachedKey
+  [ 6] zio.internal.ConcurrentWeakHashSetAddBenchmark.javaAddSerial
+  [ 7] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_thrpt_jmhStub
+  [ 8] zio.internal.jmh_generated.ConcurrentWeakHashSetAddBenchmark_javaAddSerial_jmhTest.javaAddSerial_Throughput
+  [ 9] java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial
+  [10] java.lang.invoke.LambdaForm$MH.0x000000c80102d800.invoke
+  [11] java.lang.invoke.LambdaForm$MH.0x000000c80102dc00.invokeExact_MT
+  [12] jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl
+  [13] jdk.internal.reflect.DirectMethodHandleAccessor.invoke
+  [14] java.lang.reflect.Method.invoke
+  [15] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [16] org.openjdk.jmh.runner.BenchmarkHandler$BenchmarkTask.call
+  [17] java.util.concurrent.FutureTask.run
+  [18] java.util.concurrent.Executors$RunnableAdapter.call
+  [19] java.util.concurrent.FutureTask.run
+  [20] java.util.concurrent.ThreadPoolExecutor.runWorker
+  [21] java.util.concurrent.ThreadPoolExecutor$Worker.run
+  [22] java.lang.Thread.runWith
+  [23] java.lang.Thread.run
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] ReferenceProcessor::discover_reference
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_to_howl
+  [ 1] G1CardSet::add_card
+  [ 2] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 3] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 6] HeapRegionManager::par_iterate
+  [ 7] G1RebuildRSAndScrubTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] GenericTaskQueueSet<GenericTaskQueue<G1TaskQueueEntry, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::tasks
+  [ 1] TaskTerminator::offer_termination
+  [ 2] G1CMTask::do_marking_step
+  [ 3] G1CMDrainMarkingStackClosure::do_void
+  [ 4] RefProcSoftWeakFinalPhaseTask::rp_work
+  [ 5] G1CMRefProcProxyTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] pthread_mutex_unlock
+  [ 1] G1CMMarkStack::par_pop_chunk
+  [ 2] G1CMTask::do_marking_step
+  [ 3] G1CMConcurrentMarkingTask::work
+  [ 4] WorkerThread::run
+  [ 5] Thread::call_run
+  [ 6] thread_native_entry
+  [ 7] _pthread_start
+  [ 8] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSet::add_card
+  [ 1] G1CardSet::add_card
+  [ 2] void InstanceRefKlass::oop_oop_iterate_fields<narrowOop, G1RebuildRemSetClosure, AlwaysContains>
+  [ 3] void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+  [ 4] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 6] HeapRegionManager::par_iterate
+  [ 7] G1RebuildRSAndScrubTask::work
+  [ 8] WorkerThread::run
+  [ 9] Thread::call_run
+  [10] thread_native_entry
+  [11] _pthread_start
+  [12] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] G1CardSetHashTable::get_or_add
+  [ 1] G1CardSet::add_card
+  [ 2] void G1CardSet::iterate_cards_during_transfer<G1TransferCard>
+  [ 3] G1CardSet::add_card
+  [ 4] void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+  [ 5] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+  [ 6] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+  [ 7] G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_region
+  [ 8] HeapRegionManager::par_iterate
+  [ 9] G1RebuildRSAndScrubTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+  [ 1] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 2] G1ParScanThreadState::trim_queue_to_threshold
+  [ 3] G1ScanHRForRegionClosure::scan_memregion
+  [ 4] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 5] G1ScanHRForRegionClosure::do_heap_region
+  [ 6] G1RemSet::scan_heap_roots
+  [ 7] G1EvacuateRegionsTask::scan_roots
+  [ 8] G1EvacuateRegionsBaseTask::work
+  [ 9] WorkerThread::run
+  [10] Thread::call_run
+  [11] thread_native_entry
+  [12] _pthread_start
+  [13] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<299110ull, G1BarrierSet>, (AccessInternal::BarrierType)2, 299110ull>::oop_access_barrier
+  [ 1] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+  [ 2] G1ParScanThreadState::do_copy_to_survivor_space
+  [ 3] G1ParScanThreadState::trim_queue_to_threshold
+  [ 4] G1ScanHRForRegionClosure::scan_memregion
+  [ 5] G1ScanHRForRegionClosure::scan_heap_roots
+  [ 6] G1ScanHRForRegionClosure::do_heap_region
+  [ 7] G1RemSet::scan_heap_roots
+  [ 8] G1EvacuateRegionsTask::scan_roots
+  [ 9] G1EvacuateRegionsBaseTask::work
+  [10] WorkerThread::run
+  [11] Thread::call_run
+  [12] thread_native_entry
+  [13] _pthread_start
+  [14] thread_start
+
+--- 10000000 ns (0.11%), 1 sample
+  [ 0] void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+  [ 1] G1ParScanThreadState::trim_queue_to_threshold
+  [ 2] G1ParScanThreadState::steal_and_trim_queue
+  [ 3] G1ParEvacuateFollowersClosure::do_void
+  [ 4] G1EvacuateRegionsBaseTask::evacuate_live_objects
+  [ 5] G1EvacuateRegionsBaseTask::work
+  [ 6] WorkerThread::run
+  [ 7] Thread::call_run
+  [ 8] thread_native_entry
+  [ 9] _pthread_start
+  [10] thread_start
+
+          ns  percent  samples  top
+  ----------  -------  -------  ---
+  1430000000   15.68%      143  java.util.WeakHashMap.put
+   830000000    9.10%       83  void G1ScanEvacuatedObjClosure::do_oop_work<narrowOop>
+   790000000    8.66%       79  G1ParScanThreadState::do_copy_to_survivor_space
+   640000000    7.02%       64  void G1ScanCardClosure::do_oop_work<narrowOop>
+   510000000    5.59%       51  java.util.WeakHashMap.transfer
+   500000000    5.48%       50  G1ParScanThreadState::trim_queue_to_threshold
+   380000000    4.17%       38  _platform_memset
+   240000000    2.63%       24  G1CMTask::make_reference_grey
+   200000000    2.19%       20  GenericTaskQueueSet<OverflowTaskQueue<ScannerTask, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+   190000000    2.08%       19  G1ConcurrentMark::mark_in_bitmap
+   180000000    1.97%       18  java_lang_ref_Reference::is_referent_field
+   180000000    1.97%       18  GenericTaskQueueSet<GenericTaskQueue<G1TaskQueueEntry, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::steal_best_of_2
+   160000000    1.75%       16  AccessBarrierSupport::resolve_unknown_oop_ref_strength
+   150000000    1.64%       15  void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanEvacuatedObjClosure, AlwaysContains>
+   150000000    1.64%       15  ReferenceProcessor::process_discovered_list_work
+   150000000    1.64%       15  java.util.WeakHashMap$Entry.<init>
+   140000000    1.54%       14  SpinPause
+   130000000    1.43%       13  ReferenceProcessor::discover_reference
+   120000000    1.32%       12  HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ScanCardClosure, true>
+   120000000    1.32%       12  __psynch_cvwait
+   110000000    1.21%       11  void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+   100000000    1.10%       10  G1PostEvacuateCollectionSetCleanupTask2::RedirtyLoggedCardsTask::do_work
+    80000000    0.88%        8  __psynch_mutexwait
+    70000000    0.77%        7  void OopOopIterateBoundedDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+    60000000    0.66%        6  void InstanceRefKlass::oop_oop_iterate<narrowOop, G1RebuildRemSetClosure>
+    60000000    0.66%        6  void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceKlass, narrowOop>
+    60000000    0.66%        6  RedirtyLoggedCardTableEntryClosure::do_card_ptr
+    50000000    0.55%        5  void OopOopIterateBackwardsDispatch<G1ScanEvacuatedObjClosure>::Table::oop_oop_iterate_backwards<InstanceRefKlass, narrowOop>
+    50000000    0.55%        5  G1MergeHeapRootsTask::G1MergeLogBufferCardsClosure::do_card_ptr
+    50000000    0.55%        5  java.lang.ref.Reference.<init>
+    50000000    0.55%        5  G1CMTask::drain_local_queue
+    50000000    0.55%        5  G1SATBMarkQueueSet::filter
+    40000000    0.44%        4  G1STWIsAliveClosure::do_object_b
+    40000000    0.44%        4  TaskTerminator::offer_termination
+    40000000    0.44%        4  void OopOopIterateDispatch<G1ScanCardClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+    40000000    0.44%        4  void InstanceRefKlass::oop_oop_iterate_ref_processing<narrowOop, G1ScanCardClosure, AlwaysContains>
+    40000000    0.44%        4  void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+    30000000    0.33%        3  G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_and_scrub_to_pb
+    30000000    0.33%        3  void OopOopIterateDispatch<G1RootRegionScanClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+    30000000    0.33%        3  void G1CMTask::process_grey_task_entry<true>
+    30000000    0.33%        3  void InstanceRefKlass::oop_oop_iterate_fields<narrowOop, G1RebuildRemSetClosure, AlwaysContains>
+    30000000    0.33%        3  G1ParScanThreadState::steal_and_trim_queue
+    30000000    0.33%        3  G1MergeHeapRootsTask::work
+    30000000    0.33%        3  java.util.Collections$SynchronizedCollection.add
+    30000000    0.33%        3  G1CardSet::add_card
+    30000000    0.33%        3  G1RebuildRSAndScrubTask::G1RebuildRSAndScrubRegionClosure::scan_object
+    30000000    0.33%        3  AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<286822ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 286822ull>::oop_access_barrier
+    30000000    0.33%        3  void OopOopIterateBoundedDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+    30000000    0.33%        3  AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<397414ull, G1BarrierSet>, (AccessInternal::BarrierType)3, 397414ull>::oop_access_barrier
+    20000000    0.22%        2  __psynch_cvsignal
+    20000000    0.22%        2  G1CardSet::add_to_howl
+    20000000    0.22%        2  G1CardSet::add_to_container
+    20000000    0.22%        2  G1CMBitMapClosure::do_addr
+    20000000    0.22%        2  ClassLoaderData::oops_do
+    20000000    0.22%        2  G1CardSetHashTable::get_or_add
+    20000000    0.22%        2  void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+    20000000    0.22%        2  ReferenceProcessor::preclean_discovered_reflist
+    20000000    0.22%        2  G1CMTask::do_marking_step
+    20000000    0.22%        2  java.util.WeakHashMap.expungeStaleEntries
+    20000000    0.22%        2  void OopOopIterateDispatch<G1ConcurrentRefineOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+    20000000    0.22%        2  G1CMBitMap::iterate
+    20000000    0.22%        2  HeapWordImpl** HeapRegion::oops_on_memregion_iterate<G1ConcurrentRefineOopClosure, false>
+    20000000    0.22%        2  pthread_mutex_unlock
+    10000000    0.11%        1  G1RemSet::refine_card_concurrently
+    10000000    0.11%        1  jdk.internal.misc.Unsafe.compareAndSetReference
+    10000000    0.11%        1  jdk.internal.misc.Unsafe.weakCompareAndSetReference
+    10000000    0.11%        1  mach_absolute_time
+    10000000    0.11%        1  oopDesc::obj_field_put_raw
+    10000000    0.11%        1  java.util.concurrent.ConcurrentLinkedQueue.offer
+    10000000    0.11%        1  sys_icache_invalidate
+    10000000    0.11%        1  tlv_get_addr
+    10000000    0.11%        1  G1CMIsAliveClosure::do_object_b
+    10000000    0.11%        1  G1CMSubjectToDiscoveryClosure::do_object_b
+    10000000    0.11%        1  G1BarrierSet::write_ref_field_post_slow
+    10000000    0.11%        1  CodeBuffer::CodeBuffer
+    10000000    0.11%        1  java.util.WeakHashMap.hash
+    10000000    0.11%        1  _pthread_mutex_firstfit_lock_slow
+    10000000    0.11%        1  G1CardSet::add_to_array
+    10000000    0.11%        1  _platform_bzero
+    10000000    0.11%        1  AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<299110ull, G1BarrierSet>, (AccessInternal::BarrierType)2, 299110ull>::oop_access_barrier
+    10000000    0.11%        1  __gettimeofday
+    10000000    0.11%        1  ZThread::~ZThread
+    10000000    0.11%        1  void OopOopIterateBoundedDispatch<G1ScanCardClosure>::Table::oop_oop_iterate_bounded<ObjArrayKlass, narrowOop>
+    10000000    0.11%        1  void OopOopIterateDispatch<G1CMOopClosure>::Table::oop_oop_iterate<InstanceKlass, narrowOop>
+    10000000    0.11%        1  G1CopyingKeepAliveClosure::do_oop
+    10000000    0.11%        1  PtrQueueSet::try_enqueue
+    10000000    0.11%        1  OopIterateClosure::reference_iteration_mode
+    10000000    0.11%        1  AccessInternal::PostRuntimeDispatch<G1BarrierSet::AccessBarrier<282726ull, G1BarrierSet>, (AccessInternal::BarrierType)0, 282726ull>::oop_access_barrier
+    10000000    0.11%        1  void OopOopIterateDispatch<G1RebuildRemSetClosure>::Table::oop_oop_iterate<InstanceRefKlass, narrowOop>
+    10000000    0.11%        1  ObjArrayAllocator::initialize
+    10000000    0.11%        1  GenericTaskQueueSet<GenericTaskQueue<G1TaskQueueEntry, (MEMFLAGS)5, 131072u>, (MEMFLAGS)5>::tasks
+    10000000    0.11%        1  zio.internal.AddContext.idx
+    10000000    0.11%        1  zio.internal.TestKey.name

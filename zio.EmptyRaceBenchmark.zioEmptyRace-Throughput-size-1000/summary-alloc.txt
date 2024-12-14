@@ -1,0 +1,2845 @@
+--- Execution profile ---
+Total samples       : 143083
+
+--- 1828188769 bytes (2.44%), 3487 samples
+  [ 0] zio.ZIO$Continuation[]
+  [ 1] zio.internal.FiberRuntime.evaluateEffect
+  [ 2] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 3] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 4] zio.internal.FiberRuntime.run
+  [ 5] zio.internal.ZScheduler$$anon$3.run
+
+--- 1035991112 bytes (1.38%), 1976 samples
+  [ 0] zio.internal.FiberRuntime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 1014495345 bytes (1.35%), 1935 samples
+  [ 0] zio.internal.FiberRuntime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 888666465 bytes (1.18%), 1695 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] scala.collection.IterableOnceOps.reversed
+  [ 2] scala.collection.IterableOnceOps.reversed$
+  [ 3] scala.collection.AbstractIterable.reversed
+  [ 4] scala.collection.SeqOps.reverseIterator
+  [ 5] scala.collection.SeqOps.reverseIterator$
+  [ 6] scala.collection.AbstractSeq.reverseIterator
+  [ 7] zio.internal.FiberRuntime.setExitValue
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 778566195 bytes (1.04%), 1485 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 759167576 bytes (1.01%), 1448 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011713f8
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 751827558 bytes (1.00%), 1434 samples
+  [ 0] zio.ZIO$FoldZIO
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 632290122 bytes (0.84%), 1206 samples
+  [ 0] zio.ZIO$Continuation[]
+  [ 1] zio.internal.FiberRuntime.evaluateEffect
+  [ 2] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 3] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 4] zio.internal.FiberRuntime.run
+  [ 5] zio.internal.ZScheduler$$anon$3.run
+
+--- 573045691 bytes (0.76%), 1093 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e801178b60
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 568327108 bytes (0.76%), 1084 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.isInterruptedOnly
+  [ 4] zio.internal.FiberRuntime.reportExitValue$1
+  [ 5] zio.internal.FiberRuntime.setExitValue
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 567278534 bytes (0.76%), 1082 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] scala.collection.LinearSeqOps.foldLeft
+  [ 2] scala.collection.LinearSeqOps.foldLeft$
+  [ 3] scala.collection.immutable.List.foldLeft
+  [ 4] zio.Cause.loop$2
+  [ 5] zio.Cause.foldContext
+  [ 6] zio.Cause.isInterruptedOnly
+  [ 7] zio.internal.FiberRuntime.reportExitValue$1
+  [ 8] zio.internal.FiberRuntime.setExitValue
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 565181386 bytes (0.75%), 1078 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 555219933 bytes (0.74%), 1059 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.evaluateEffect
+  [ 3] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 4] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 5] zio.internal.FiberRuntime.run
+  [ 6] zio.internal.ZScheduler$$anon$3.run
+
+--- 546831341 bytes (0.73%), 1043 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.internal.FiberRuntime.reportExitValue$1
+  [ 2] zio.internal.FiberRuntime.setExitValue
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 546831341 bytes (0.73%), 1043 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 542637045 bytes (0.72%), 1035 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 538442749 bytes (0.72%), 1027 samples
+  [ 0] zio.Fiber$Status$Running
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 473955448 bytes (0.63%), 904 samples
+  [ 0] scala.collection.immutable.Map$Map3
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 473431161 bytes (0.63%), 903 samples
+  [ 0] java.util.WeakHashMap$Entry
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.FiberRuntime.addChild
+  [ 5] zio.internal.FiberScope$Local.add
+  [ 6] zio.ZIO$unsafe$.makeChildFiber
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 8] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 458226838 bytes (0.61%), 874 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80116a978
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 445643950 bytes (0.59%), 850 samples
+  [ 0] java.util.WeakHashMap$Entry
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.FiberRuntime.addChild
+  [ 5] zio.internal.FiberScope$Local.add
+  [ 6] zio.ZIO$unsafe$.makeChildFiber
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 8] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 403700990 bytes (0.54%), 770 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 396885259 bytes (0.53%), 757 samples
+  [ 0] zio.FiberId$Runtime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 395312398 bytes (0.53%), 754 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 392690963 bytes (0.52%), 749 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801179f50
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 390069528 bytes (0.52%), 744 samples
+  [ 0] zio.Chunk$Singleton
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$interruptAsFork$1
+  [ 5] zio.internal.FiberRuntime$$Lambda.0x000000e801180780.apply$mcV$sp
+  [ 6] scala.runtime.java8.JFunction0$mcV$sp.apply
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.evaluateEffect
+  [11] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [12] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [13] zio.internal.FiberRuntime.run
+  [14] zio.internal.ZScheduler$$anon$3.run
+
+--- 387972380 bytes (0.52%), 740 samples
+  [ 0] zio.ZIO$FoldZIO
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 386923806 bytes (0.52%), 738 samples
+  [ 0] zio.FiberId$Runtime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 386923806 bytes (0.52%), 738 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 386399519 bytes (0.52%), 737 samples
+  [ 0] zio.Cause$Interrupt$$anon$6
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.foldLog
+  [ 4] zio.Cause.stripFailures
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 385350945 bytes (0.51%), 735 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801179520
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 383778084 bytes (0.51%), 732 samples
+  [ 0] scala.util.Right
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.isInterruptedOnly
+  [ 4] zio.internal.FiberRuntime.reportExitValue$1
+  [ 5] zio.internal.FiberRuntime.setExitValue
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 383778084 bytes (0.51%), 732 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e801172b58
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 375913779 bytes (0.50%), 717 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80117d668
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 375389492 bytes (0.50%), 716 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e801175c00
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 374865205 bytes (0.50%), 715 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011721e8
+  [ 1] zio.internal.FiberRuntime.addObserver
+  [ 2] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 4] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [ 5] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [ 6] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [ 7] zio.internal.FiberRuntime.initiateAsync
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 373816631 bytes (0.50%), 713 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e801172b58
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 371719483 bytes (0.50%), 709 samples
+  [ 0] zio.ZIO$FoldZIO
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 371195196 bytes (0.49%), 708 samples
+  [ 0] java.util.WeakHashMap$Entry[]
+  [ 1] java.util.WeakHashMap.expungeStaleEntries
+  [ 2] java.util.WeakHashMap.getTable
+  [ 3] java.util.WeakHashMap.resize
+  [ 4] java.util.WeakHashMap.put
+  [ 5] java.util.Collections$SetFromMap.add
+  [ 6] java.util.Collections$SynchronizedCollection.add
+  [ 7] zio.internal.FiberRuntime.addChild
+  [ 8] zio.internal.FiberScope$Local.add
+  [ 9] zio.ZIO$unsafe$.makeChildFiber
+  [10] zio.ZIO.$anonfun$raceFibersWith$1
+  [11] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [12] zio.internal.FiberRuntime.runLoop
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.evaluateEffect
+  [16] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [17] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [18] zio.internal.FiberRuntime.run
+  [19] zio.internal.ZScheduler$$anon$3.run
+
+--- 361233743 bytes (0.48%), 689 samples
+  [ 0] zio.ZIO$InterruptibilityRestorer$MakeInterruptible$$$Lambda.0x000000e8011784f0
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 359136595 bytes (0.48%), 685 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 358088021 bytes (0.48%), 683 samples
+  [ 0] zio.ZIO$FoldZIO
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 349699429 bytes (0.47%), 667 samples
+  [ 0] zio.internal.FiberRuntime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 349175142 bytes (0.47%), 666 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011725a8
+  [ 1] zio.internal.FiberRuntime.addObserver
+  [ 2] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 4] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [ 5] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [ 6] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [ 7] zio.internal.FiberRuntime.initiateAsync
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 329776523 bytes (0.44%), 629 samples
+  [ 0] zio.internal.FiberRuntime
+  [ 1] zio.FiberRefs.forkAs
+  [ 2] zio.ZIO$unsafe$.makeChildFiber
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 307232182 bytes (0.41%), 586 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801181c28
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 306183608 bytes (0.41%), 584 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 305135034 bytes (0.41%), 582 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801147620
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 304610747 bytes (0.41%), 581 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e80117c800
+  [ 1] zio.ZIO$$Lambda.0x000000e80117d668.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 303037886 bytes (0.40%), 578 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e8011873a0
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 3] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 4] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 5] zio.internal.FiberRuntime.initiateAsync
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 301465025 bytes (0.40%), 575 samples
+  [ 0] zio.internal.FiberRuntime$$anon$1$$Lambda.0x000000e8011825a0
+  [ 1] zio.internal.FiberRuntime$$anon$1.addObserver
+  [ 2] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 3] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 4] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 5] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 6] zio.internal.FiberRuntime.initiateAsync
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 301465025 bytes (0.40%), 575 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 299892164 bytes (0.40%), 572 samples
+  [ 0] zio.ZIO$Stateful
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 297270729 bytes (0.40%), 567 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 296746442 bytes (0.40%), 566 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] scala.collection.IterableOnceOps.reversed
+  [ 2] scala.collection.IterableOnceOps.reversed$
+  [ 3] scala.collection.AbstractIterable.reversed
+  [ 4] scala.collection.SeqOps.reverseIterator
+  [ 5] scala.collection.SeqOps.reverseIterator$
+  [ 6] scala.collection.AbstractSeq.reverseIterator
+  [ 7] zio.internal.FiberRuntime.setExitValue
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 295173581 bytes (0.39%), 563 samples
+  [ 0] zio.Fiber$Status$Running
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 295173581 bytes (0.39%), 563 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 294649294 bytes (0.39%), 562 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime$$anon$1.addObserver
+  [ 5] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 7] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 8] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 9] zio.internal.FiberRuntime.initiateAsync
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.runLoop
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.evaluateEffect
+  [16] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [17] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [18] zio.internal.FiberRuntime.run
+  [19] zio.internal.ZScheduler$$anon$3.run
+
+--- 294649294 bytes (0.39%), 562 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801169e38
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 293600720 bytes (0.39%), 560 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 292552146 bytes (0.39%), 558 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3
+  [ 8] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3$adapted
+  [ 9] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011861c0.apply
+  [10] zio.internal.FiberRuntime.$anonfun$await$3
+  [11] zio.internal.FiberRuntime.$anonfun$await$3$adapted
+  [12] zio.internal.FiberRuntime$$Lambda.0x000000e801186580.apply
+  [13] zio.internal.FiberRuntime.setExitValue
+  [14] zio.internal.FiberRuntime.evaluateEffect
+  [15] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [16] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [17] zio.internal.FiberRuntime.run
+  [18] zio.internal.ZScheduler$$anon$3.run
+
+--- 292027859 bytes (0.39%), 557 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 291503572 bytes (0.39%), 556 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 290979285 bytes (0.39%), 555 samples
+  [ 0] zio.StackTrace
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$interruptAsFork$1
+  [ 5] zio.internal.FiberRuntime$$Lambda.0x000000e801180780.apply$mcV$sp
+  [ 6] scala.runtime.java8.JFunction0$mcV$sp.apply
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.evaluateEffect
+  [11] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [12] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [13] zio.internal.FiberRuntime.run
+  [14] zio.internal.ZScheduler$$anon$3.run
+
+--- 290454998 bytes (0.39%), 554 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.isInterruptedOnly
+  [ 4] zio.internal.FiberRuntime.reportExitValue$1
+  [ 5] zio.internal.FiberRuntime.setExitValue
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 290454998 bytes (0.39%), 554 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.ZIO.$anonfun$$times$greater$1
+  [ 2] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 289930711 bytes (0.39%), 553 samples
+  [ 0] zio.ZIO$Stateful
+  [ 1] zio.ZIO$$Lambda.0x000000e801179f50.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 289406424 bytes (0.39%), 552 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 288882137 bytes (0.39%), 551 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] scala.collection.LinearSeqOps.foldLeft
+  [ 2] scala.collection.LinearSeqOps.foldLeft$
+  [ 3] scala.collection.immutable.List.foldLeft
+  [ 4] zio.Cause.loop$2
+  [ 5] zio.Cause.foldContext
+  [ 6] zio.Cause.foldLog
+  [ 7] zio.Cause.stripFailures
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 288882137 bytes (0.39%), 551 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 287309276 bytes (0.38%), 548 samples
+  [ 0] zio.FiberRefs$StackEntry
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 286784989 bytes (0.38%), 547 samples
+  [ 0] zio.Fiber$Status$Running
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.evaluateEffect
+  [ 3] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 4] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 5] zio.internal.FiberRuntime.run
+  [ 6] zio.internal.ZScheduler$$anon$3.run
+
+--- 286784989 bytes (0.38%), 547 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011479e0
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 286784989 bytes (0.38%), 547 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801171038
+  [ 1] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 2] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 285736415 bytes (0.38%), 545 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 285212128 bytes (0.38%), 544 samples
+  [ 0] zio.Fiber$Status$Running
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 284687841 bytes (0.38%), 543 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.ZIO$$Lambda.0x000000e80117d668.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 284687841 bytes (0.38%), 543 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e80117e7a0
+  [ 1] zio.ZIO$$Lambda.0x000000e801179520.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 283639267 bytes (0.38%), 541 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.internal.FiberRuntime.addObserver
+  [ 2] zio.internal.FiberRuntime$$anon$1.$anonfun$addObserver$1
+  [ 3] zio.internal.FiberRuntime$$anon$1.$anonfun$addObserver$1$adapted
+  [ 4] zio.internal.FiberRuntime$$anon$1$$Lambda.0x000000e8011825a0.apply
+  [ 5] zio.internal.FiberRuntime.processStatefulMessage
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 282590693 bytes (0.38%), 539 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801180780
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 281542119 bytes (0.38%), 537 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80117b5d8
+  [ 1] zio.ZIO$$Lambda.0x000000e8011479e0.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 281017832 bytes (0.37%), 536 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801147620
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 281017832 bytes (0.37%), 536 samples
+  [ 0] zio.FiberRefs
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 281017832 bytes (0.37%), 536 samples
+  [ 0] zio.Cause$Interrupt
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$interruptAsFork$1
+  [ 5] zio.internal.FiberRuntime$$Lambda.0x000000e801180780.apply$mcV$sp
+  [ 6] scala.runtime.java8.JFunction0$mcV$sp.apply
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.evaluateEffect
+  [11] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [12] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [13] zio.internal.FiberRuntime.run
+  [14] zio.internal.ZScheduler$$anon$3.run
+
+--- 280493545 bytes (0.37%), 535 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801168e40
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 279969258 bytes (0.37%), 534 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.internal.FiberRuntime.addObserver
+  [ 2] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 4] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [ 5] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [ 6] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [ 7] zio.internal.FiberRuntime.initiateAsync
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 279444971 bytes (0.37%), 533 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.internal.FiberRuntime.addObserver
+  [ 2] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 4] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [ 5] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [ 6] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [ 7] zio.internal.FiberRuntime.initiateAsync
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 278920684 bytes (0.37%), 532 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011479e0
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 278920684 bytes (0.37%), 532 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 278396397 bytes (0.37%), 531 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011840b0
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 277347823 bytes (0.37%), 529 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011379b0
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 275774962 bytes (0.37%), 526 samples
+  [ 0] zio.ZIO$Stateful
+  [ 1] zio.ZIO$$Lambda.0x000000e80117d668.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 275774962 bytes (0.37%), 526 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 275250675 bytes (0.37%), 525 samples
+  [ 0] zio.ZIO$Sync
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 275250675 bytes (0.37%), 525 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 274202101 bytes (0.37%), 523 samples
+  [ 0] zio.ZIO$Stateful
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 274202101 bytes (0.37%), 523 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 273153527 bytes (0.36%), 521 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801171038
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 273153527 bytes (0.36%), 521 samples
+  [ 0] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 272629240 bytes (0.36%), 520 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 272104953 bytes (0.36%), 519 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801184ae0
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 272104953 bytes (0.36%), 519 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.ZIO.$anonfun$$times$greater$1
+  [ 2] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 271056379 bytes (0.36%), 517 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.Cause.$anonfun$foldContext$1
+  [ 2] zio.Cause$$Lambda.0x000000e80118ee28.apply
+  [ 3] scala.collection.LinearSeqOps.foldLeft
+  [ 4] scala.collection.LinearSeqOps.foldLeft$
+  [ 5] scala.collection.immutable.List.foldLeft
+  [ 6] zio.Cause.loop$2
+  [ 7] zio.Cause.foldContext
+  [ 8] zio.Cause.isInterruptedOnly
+  [ 9] zio.internal.FiberRuntime.reportExitValue$1
+  [10] zio.internal.FiberRuntime.setExitValue
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 270532092 bytes (0.36%), 516 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80117dd30
+  [ 1] zio.ZIO$$Lambda.0x000000e80117d668.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 270007805 bytes (0.36%), 515 samples
+  [ 0] zio.Fiber$$Lambda.0x000000e801180a50
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 268959231 bytes (0.36%), 513 samples
+  [ 0] zio.ZIO$Sync
+  [ 1] zio.ZIO$$Lambda.0x000000e8011479e0.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 268434944 bytes (0.36%), 512 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011717b8
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 267910657 bytes (0.36%), 511 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 267910657 bytes (0.36%), 511 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80118a858
+  [ 1] zio.ZIO$$Lambda.0x000000e801181c28.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 267386370 bytes (0.36%), 510 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$interruptAsFork$1
+  [ 5] zio.internal.FiberRuntime$$Lambda.0x000000e801180780.apply$mcV$sp
+  [ 6] scala.runtime.java8.JFunction0$mcV$sp.apply
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.evaluateEffect
+  [11] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [12] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [13] zio.internal.FiberRuntime.run
+  [14] zio.internal.ZScheduler$$anon$3.run
+
+--- 266862083 bytes (0.36%), 509 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 266337796 bytes (0.36%), 508 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.foldLog
+  [ 4] zio.Cause.stripFailures
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 266337796 bytes (0.36%), 508 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801137448
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 266337796 bytes (0.36%), 508 samples
+  [ 0] zio.ZIO$Stateful
+  [ 1] zio.ZIO$$Lambda.0x000000e801179520.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 265813509 bytes (0.35%), 507 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801184720
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 265289222 bytes (0.35%), 506 samples
+  [ 0] zio.ZIO$Async
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 265289222 bytes (0.35%), 506 samples
+  [ 0] zio.ZIO$Sync
+  [ 1] zio.ZIO$$Lambda.0x000000e801181c28.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 265289222 bytes (0.35%), 506 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011693e0
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 263716361 bytes (0.35%), 503 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 262667787 bytes (0.35%), 501 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80116a3d8
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 262143500 bytes (0.35%), 500 samples
+  [ 0] zio.ZIO$Sync
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 3] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 4] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 5] zio.internal.FiberRuntime.initiateAsync
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 256376343 bytes (0.34%), 489 samples
+  [ 0] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 255852056 bytes (0.34%), 488 samples
+  [ 0] zio.Cause$Then
+  [ 1] zio.internal.FiberRuntime.getFiberRef
+  [ 2] zio.internal.FiberRuntime.getInterruptedCause
+  [ 3] zio.internal.FiberRuntime.patchRuntimeFlags
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 255852056 bytes (0.34%), 488 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 254279195 bytes (0.34%), 485 samples
+  [ 0] zio.ZIO$Sync
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 254279195 bytes (0.34%), 485 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 253754908 bytes (0.34%), 484 samples
+  [ 0] zio.FiberRefs$Value
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 253230621 bytes (0.34%), 483 samples
+  [ 0] zio.ZIO$Async
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 251133473 bytes (0.33%), 479 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e80117e7a0
+  [ 1] zio.ZIO$$Lambda.0x000000e801179f50.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 249560612 bytes (0.33%), 476 samples
+  [ 0] zio.ZIO$FoldZIO
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 246414890 bytes (0.33%), 470 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011713f8
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 221249114 bytes (0.29%), 422 samples
+  [ 0] java.util.concurrent.ConcurrentLinkedQueue$Node
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] zio.internal.ZScheduler$$anon$3.run
+
+--- 206044791 bytes (0.27%), 393 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e80113ed18
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 204996217 bytes (0.27%), 391 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 203423356 bytes (0.27%), 388 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80117c400
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 202374782 bytes (0.27%), 386 samples
+  [ 0] zio.Cause$BothCase$1$
+  [ 1] zio.Cause.$anonfun$foldContext$1
+  [ 2] zio.Cause$$Lambda.0x000000e80118ee28.apply
+  [ 3] scala.collection.LinearSeqOps.foldLeft
+  [ 4] scala.collection.LinearSeqOps.foldLeft$
+  [ 5] scala.collection.immutable.List.foldLeft
+  [ 6] zio.Cause.loop$2
+  [ 7] zio.Cause.foldContext
+  [ 8] zio.Cause.isInterruptedOnly
+  [ 9] zio.internal.FiberRuntime.reportExitValue$1
+  [10] zio.internal.FiberRuntime.setExitValue
+  [11] zio.internal.FiberRuntime.evaluateEffect
+  [12] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [13] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [14] zio.internal.FiberRuntime.run
+  [15] zio.internal.ZScheduler$$anon$3.run
+
+--- 198704773 bytes (0.26%), 379 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 198704773 bytes (0.26%), 379 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 197656199 bytes (0.26%), 377 samples
+  [ 0] zio.EmptyRaceBenchmark$$Lambda.0x000000e801146c08
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 196607625 bytes (0.26%), 375 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 196083338 bytes (0.26%), 374 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e80117d000
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 196083338 bytes (0.26%), 374 samples
+  [ 0] scala.util.Left
+  [ 1] zio.internal.FiberRuntime.reportExitValue$1
+  [ 2] zio.internal.FiberRuntime.setExitValue
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 196083338 bytes (0.26%), 374 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.ZIO$$Lambda.0x000000e801184ae0.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 195034764 bytes (0.26%), 372 samples
+  [ 0] zio.EmptyRaceBenchmark$$Lambda.0x000000e801169b70
+  [ 1] zio.ZIO$.$anonfun$fiberIdWith$1
+  [ 2] zio.ZIO$$$Lambda.0x000000e80113ed18.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 193986190 bytes (0.26%), 370 samples
+  [ 0] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 193986190 bytes (0.26%), 370 samples
+  [ 0] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 192937616 bytes (0.26%), 368 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.evaluateEffect
+  [ 3] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 4] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 5] zio.internal.FiberRuntime.run
+  [ 6] zio.internal.ZScheduler$$anon$3.run
+
+--- 192937616 bytes (0.26%), 368 samples
+  [ 0] zio.Fiber$Status$Running
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 192413329 bytes (0.26%), 367 samples
+  [ 0] zio.Exit$Failure
+  [ 1] zio.internal.FiberRuntime.patchRuntimeFlags
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 191364755 bytes (0.26%), 365 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801180d00
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 190840468 bytes (0.25%), 364 samples
+  [ 0] zio.internal.FiberMessage$InterruptSignal
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$interruptAsFork$1
+  [ 5] zio.internal.FiberRuntime$$Lambda.0x000000e801180780.apply$mcV$sp
+  [ 6] scala.runtime.java8.JFunction0$mcV$sp.apply
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.evaluateEffect
+  [11] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [12] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [13] zio.internal.FiberRuntime.run
+  [14] zio.internal.ZScheduler$$anon$3.run
+
+--- 190840468 bytes (0.25%), 364 samples
+  [ 0] zio.Exit$Success
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3
+  [ 8] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3$adapted
+  [ 9] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011861c0.apply
+  [10] zio.internal.FiberRuntime.$anonfun$await$3
+  [11] zio.internal.FiberRuntime.$anonfun$await$3$adapted
+  [12] zio.internal.FiberRuntime$$Lambda.0x000000e801186580.apply
+  [13] zio.internal.FiberRuntime.setExitValue
+  [14] zio.internal.FiberRuntime.evaluateEffect
+  [15] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [16] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [17] zio.internal.FiberRuntime.run
+  [18] zio.internal.ZScheduler$$anon$3.run
+
+--- 190316181 bytes (0.25%), 363 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 189791894 bytes (0.25%), 362 samples
+  [ 0] zio.internal.FiberMessage$Stateful
+  [ 1] zio.internal.FiberRuntime$$anon$1.addObserver
+  [ 2] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 3] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 4] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 5] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 6] zio.internal.FiberRuntime.initiateAsync
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 189267607 bytes (0.25%), 361 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 188743320 bytes (0.25%), 360 samples
+  [ 0] zio.Exit$Failure
+  [ 1] zio.ZIO$$Lambda.0x000000e801179520.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 187694746 bytes (0.25%), 358 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] scala.collection.LinearSeqOps.foldLeft
+  [ 2] scala.collection.LinearSeqOps.foldLeft$
+  [ 3] scala.collection.immutable.List.foldLeft
+  [ 4] zio.Cause.loop$2
+  [ 5] zio.Cause.foldContext
+  [ 6] zio.Cause.isInterruptedOnly
+  [ 7] zio.internal.FiberRuntime.reportExitValue$1
+  [ 8] zio.internal.FiberRuntime.setExitValue
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 187170459 bytes (0.25%), 357 samples
+  [ 0] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011861c0
+  [ 1] zio.internal.FiberRuntime$$anon$1.addObserver
+  [ 2] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 3] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 4] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 5] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 6] zio.internal.FiberRuntime.initiateAsync
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 186646172 bytes (0.25%), 356 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801184470
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 186121885 bytes (0.25%), 355 samples
+  [ 0] zio.ZIO$Grafter$$$Lambda.0x000000e801178b60
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 186121885 bytes (0.25%), 355 samples
+  [ 0] zio.internal.FiberMessage$Resume
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 185073311 bytes (0.25%), 353 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e8011814a8
+  [ 1] zio.ZIO$$Lambda.0x000000e80117c400.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 185073311 bytes (0.25%), 353 samples
+  [ 0] zio.internal.FiberMessage$Resume
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 184549024 bytes (0.25%), 352 samples
+  [ 0] zio.internal.FiberMessage$Resume
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 184549024 bytes (0.25%), 352 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e801173308
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 184024737 bytes (0.25%), 351 samples
+  [ 0] zio.ZIO$UpdateRuntimeFlags
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 183500450 bytes (0.24%), 350 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.ZIO$$Lambda.0x000000e80117b5d8.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 183500450 bytes (0.24%), 350 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 2] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 182451876 bytes (0.24%), 348 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.internal.FiberRuntime.reportExitValue$1
+  [ 2] zio.internal.FiberRuntime.setExitValue
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 181403302 bytes (0.24%), 346 samples
+  [ 0] zio.internal.FiberMessage$Resume
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3
+  [ 8] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$3$adapted
+  [ 9] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011861c0.apply
+  [10] zio.internal.FiberRuntime.$anonfun$await$3
+  [11] zio.internal.FiberRuntime.$anonfun$await$3$adapted
+  [12] zio.internal.FiberRuntime$$Lambda.0x000000e801186580.apply
+  [13] zio.internal.FiberRuntime.setExitValue
+  [14] zio.internal.FiberRuntime.evaluateEffect
+  [15] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [16] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [17] zio.internal.FiberRuntime.run
+  [18] zio.internal.ZScheduler$$anon$3.run
+
+--- 180879015 bytes (0.24%), 345 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e801173308
+  [ 1] java.util.concurrent.ConcurrentLinkedQueue.offer
+  [ 2] java.util.concurrent.ConcurrentLinkedQueue.add
+  [ 3] zio.internal.FiberRuntime.tell
+  [ 4] zio.internal.FiberRuntime.$anonfun$startSuspended$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$startSuspended$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171038.apply
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$2
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$2$adapted
+  [ 9] zio.ZIO$$Lambda.0x000000e8011713f8.apply
+  [10] zio.ZIOCompanionVersionSpecific.$anonfun$async$2
+  [11] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68.apply
+  [12] zio.internal.FiberRuntime.initiateAsync
+  [13] zio.internal.FiberRuntime.runLoop
+  [14] zio.internal.FiberRuntime.runLoop
+  [15] zio.internal.FiberRuntime.runLoop
+  [16] zio.internal.FiberRuntime.evaluateEffect
+  [17] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [18] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [19] zio.internal.FiberRuntime.run
+  [20] zio.internal.ZScheduler$$anon$3.run
+
+--- 180354728 bytes (0.24%), 344 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime._blockingOn_$eq
+  [ 2] zio.internal.FiberRuntime.startSuspended
+  [ 3] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 4] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.evaluateEffect
+  [ 9] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [10] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [11] zio.internal.FiberRuntime.run
+  [12] zio.internal.ZScheduler$$anon$3.run
+
+--- 180354728 bytes (0.24%), 344 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e80117d000
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 180354728 bytes (0.24%), 344 samples
+  [ 0] zio.Exit$Failure
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 179306154 bytes (0.24%), 342 samples
+  [ 0] zio.Exit$Failure
+  [ 1] zio.internal.FiberRuntime.getFiberRef
+  [ 2] zio.internal.FiberRuntime.getInterruptedCause
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 178257580 bytes (0.24%), 340 samples
+  [ 0] zio.ZIO$InterruptibilityRestorer$MakeInterruptible$$$Lambda.0x000000e8011784f0
+  [ 1] zio.ZIO$$$Lambda.0x000000e801173308.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 177209006 bytes (0.24%), 338 samples
+  [ 0] zio.Exit$Failure
+  [ 1] zio.internal.FiberRuntime.patchRuntimeFlags
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 176160432 bytes (0.23%), 336 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 176160432 bytes (0.23%), 336 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime.<init>
+  [ 2] zio.internal.FiberRuntime$.apply
+  [ 3] zio.ZIO$unsafe$.makeChildFiber
+  [ 4] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 5] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.evaluateEffect
+  [10] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [11] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [12] zio.internal.FiberRuntime.run
+  [13] zio.internal.ZScheduler$$anon$3.run
+
+--- 176160432 bytes (0.23%), 336 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e80117c400
+  [ 1] zio.ZIO$$Lambda.0x000000e80117d668.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 176160432 bytes (0.23%), 336 samples
+  [ 0] scala.util.Right
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.foldLog
+  [ 4] zio.Cause.stripFailures
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 175636145 bytes (0.23%), 335 samples
+  [ 0] zio.ZIO$FlatMap
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 175636145 bytes (0.23%), 335 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801156c60
+  [ 1] zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 175111858 bytes (0.23%), 334 samples
+  [ 0] zio.ZIO$$Lambda.0x000000e801183cf0
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 175111858 bytes (0.23%), 334 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.ZIO$$Lambda.0x000000e801179f50.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.evaluateEffect
+  [ 5] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 6] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 7] zio.internal.FiberRuntime.run
+  [ 8] zio.internal.ZScheduler$$anon$3.run
+
+--- 174587571 bytes (0.23%), 333 samples
+  [ 0] scala.collection.immutable.$colon$colon
+  [ 1] zio.Cause.loop$2
+  [ 2] zio.Cause.foldContext
+  [ 3] zio.Cause.isInterruptedOnly
+  [ 4] zio.internal.FiberRuntime.reportExitValue$1
+  [ 5] zio.internal.FiberRuntime.setExitValue
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 174587571 bytes (0.23%), 333 samples
+  [ 0] java.util.concurrent.atomic.AtomicBoolean
+  [ 1] zio.internal.FiberRuntime.initiateAsync
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 173014710 bytes (0.23%), 330 samples
+  [ 0] zio.Cause$ThenCase$1$
+  [ 1] zio.internal.FiberRuntime.reportExitValue$1
+  [ 2] zio.internal.FiberRuntime.setExitValue
+  [ 3] zio.internal.FiberRuntime.evaluateEffect
+  [ 4] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 5] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 6] zio.internal.FiberRuntime.run
+  [ 7] zio.internal.ZScheduler$$anon$3.run
+
+--- 173014710 bytes (0.23%), 330 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801186580
+  [ 1] zio.internal.FiberRuntime$$anon$1.addObserver
+  [ 2] zio.internal.FiberRuntime.$anonfun$await$2
+  [ 3] zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0.apply
+  [ 4] zio.ZIOCompanionVersionSpecific.$anonfun$asyncInterrupt$2
+  [ 5] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680.apply
+  [ 6] zio.internal.FiberRuntime.initiateAsync
+  [ 7] zio.internal.FiberRuntime.runLoop
+  [ 8] zio.internal.FiberRuntime.runLoop
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 172490423 bytes (0.23%), 329 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e80117d000
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 171966136 bytes (0.23%), 328 samples
+  [ 0] zio.internal.FiberRuntime$$Lambda.0x000000e801182f28
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 170917562 bytes (0.23%), 326 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.internal.FiberRuntime.runLoop
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.evaluateEffect
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+--- 170393275 bytes (0.23%), 325 samples
+  [ 0] zio.Exit$Success
+  [ 1] zio.internal.FiberRuntime.$anonfun$await$1
+  [ 2] zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18.apply
+  [ 3] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 4] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 169344701 bytes (0.23%), 323 samples
+  [ 0] java.util.concurrent.atomic.AtomicReference
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 168296127 bytes (0.22%), 321 samples
+  [ 0] zio.internal.FiberMessage$Resume
+  [ 1] java.lang.invoke.VarHandleInts$FieldInstanceReadWrite.compareAndSet
+  [ 2] java.lang.invoke.VarHandleGuards.guard_LII_Z
+  [ 3] java.util.concurrent.atomic.AtomicBoolean.compareAndSet
+  [ 4] zio.internal.FiberRuntime.$anonfun$initiateAsync$1
+  [ 5] zio.internal.FiberRuntime.$anonfun$initiateAsync$1$adapted
+  [ 6] zio.internal.FiberRuntime$$Lambda.0x000000e801171e28.apply
+  [ 7] zio.ZIO.complete$1
+  [ 8] zio.ZIO.$anonfun$raceFibersWith$4
+  [ 9] zio.ZIO.$anonfun$raceFibersWith$4$adapted
+  [10] zio.ZIO$$Lambda.0x000000e8011725a8.apply
+  [11] zio.internal.FiberRuntime.setExitValue
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 166198979 bytes (0.22%), 317 samples
+  [ 0] java.util.WeakHashMap$Entry
+  [ 1] java.util.WeakHashMap.put
+  [ 2] java.util.Collections$SetFromMap.add
+  [ 3] java.util.Collections$SynchronizedCollection.add
+  [ 4] zio.internal.FiberRuntime.addChild
+  [ 5] zio.internal.FiberScope$Local.add
+  [ 6] zio.ZIO$unsafe$.makeChildFiber
+  [ 7] zio.ZIO.$anonfun$raceFibersWith$1
+  [ 8] zio.ZIO$$Lambda.0x000000e80116a978.apply
+  [ 9] zio.internal.FiberRuntime.runLoop
+  [10] zio.internal.FiberRuntime.runLoop
+  [11] zio.internal.FiberRuntime.runLoop
+  [12] zio.internal.FiberRuntime.evaluateEffect
+  [13] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [14] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [15] zio.internal.FiberRuntime.run
+  [16] zio.internal.ZScheduler$$anon$3.run
+
+--- 164626118 bytes (0.22%), 314 samples
+  [ 0] zio.ZIO$$$Lambda.0x000000e801173308
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 163577544 bytes (0.22%), 312 samples
+  [ 0] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183a40
+  [ 1] zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0.apply
+  [ 2] zio.ZIO$.$anonfun$suspendSucceed$1
+  [ 3] zio.ZIO$$$Lambda.0x000000e80117d000.apply
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.evaluateEffect
+  [ 7] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 8] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 9] zio.internal.FiberRuntime.run
+  [10] zio.internal.ZScheduler$$anon$3.run
+
+--- 163053257 bytes (0.22%), 311 samples
+  [ 0] java.lang.Integer
+  [ 1] scala.runtime.java8.JFunction0$mcI$sp.apply
+  [ 2] zio.internal.FiberRuntime.runLoop
+  [ 3] zio.internal.FiberRuntime.runLoop
+  [ 4] zio.internal.FiberRuntime.runLoop
+  [ 5] zio.internal.FiberRuntime.runLoop
+  [ 6] zio.internal.FiberRuntime.runLoop
+  [ 7] zio.internal.FiberRuntime.evaluateEffect
+  [ 8] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 9] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [10] zio.internal.FiberRuntime.run
+  [11] zio.internal.ZScheduler$$anon$3.run
+
+--- 155713239 bytes (0.21%), 297 samples
+  [ 0] scala.collection.immutable.Map$Map3
+  [ 1] zio.FiberRefs.zio$FiberRefs$$updateAnyRef
+  [ 2] zio.FiberRefs.updatedAs
+  [ 3] zio.internal.FiberRuntime.setFiberRef
+  [ 4] zio.internal.FiberRuntime.addInterruptedCause
+  [ 5] zio.internal.FiberRuntime.processNewInterruptSignal
+  [ 6] zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+  [ 7] zio.internal.FiberRuntime.drainQueueOnCurrentThread
+  [ 8] zio.internal.FiberRuntime.run
+  [ 9] zio.internal.ZScheduler$$anon$3.run
+
+       bytes  percent  samples  top
+  ----------  -------  -------  ---
+  6419894315    8.56%    12245  scala.collection.immutable.$colon$colon
+  3687310471    4.92%     7033  java.util.concurrent.ConcurrentLinkedQueue$Node
+  3356485374    4.47%     6402  zio.ZIO$FlatMap
+  3095914735    4.13%     5905  zio.ZIO$UpdateRuntimeFlagsWithin$DynamicNoBox
+  2735729566    3.65%     5218  zio.internal.FiberRuntime
+  2512383304    3.35%     4792  zio.ZIO$FoldZIO
+  2461003178    3.28%     4694  zio.ZIO$Continuation[]
+  2264919840    3.02%     4320  zio.ZIO$UpdateRuntimeFlags
+  2016932089    2.69%     3847  java.util.concurrent.atomic.AtomicBoolean
+  1999630618    2.67%     3814  zio.Exit$Success
+  1896870366    2.53%     3618  zio.Fiber$Status$Running
+  1883238904    2.51%     3592  zio.ZIO$Stateful
+  1797255836    2.40%     3428  zio.ZIO$Sync
+  1240463042    1.65%     2366  java.util.WeakHashMap$Entry
+  1236793033    1.65%     2359  zio.Exit$Failure
+  1233123024    1.64%     2352  zio.internal.FiberMessage$Resume
+  1117255597    1.49%     2131  zio.internal.FiberRuntime$$Lambda.0x000000e801171e28
+  1051195435    1.40%     2005  zio.FiberId$Runtime
+  1022359650    1.36%     1950  zio.ZIO$Grafter$$$Lambda.0x000000e801172b58
+  1007155327    1.34%     1921  zio.ZIO$$Lambda.0x000000e8011713f8
+   773847612    1.03%     1476  zio.ZIO$$Lambda.0x000000e801147620
+   770701890    1.03%     1470  java.util.concurrent.ConcurrentLinkedQueue
+   759691863    1.01%     1449  zio.internal.FiberRuntime$$Lambda.0x000000e80117fb18
+   759167576    1.01%     1448  zio.ZIO$Grafter$$$Lambda.0x000000e801178b60
+   753924706    1.01%     1438  zio.ZIO$$Lambda.0x000000e8011479e0
+   751827558    1.00%     1434  scala.util.Right
+   747633262    1.00%     1426  zio.internal.FiberRuntime$$Lambda.0x000000e801171038
+   744487540    0.99%     1420  zio.ZIO$$$Lambda.0x000000e80117d000
+   732428939    0.98%     1397  zio.ZIO$$$Lambda.0x000000e801173308
+   726661782    0.97%     1386  zio.ZIO$Grafter$$$Lambda.0x000000e80117e7a0
+   717748903    0.96%     1369  zio.ZIO$InterruptibilityRestorer$MakeInterruptible$$$Lambda.0x000000e8011784f0
+   716176042    0.95%     1366  zio.ZIO$Async
+   631765835    0.84%     1205  scala.collection.immutable.Map$Map3
+   610270068    0.81%     1164  zio.ZIO$$Lambda.0x000000e80116a978
+   521141278    0.69%      994  zio.Chunk$Singleton
+   516422695    0.69%      985  zio.ZIO$$Lambda.0x000000e801179f50
+   510655538    0.68%      974  zio.Cause$Interrupt$$anon$6
+   508034103    0.68%      969  zio.ZIO$$Lambda.0x000000e8011721e8
+   506985529    0.68%      967  zio.ZIO$$Lambda.0x000000e801179520
+   504364094    0.67%      962  zio.ZIO$Grafter$$$Lambda.0x000000e801175c00
+   503839807    0.67%      961  java.util.WeakHashMap$Entry[]
+   502791233    0.67%      959  zio.ZIO$$Lambda.0x000000e80117d668
+   487586910    0.65%      930  zio.ZIO$$Lambda.0x000000e80117c400
+   475528309    0.63%      907  zio.ZIO$$Lambda.0x000000e8011725a8
+   400555268    0.53%      764  zio.internal.FiberRuntime$$Lambda.0x000000e80117c800
+   399506694    0.53%      762  zio.ZIO$$Lambda.0x000000e801181c28
+   396360972    0.53%      756  zio.internal.FiberRuntime$$Lambda.0x000000e8011821e0
+   393739537    0.52%      751  zio.internal.FiberRuntime$$anon$1$$Lambda.0x000000e8011825a0
+   391118102    0.52%      746  zio.StackTrace
+   391118102    0.52%      746  zio.ZIO$$Lambda.0x000000e801169e38
+   386399519    0.52%      737  zio.FiberRefs
+   382729510    0.51%      730  zio.Cause$Interrupt
+   380632362    0.51%      726  zio.ZIO$$Lambda.0x000000e8011379b0
+   379583788    0.51%      724  zio.FiberRefs$StackEntry
+   376962353    0.50%      719  zio.ZIO$$Lambda.0x000000e801184ae0
+   376962353    0.50%      719  zio.ZIO$$Lambda.0x000000e80117dd30
+   376962353    0.50%      719  zio.internal.FiberRuntime$$Lambda.0x000000e8011873a0
+   375389492    0.50%      716  zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011833d0
+   371195196    0.49%      708  zio.ZIO$$Lambda.0x000000e8011840b0
+   367525187    0.49%      701  zio.ZIO$$Lambda.0x000000e80118a858
+   365952326    0.49%      698  zio.ZIO$$Lambda.0x000000e80117b5d8
+   365428039    0.49%      697  zio.internal.FiberRuntime$$Lambda.0x000000e801180780
+   364379465    0.49%      695  zio.ZIO$$Lambda.0x000000e801168e40
+   361233743    0.48%      689  zio.ZIO$$Lambda.0x000000e80116a3d8
+   360185169    0.48%      687  zio.ZIO$$Lambda.0x000000e8011717b8
+   358612308    0.48%      684  zio.ZIO$$Lambda.0x000000e801137448
+   357039447    0.48%      681  zio.Fiber$$Lambda.0x000000e801180a50
+   355990873    0.47%      679  zio.ZIO$$Lambda.0x000000e8011693e0
+   355466586    0.47%      678  zio.ZIO$$Lambda.0x000000e801184720
+   346553707    0.46%      661  zio.Cause$Then
+   344980846    0.46%      658  zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183680
+   340262263    0.45%      649  zio.FiberRefs$Value
+   267386370    0.36%      510  zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801171a68
+   266862083    0.36%      509  zio.ZIO$$$Lambda.0x000000e80113ed18
+   263716361    0.35%      503  zio.EmptyRaceBenchmark$$Lambda.0x000000e801146c08
+   261619213    0.35%      499  zio.Cause$BothCase$1$
+   261094926    0.35%      498  zio.EmptyRaceBenchmark$$Lambda.0x000000e801169b70
+   261094926    0.35%      498  zio.internal.FiberMessage$InterruptSignal
+   258997778    0.35%      494  zio.internal.FiberMessage$Stateful
+   258473491    0.34%      493  scala.util.Left
+   253754908    0.34%      484  zio.ZIO$$Lambda.0x000000e801184470
+   251133473    0.33%      479  zio.ZIO$$Lambda.0x000000e801180d00
+   250609186    0.33%      478  zio.EmptyRaceBenchmark$$Lambda.0x000000e801157a88
+   248512038    0.33%      474  zio.ZIO$$Lambda.0x000000e8011814a8
+   243793455    0.32%      465  zio.ZIO$$Lambda.0x000000e801183cf0
+   243269168    0.32%      464  zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e8011861c0
+   236977724    0.32%      452  zio.ZIO$$Lambda.0x000000e801156c60
+   235404863    0.31%      449  zio.internal.FiberRuntime$$Lambda.0x000000e801182f28
+   234356289    0.31%      447  java.util.concurrent.atomic.AtomicReference
+   232259141    0.31%      443  zio.Cause$ThenCase$1$
+   225443410    0.30%      430  zio.ZIOCompanionVersionSpecific$$Lambda.0x000000e801183a40
+   222821975    0.30%      425  zio.internal.FiberRuntime$$Lambda.0x000000e801186580
+   207617652    0.28%      396  java.lang.Integer
+    47710117    0.06%       91  zio.ChunkBuilder$$anon$1
+    41942960    0.06%       80  scala.collection.mutable.ArrayBuilder$ofRef
+    37224377    0.05%       71  java.lang.Object[]
+     1572861    0.00%        3  java.util.concurrent.locks.ReentrantLock$NonfairSync
+     1572861    0.00%        3  scala.collection.immutable.Map$Map2
+     1048574    0.00%        2  java.lang.ref.ReferenceQueue
+     1048574    0.00%        2  java.util.concurrent.locks.AbstractQueuedSynchronizer$ExclusiveNode
+     1048574    0.00%        2  zio.EmptyRaceBenchmark$$Lambda.0x000000e80118ab08
+     1048574    0.00%        2  java.lang.ref.WeakReference
+      524287    0.00%        1  java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject
+      524287    0.00%        1  java.util.WeakHashMap
+      524287    0.00%        1  java.util.Collections$SetFromMap
+      524287    0.00%        1  java.util.concurrent.ConcurrentHashMap$KeyIterator
+      524287    0.00%        1  java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode
+      524287    0.00%        1  zio.FiberRefs$StackEntry$mcI$sp
+      524287    0.00%        1  zio.Runtime$$anon$1
+      524287    0.00%        1  scala.collection.immutable.Map$Map2$$anon$2
+      524287    0.00%        1  java.util.WeakHashMap$KeyIterator
