@@ -6,7 +6,7 @@ object TracerUtils {
    * Parse the trace string into location, file and line
    *
    * Implementation note: It parses the string from the end to the beginning for
-   * performances reasons. See [[zio.internal.stacktracer.Tracer.createTrace]]
+   * performances reasons. See zio.internal.stacktracer.Tracer.createTrace
    * for the format of the trace
    */
   def parse(trace: String): Option[(String, String, Int)] = {
