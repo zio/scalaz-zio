@@ -25,12 +25,23 @@ object Tracer {
       var closingParentesisIdx = -1
       var colonIdx             = -1
 
+      // Finding the first opening parentesis
       while (idx < length) {
         val c = trace.charAt(idx)
-        if (openingParentesisNotMet && c == '(') {
+        if (c == '(') {
           openingParentesisIdx = idx
           openingParentesisNotMet = false
-        } else if (colonNotMet && c == ':') {
+          idx = length // stop loop
+        } else idx += 1
+      }
+
+      if (openingParentesisNotMet) return None
+      else idx = openingParentesisIdx + 1
+
+      // Finding the rest
+      while (idx < length) {
+        val c = trace.charAt(idx)
+        if (colonNotMet && c == ':') {
           colonIdx = idx
           colonNotMet = false
         } else if (closingParentesisNotMet && c == ')') {
