@@ -13,11 +13,42 @@ object Tracer {
   val instance: Tracer = new Tracer {
     type Type = String
     val empty: Type with Traced = "".intern().asInstanceOf[Type with Traced]
-    def unapply(trace: Type): Option[(String, String, Int)] =
-      trace match {
-        case regex(location, file, line) => Some((location, file, line.toInt))
-        case _                           => None
+    def unapply(trace: Type): Option[(String, String, Int)] = {
+      var openingParentesisNotMet = true
+      var closingParentesisNotMet = true
+      var colonNotMet             = true
+
+      var idx    = 0
+      val length = trace.length
+
+      var openingParentesisIdx = -1
+      var closingParentesisIdx = -1
+      var colonIdx             = -1
+
+      while (idx < length) {
+        val c = trace.charAt(idx)
+        if (openingParentesisNotMet && c == '(') {
+          openingParentesisIdx = idx
+          openingParentesisNotMet = false
+        } else if (colonNotMet && c == ':') {
+          colonIdx = idx
+          colonNotMet = false
+        } else if (closingParentesisNotMet && c == ')') {
+          closingParentesisIdx = idx
+          closingParentesisNotMet = false
+        }
+
+        idx += 1
       }
+
+      if (openingParentesisNotMet || closingParentesisNotMet || colonNotMet) None
+      else {
+        val location = trace.substring(0, openingParentesisIdx)
+        val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
+        val line     = trace.substring(colonIdx + 1, closingParentesisIdx)
+        Some((location, file, line.toInt))
+      }
+    }
 
     def apply(location: String, file: String, line: Int): Type with Traced =
       createTrace(location, file, line).asInstanceOf[Type with Traced]
@@ -26,7 +57,6 @@ object Tracer {
   private[internal] def createTrace(location: String, file: String, line: Int): String =
     s"$location($file:$line)".intern
 
-  private val regex = """(.*?)\((.*?):([^:]*?)\)""".r
 }
 
 sealed trait Tracer {
