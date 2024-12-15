@@ -14,12 +14,6 @@ object Tracer {
     type Type = String
     val empty: Type with Traced = "".intern().asInstanceOf[Type with Traced]
 
-    /**
-     * Parse the trace string into location, file and line
-     *
-     * Implementation note: It parses the string from the end to the beginning
-     * for performances reasons.
-     */
     def unapply(trace: Type): Option[(String, String, Int)] = TracerUtils.parse(trace)
 
     def apply(location: String, file: String, line: Int): Type with Traced =
