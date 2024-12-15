@@ -20,11 +20,14 @@ object Tracer {
      * Implementation note: It parses the string from the end to the beginning for performances reasons.
      */
     def unapply(trace: Type): Option[(String, String, Int)] = {
+      val length = trace.length
+
+      if (trace.charAt(length - 1) != ')') return None
+
       var openingParentesisNotMet = true
       var colonNotMet             = true
 
-      val length = trace.length
-      var idx    = length - 1 // start from the end - 1 because the last character is ')'
+      var idx    = length - 2 // start from the end - 2 because the last character is ')'
 
       var openingParentesisIdx = -1
       var colonIdx             = -1
