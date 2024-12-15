@@ -1,0 +1,50 @@
+package zio.internal.stacktracer
+
+object TracerUtils {
+
+  def parse(trace: String): Option[(String, String, Int)] = {
+    val length = trace.length
+
+    if (length == 0 || trace.charAt(length - 1) != ')') return None
+
+    var openingParentesisNotMet = true
+    var colonNotMet             = true
+
+    var idx = length - 2 // start from the end - 2 because the last character is ')'
+
+    var openingParentesisIdx = -1
+    var colonIdx             = -1
+
+    // Finding the colon
+    while (idx > 0) {
+      val c = trace.charAt(idx)
+      if (c == ':') {
+        colonIdx = idx
+        colonNotMet = false
+        idx = 0 // stop loop
+      } else idx -= 1
+    }
+
+    if (colonNotMet) return None
+    else idx = colonIdx - 1
+
+    // Finding the opening parentesis
+    while (idx >= 0) {
+      val c = trace.charAt(idx)
+      if (c == '(') {
+        openingParentesisIdx = idx
+        openingParentesisNotMet = false
+        idx = -1 // stop loop
+      } else idx -= 1
+    }
+
+    if (openingParentesisNotMet) None
+    else {
+      val location = trace.substring(0, openingParentesisIdx)
+      val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
+      val line     = trace.substring(colonIdx + 1, length - 1)
+      Some((location, file, line.toInt))
+    }
+  }
+
+}

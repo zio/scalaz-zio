@@ -19,54 +19,8 @@ object Tracer {
      *
      * Implementation note: It parses the string from the end to the beginning
      * for performances reasons.
-     *
-     * If you modify this method, make sure to also modify the Scala 3 version:
-     *  `stacktracer/src/main/scala-3/zio/internal/stacktracer/Tracer.scala`
      */
-    def unapply(trace: Type): Option[(String, String, Int)] = {
-      val length = trace.length
-
-      if (length == 0 || trace.charAt(length - 1) != ')') return None
-
-      var openingParentesisNotMet = true
-      var colonNotMet             = true
-
-      var idx = length - 2 // start from the end - 2 because the last character is ')'
-
-      var openingParentesisIdx = -1
-      var colonIdx             = -1
-
-      // Finding the colon
-      while (idx > 0) {
-        val c = trace.charAt(idx)
-        if (c == ':') {
-          colonIdx = idx
-          colonNotMet = false
-          idx = 0 // stop loop
-        } else idx -= 1
-      }
-
-      if (colonNotMet) return None
-      else idx = colonIdx - 1
-
-      // Finding the opening parentesis
-      while (idx >= 0) {
-        val c = trace.charAt(idx)
-        if (c == '(') {
-          openingParentesisIdx = idx
-          openingParentesisNotMet = false
-          idx = -1 // stop loop
-        } else idx -= 1
-      }
-
-      if (openingParentesisNotMet) None
-      else {
-        val location = trace.substring(0, openingParentesisIdx)
-        val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
-        val line     = trace.substring(colonIdx + 1, length - 1)
-        Some((location, file, line.toInt))
-      }
-    }
+    def unapply(trace: Type): Option[(String, String, Int)] = TracerUtils.parse(trace)
 
     def apply(location: String, file: String, line: Int): Type with Traced =
       createTrace(location, file, line).asInstanceOf[Type with Traced]
