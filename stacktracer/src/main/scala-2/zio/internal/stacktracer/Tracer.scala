@@ -13,40 +13,46 @@ object Tracer {
   val instance: Tracer = new Tracer {
     type Type = String
     val empty: Type with Traced = "".intern().asInstanceOf[Type with Traced]
+
+    /**
+     * Parse the trace string into location, file and line
+     *
+     * Implementation note: It parses the string from the end to the beginning for performances reasons.
+     */
     def unapply(trace: Type): Option[(String, String, Int)] = {
       var openingParentesisNotMet = true
       var colonNotMet             = true
 
-      var idx    = 0
       val length = trace.length
+      var idx    = length - 1 // start from the end - 1 because the last character is ')'
 
       var openingParentesisIdx = -1
       var colonIdx             = -1
 
-      // Finding the first opening parentesis
-      while (idx < length) {
-        val c = trace.charAt(idx)
-        if (c == '(') {
-          openingParentesisIdx = idx
-          openingParentesisNotMet = false
-          idx = length // stop loop
-        } else idx += 1
-      }
-
-      if (openingParentesisNotMet) return None
-      else idx = openingParentesisIdx + 1
-
       // Finding the colon
-      while (idx < length) {
+      while (idx > 0) {
         val c = trace.charAt(idx)
         if (c == ':') {
           colonIdx = idx
           colonNotMet = false
-          idx = length // stop loop
-        } else idx += 1
+          idx = 0 // stop loop
+        } else idx -= 1
       }
 
-      if (openingParentesisNotMet || colonNotMet) None
+      if (colonNotMet) return None
+      else idx = colonIdx - 1
+
+      // Finding the opening parentesis
+      while (idx >= 0) {
+        val c = trace.charAt(idx)
+        if (c == '(') {
+          openingParentesisIdx = idx
+          openingParentesisNotMet = false
+          idx = -1 // stop loop
+        } else idx -= 1
+      }
+
+      if (openingParentesisNotMet) None
       else {
         val location = trace.substring(0, openingParentesisIdx)
         val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
