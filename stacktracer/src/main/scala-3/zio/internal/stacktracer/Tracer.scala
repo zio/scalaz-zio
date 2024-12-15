@@ -26,7 +26,10 @@ object Tracer {
     /**
      * Parse the trace string into location, file and line
      *
-     * Implementation note: It parses the string from the end to the beginning for performances reasons.
+     * Implementation note: It parses the string from the end to the beginning for performances reasons
+     *
+     * * If you modify this method, make sure to also modify the Scala 2 version:
+     * *  `zio/internal/stacktracer/Tracer.scala`
      */
     def unapply(trace: Type): Option[(String, String, Int)] = {
       val length = trace.length
