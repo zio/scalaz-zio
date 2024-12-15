@@ -3490,8 +3490,12 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           val iterator = map.iterator
           val builder  = Map.newBuilder[Key2, Value2]
 
-          val ft = f.tupled
-          ZIO.whileLoop(iterator.hasNext)(ft(iterator.next()))(builder += _).as(builder.result())
+          ZIO
+            .whileLoop(iterator.hasNext) {
+              val kv = iterator.next()
+              ft(kv._1, kv._2)
+            }(builder += _)
+            .as(builder.result())
         }
     }
 
