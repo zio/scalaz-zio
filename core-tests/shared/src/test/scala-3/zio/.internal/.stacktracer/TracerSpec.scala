@@ -17,7 +17,7 @@ object TracerSpec extends ZIOBaseSpec {
           val trace  = Tracer.instance.empty
           val result = Tracer.instance.unapply(trace)
           assertTrue(result == None)
-        },
+        }
       ),
     )
 
