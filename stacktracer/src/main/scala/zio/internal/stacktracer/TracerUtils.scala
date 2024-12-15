@@ -1,6 +1,6 @@
 package zio.internal.stacktracer
 
-object TracerUtils {
+private[internal] object TracerUtils {
 
   /**
    * Parse the trace string into location, file and line
