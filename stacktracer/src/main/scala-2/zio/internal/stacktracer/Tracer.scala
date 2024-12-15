@@ -15,14 +15,12 @@ object Tracer {
     val empty: Type with Traced = "".intern().asInstanceOf[Type with Traced]
     def unapply(trace: Type): Option[(String, String, Int)] = {
       var openingParentesisNotMet = true
-      var closingParentesisNotMet = true
       var colonNotMet             = true
 
       var idx    = 0
       val length = trace.length
 
       var openingParentesisIdx = -1
-      var closingParentesisIdx = -1
       var colonIdx             = -1
 
       // Finding the first opening parentesis
@@ -38,25 +36,21 @@ object Tracer {
       if (openingParentesisNotMet) return None
       else idx = openingParentesisIdx + 1
 
-      // Finding the rest
+      // Finding the colon
       while (idx < length) {
         val c = trace.charAt(idx)
-        if (colonNotMet && c == ':') {
+        if (c == ':') {
           colonIdx = idx
           colonNotMet = false
-        } else if (closingParentesisNotMet && c == ')') {
-          closingParentesisIdx = idx
-          closingParentesisNotMet = false
-        }
-
-        idx += 1
+          idx = length // stop loop
+        } else idx += 1
       }
 
-      if (openingParentesisNotMet || closingParentesisNotMet || colonNotMet) None
+      if (openingParentesisNotMet || colonNotMet) None
       else {
         val location = trace.substring(0, openingParentesisIdx)
         val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
-        val line     = trace.substring(colonIdx + 1, closingParentesisIdx)
+        val line     = trace.substring(colonIdx + 1, length - 1)
         Some((location, file, line.toInt))
       }
     }
