@@ -31,7 +31,7 @@ object Tracer {
     def unapply(trace: Type): Option[(String, String, Int)] = {
       val length = trace.length
 
-      if (trace.charAt(length - 1) != ')') return None
+      if (length == 0 || trace.charAt(length - 1) != ')') return None
 
       var openingParentesisNotMet = true
       var colonNotMet             = true
