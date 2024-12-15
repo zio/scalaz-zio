@@ -4,6 +4,9 @@ import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
 
+import java.io.{ByteArrayOutputStream, PrintStream}
+import scala.collection.AbstractIterator
+
 object StackTracesSpec extends ZIOBaseSpec {
 
   def spec = suite("StackTracesSpec")(
@@ -12,12 +15,13 @@ object StackTracesSpec extends ZIOBaseSpec {
         for {
           _     <- ZIO.succeed(25)
           value  = ZIO.fail("Oh no!")
-          trace <- matchPrettyPrintCause(value)
-        } yield {
-          assertHasMessage(trace)("java.lang.String: Oh no!") &&
-          assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
-          assertTrue(!trace.contains("Suppressed"))
-        }
+          cause <- value.cause
+        } yield assert(cause)(causeHasTrace {
+          """java.lang.String: Oh no!
+            |	at zio.StackTracesSpec.spec.value
+            |	at zio.StackTracesSpec.spec
+            |""".stripMargin
+        })
       }
     ),
     suite("captureMultiMethod")(
@@ -37,16 +41,21 @@ object StackTracesSpec extends ZIOBaseSpec {
         for {
           _     <- ZIO.succeed(25)
           value  = underlyingFailure
-          trace <- matchPrettyPrintCause(value)
-        } yield {
-          assertHasMessage(trace)("java.lang.String: Oh no!") &&
-          assertHasStacktraceFor(trace)("spec.deepUnderlyingFailure") &&
-          assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
-          assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
-          assert(trace)(containsString("Suppressed: java.lang.RuntimeException: deep failure")) &&
-          assert(trace)(containsString("Suppressed: java.lang.RuntimeException: other failure")) &&
-          assertTrue(numberOfOccurrences("Suppressed")(trace) == 2)
-        }
+          cause <- value.cause
+        } yield assert(cause)(causeHasTrace {
+          """java.lang.String: Oh no!
+            |	at zio.StackTracesSpec.spec.deepUnderlyingFailure
+            |	at zio.StackTracesSpec.spec.underlyingFailure
+            |	at zio.StackTracesSpec.spec
+            |	Suppressed: java.lang.RuntimeException: deep failure
+            |		at zio.StackTracesSpec.spec.deepUnderlyingFailure
+            |		at zio.StackTracesSpec.spec.underlyingFailure
+            |		at zio.StackTracesSpec.spec
+            |		Suppressed: java.lang.RuntimeException: other failure
+            |			at zio.StackTracesSpec.spec.underlyingFailure
+            |			at zio.StackTracesSpec.spec
+            |""".stripMargin
+        })
       },
       test("captures a deep embedded failure without suppressing the underlying cause") {
         val deepUnderlyingFailure =
@@ -64,15 +73,18 @@ object StackTracesSpec extends ZIOBaseSpec {
         for {
           _     <- ZIO.succeed(25)
           value  = underlyingFailure
-          trace <- matchPrettyPrintCause(value)
-        } yield {
-          assertHasMessage(trace)("java.lang.String: Oh no!") &&
-          assertHasStacktraceFor(trace)("spec.deepUnderlyingFailure") &&
-          assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
-          assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
-          assert(trace)(containsString("Suppressed: java.lang.RuntimeException: deep failure")) &&
-          assertTrue(numberOfOccurrences("Suppressed")(trace) == 1)
-        }
+          cause <- value.cause
+        } yield assert(cause)(causeHasTrace {
+          """java.lang.String: Oh no!
+            |	at zio.StackTracesSpec.spec.deepUnderlyingFailure
+            |	at zio.StackTracesSpec.spec.underlyingFailure
+            |	at zio.StackTracesSpec.spec
+            |	Suppressed: java.lang.RuntimeException: deep failure
+            |		at zio.StackTracesSpec.spec.deepUnderlyingFailure
+            |		at zio.StackTracesSpec.spec.underlyingFailure
+            |		at zio.StackTracesSpec.spec
+            |""".stripMargin
+        })
       },
       test("captures the embedded failure") {
         val underlyingFailure =
@@ -84,14 +96,16 @@ object StackTracesSpec extends ZIOBaseSpec {
         for {
           _     <- ZIO.succeed(25)
           value  = underlyingFailure
-          trace <- matchPrettyPrintCause(value)
-        } yield {
-          assertHasMessage(trace)("java.lang.String: Oh no!") &&
-          assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
-          assertHasStacktraceFor(trace)("matchPrettyPrintCause") &&
-          assert(trace)(containsString("Suppressed: java.lang.RuntimeException: other failure")) &&
-          assertTrue(numberOfOccurrences("Suppressed")(trace) == 1)
-        }
+          cause <- value.cause
+        } yield assert(cause)(causeHasTrace {
+          """java.lang.String: Oh no!
+            |	at zio.StackTracesSpec.spec.underlyingFailure
+            |	at zio.StackTracesSpec.spec
+            |	Suppressed: java.lang.RuntimeException: other failure
+            |		at zio.StackTracesSpec.spec.underlyingFailure
+            |		at zio.StackTracesSpec.spec
+            |""".stripMargin
+        })
       },
       test("captures a die failure") {
         val underlyingFailure =
@@ -99,14 +113,26 @@ object StackTracesSpec extends ZIOBaseSpec {
             .succeed("ITEM")
             .map(_ => List.empty.head)
 
-        for {
-          trace <- matchPrettyPrintCause(underlyingFailure)
-        } yield {
-          assertHasMessage(trace)("java.util.NoSuchElementException: head of empty list") &&
-          assertHasStacktraceFor(trace)("spec.underlyingFailure") &&
-          assertHasStacktraceFor(trace)("matchPrettyPrintCause")
-        }
-      }
+        for (cause <- underlyingFailure.cause)
+          yield assert(cause)(causeHasTrace {
+            if (TestVersion.isScala2)
+              """java.util.NoSuchElementException: head of empty list
+                |	at scala.collection.immutable.Nil$.head
+                |	at zio.StackTracesSpec$.$anonfun$spec
+                |	at zio.ZIO.$anonfun$map
+                |	at zio.StackTracesSpec.spec.underlyingFailure
+                |	at zio.StackTracesSpec.spec
+                |""".stripMargin
+            else
+              """java.util.NoSuchElementException: head of empty list
+                |	at scala.collection.immutable.Nil$.head
+                |	at zio.StackTracesSpec$.$anonfun
+                |	at zio.ZIO.map$$anonfun
+                |	at zio.StackTracesSpec.spec.underlyingFailure
+                |	at zio.StackTracesSpec.spec
+                |""".stripMargin
+          })
+      } @@ jvmOnly
     ),
     suite("getOrThrowFiberFailure")(
       test("fills in the external stack trace") {
@@ -118,13 +144,35 @@ object StackTracesSpec extends ZIOBaseSpec {
             .getOrThrowFiberFailure()
         }
 
-        val failure = ZIO.attempt(call()) *> ZIO.never
-        for (trace <- matchPrettyPrintCause(failure))
-          yield assertHasMessage(trace)("zio.FiberFailure: boom") &&
-            assertHasStacktraceFor(trace)("spec.subcall2") &&
-            assertHasStacktraceFor(trace)("spec.subcall") &&
-            assertHasStacktraceFor(trace)("subcall") &&
-            assertHasStacktraceFor(trace)("call")
+        assertThrows(call())(exceptionHasTrace {
+          if (TestVersion.isScala2)
+            """java.lang.String: boom
+              |	at zio.StackTracesSpec.spec.subcall2
+              |	at zio.StackTracesSpec.spec.subcall
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at scala.runtime.java8.JFunction0$mcV$sp.apply
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |""".stripMargin
+          else
+            """java.lang.String: boom
+              |	at zio.StackTracesSpec.spec.subcall2
+              |	at zio.StackTracesSpec.spec.subcall
+              |	at zio.StackTracesSpec$.subcall$1$$anonfun
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.spec$$anonfun$6$$anonfun
+              |	at zio.StackTracesSpec$.spec$$anonfun$6$$anonfun$adapted
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.spec$$anonfun
+              |	at zio.test.TestConstructor$.apply$$anonfun$1$$anonfun
+              |""".stripMargin
+        })
       }
     ) @@ jvmOnly,
     suite("getOrThrow")(
@@ -137,17 +185,82 @@ object StackTracesSpec extends ZIOBaseSpec {
             .getOrThrow()
         }
 
-        val failure = ZIO.attempt(call()) *> ZIO.never
-        for {
-          trace      <- matchPrettyPrintCause(failure)
-          suppressed <- matchPrettyPrintSuppressed(failure)
-        } yield assertHasMessage(trace)("java.lang.RuntimeException: boom") &&
-          assertHasStacktraceFor(trace)("spec.failure") &&
-          assertHasMessage(suppressed)("zio.Cause$FiberTrace: java.lang.RuntimeException: boom") &&
-          assertHasStacktraceFor(suppressed)("spec.subcall2") &&
-          assertHasStacktraceFor(suppressed)("spec.subcall") &&
-          assertHasStacktraceFor(suppressed)("subcall") &&
-          assertHasStacktraceFor(suppressed)("call")
+        assertThrows(call())(exceptionHasTrace {
+          if (TestVersion.isScala2)
+            """java.lang.RuntimeException: boom
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at zio.ZIO$.$anonfun$die
+              |	at zio.ZIO$.$anonfun$failCause
+              |	at zio.internal.FiberRuntime.runLoop
+              |	at zio.internal.FiberRuntime.evaluateEffect
+              |	at zio.internal.FiberRuntime.start
+              |	at zio.Runtime$UnsafeAPIV1.runOrFork
+              |	at zio.Runtime$UnsafeAPIV1.run
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at scala.runtime.java8.JFunction0$mcV$sp.apply
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at zio.internal.FiberRuntime.runLoop
+              |	at zio.internal.FiberRuntime.evaluateEffect
+              |	at zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+              |	at zio.internal.FiberRuntime.drainQueueOnCurrentThread
+              |	at zio.internal.FiberRuntime.run
+              |	at zio.internal.ZScheduler$$anon$3.run
+              |	Suppressed: zio.Cause$FiberTrace: java.lang.RuntimeException: boom
+              |	at zio.StackTracesSpec.spec.subcall2
+              |	at zio.StackTracesSpec.spec.subcall
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |	at scala.runtime.java8.JFunction0$mcV$sp.apply
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.$anonfun$spec
+              |""".stripMargin
+          else
+            """java.lang.RuntimeException: boom
+              |	at zio.StackTracesSpec$.subcall2$2$$anonfun
+              |	at zio.ZIO$.die$$anonfun
+              |	at zio.ZIO$.failCause$$anonfun
+              |	at zio.internal.FiberRuntime.runLoop
+              |	at zio.internal.FiberRuntime.evaluateEffect
+              |	at zio.internal.FiberRuntime.start
+              |	at zio.Runtime$UnsafeAPIV1.runOrFork
+              |	at zio.Runtime$UnsafeAPIV1.run
+              |	at zio.StackTracesSpec$.subcall$2$$anonfun
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.spec$$anonfun$7$$anonfun
+              |	at zio.StackTracesSpec$.spec$$anonfun$7$$anonfun$adapted
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.spec$$anonfun
+              |	at zio.test.TestConstructor$.apply$$anonfun$1$$anonfun
+              |	at zio.internal.FiberRuntime.runLoop
+              |	at zio.internal.FiberRuntime.evaluateEffect
+              |	at zio.internal.FiberRuntime.evaluateMessageWhileSuspended
+              |	at zio.internal.FiberRuntime.drainQueueOnCurrentThread
+              |	at zio.internal.FiberRuntime.run
+              |	at zio.internal.ZScheduler$$anon$3.run
+              |	Suppressed: zio.Cause$FiberTrace: java.lang.RuntimeException: boom
+              |	at zio.StackTracesSpec.spec.subcall2
+              |	at zio.StackTracesSpec.spec.subcall
+              |	at zio.StackTracesSpec$.subcall$2$$anonfun
+              |	at zio.Unsafe$.unsafe
+              |	at zio.StackTracesSpec$.subcall
+              |	at zio.StackTracesSpec$.call
+              |	at zio.StackTracesSpec$.spec$$anonfun$7$$anonfun
+              |	at zio.StackTracesSpec$.spec$$anonfun$7$$anonfun$adapted
+              |	at zio.StackTracesSpec$.assertThrows
+              |	at zio.StackTracesSpec$.spec$$anonfun
+              |	at zio.test.TestConstructor$.apply$$anonfun$1$$anonfun
+              |""".stripMargin
+        })
       }
     ) @@ jvmOnly
   ) @@ sequential
@@ -155,24 +268,57 @@ object StackTracesSpec extends ZIOBaseSpec {
   // set to true to print traces
   private val debug = false
 
-  private def show(trace: => Cause[Any]): Unit =
-    if (debug) {
-      println("*****")
-      println(trace.prettyPrint)
+  private val locationRegex =
+    """(\$\d+)?\((\w|\$)+\.(scala|java):\d+\)$""".r
+
+  private def assertThrows[T](task: => T)(expected: Assertion[Throwable]) =
+    try {
+      val value = task
+      assert(value)(assertion("expected an exception")(_ => false))
+    } catch {
+      case exception: Throwable =>
+        assert(exception)(expected)
     }
 
-  private def assertHasMessage(trace: String): String => TestResult =
-    errorMessage => assert(trace)(startsWithString(errorMessage))
+  def strip(trace: String) = {
+    if (debug) println(trace)
+    val stripped = trace.linesIterator.map(locationRegex.replaceAllIn(_, ""))
+    dedupe(stripped.filterNot(_.isEmpty)).mkString("", "\n", "\n")
+  }
 
-  private def assertHasStacktraceFor(trace: String): String => TestResult = subject =>
-    assert(trace)(matchesRegex(s"""(?s).*at zio\\.StackTracesSpec.?\\.$subject.*\\(.*:\\d*\\).*"""))
+  def causeHasTrace(expected: String): Assertion[Cause[Any]] =
+    hasField("stackTrace", strippedStackTrace, equalTo(expected))
 
-  private def numberOfOccurrences(text: String): String => Int = stack =>
-    (stack.length - stack.replace(text, "").length) / text.length
+  def exceptionHasTrace(expected: String): Assertion[Throwable] =
+    hasField("stackTrace", strippedStackTrace, equalTo(expected))
 
-  private val matchPrettyPrintCause: ZIO[Any, Any, Nothing] => ZIO[Any, Throwable, String] =
-    _.catchAllCause(cause => ZIO.succeed(show(cause)) *> ZIO.attempt(cause.prettyPrint))
+  def strippedStackTrace(cause: Cause[Any]): String =
+    strip(cause.prettyPrint)
 
-  private val matchPrettyPrintSuppressed: ZIO[Any, Throwable, Nothing] => ZIO[Any, Throwable, String] =
-    failure => matchPrettyPrintCause(failure.mapErrorCause(cause => Cause.fail(cause.squash.getSuppressed.head)))
+  def strippedStackTrace(exception: Throwable): String = {
+    val buffer = new ByteArrayOutputStream
+    exception.printStackTrace(new PrintStream(buffer))
+    strip(buffer.toString)
+  }
+
+  def dedupe[A](it: Iterator[A]): Iterator[A] = new AbstractIterator[A] {
+    private var current =
+      if (it.hasNext) Some(it.next()) else None
+
+    override def hasNext =
+      current.isDefined
+
+    override def next(): A = {
+      while (it.hasNext) {
+        val next = it.next()
+        if (!current.contains(next)) {
+          try return current.get
+          finally current = Some(next)
+        }
+      }
+
+      try current.get
+      finally current = None
+    }
+  }
 }
