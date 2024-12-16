@@ -164,15 +164,11 @@ object ZLogger {
 
     val parsedTarce = Trace.parseOrNull(trace)
     if (parsedTarce ne null) {
-      val location = parsedTarce._1
-      val file     = parsedTarce._2
-      val line     = parsedTarce._3
-
       sb.append(" location=")
-      appendQuoted(location, sb)
+      appendQuoted(parsedTarce.location, sb)
       sb.append(" file=")
-      appendQuoted(file, sb)
-      sb.append(" line=").append(line)
+      appendQuoted(parsedTarce.file, sb)
+      sb.append(" line=").append(parsedTarce.line)
     }
 
     if (annotations.nonEmpty) {

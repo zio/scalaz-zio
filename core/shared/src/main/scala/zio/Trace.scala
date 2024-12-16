@@ -16,7 +16,7 @@
 
 package zio
 
-import zio.internal.stacktracer.Tracer
+import zio.internal.stacktracer.{ParsedTrace, Tracer}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 object Trace {
@@ -31,10 +31,10 @@ object Trace {
     val rightParsed = parseOrNull(right)
     if (rightParsed eq null) return false
 
-    val leftFile  = leftParsed._2
-    val leftLine  = leftParsed._3
-    val rightFile = rightParsed._2
-    val rightLine = rightParsed._3
+    val leftFile  = leftParsed.file
+    val leftLine  = leftParsed.line
+    val rightFile = rightParsed.file
+    val rightLine = rightParsed.line
 
     leftFile == rightFile && leftLine == rightLine
   }
@@ -52,9 +52,9 @@ object Trace {
     val parsed = parseOrNull(trace)
     if (parsed eq null) None
     else {
-      val location = parsed._1
-      val file     = parsed._2
-      val line     = parsed._3
+      val location = parsed.location
+      val file     = parsed.file
+      val line     = parsed.line
 
       val last = location.lastIndexOf('.')
 
@@ -64,8 +64,8 @@ object Trace {
     }
   }
 
-  def unapply(trace: Trace): Option[(String, String, Int)] = Option(parseOrNull(trace))
+  def unapply(trace: Trace): Option[(String, String, Int)] = Tracer.instance.unapply(trace)
 
-  private[zio] def parseOrNull(trace: Trace): (String, String, Int) = Tracer.instance.parseOrNull(trace)
+  private[zio] def parseOrNull(trace: Trace): ParsedTrace = Tracer.instance.parseOrNull(trace)
 
 }

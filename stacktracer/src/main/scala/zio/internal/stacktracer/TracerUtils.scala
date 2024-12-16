@@ -9,7 +9,7 @@ private[internal] object TracerUtils {
    * performances reasons. See zio.internal.stacktracer.Tracer.createTrace for
    * the format of the trace
    */
-  def parse(trace: String): (String, String, Int) = {
+  def parse(trace: String): ParsedTrace = {
     val length = trace.length
 
     if (length == 0 || trace.charAt(length - 1) != ')') return null
@@ -45,7 +45,7 @@ private[internal] object TracerUtils {
       val location = trace.substring(0, openingParentesisIdx)
       val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
       val line     = trace.substring(colonIdx + 1, length - 1)
-      (location, file, line.toInt)
+      ParsedTrace(location = location, file = file, line = line.toInt)
     }
   }
 

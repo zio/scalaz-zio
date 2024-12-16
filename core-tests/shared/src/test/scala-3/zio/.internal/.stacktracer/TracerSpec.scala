@@ -23,7 +23,7 @@ object TracerSpec extends ZIOBaseSpec {
         test("returns location, file and line for correct trace") {
           val trace    = Tracer.instance.apply("location", "file", 1)
           val result   = Tracer.instance.parseOrNull(trace)
-          val expected = ("location", "file", 1)
+          val expected = ParsedTrace(location = "location", file = "file",  line = 1)
           assertTrue(result == expected)
         },
         test("returns null for an empty trace") {
