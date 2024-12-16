@@ -4108,7 +4108,13 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   /**
    * Annotates each log in this effect with the specified log annotation.
    */
-  def logAnnotate(logAnnotations: (String, String)*): LogAnnotate =
+  def logAnnotate(logAnnotation: (String, String), logAnnotations: (String, String)*): LogAnnotate =
+    logAnnotate(Set(logAnnotation) ++ logAnnotations.toSet)
+
+  /**
+   * Annotates each log in this effect with the specified log annotation.
+   */
+  def logAnnotate(logAnnotations: => Set[(String, String)]): LogAnnotate =
     logAnnotate(logAnnotations.map { case (key, value) => LogAnnotation(key, value) }.toSet)
 
   /**
