@@ -1067,8 +1067,8 @@ sealed trait ZIO[-R, +E, +A]
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
     onExit {
-      case Exit.Success(value) => success(value)
-      case Exit.Failure(cause) => error(cause)
+      case s: Exit.Success[A] => success(s.value)
+      case f: Exit.Failure[E] => error(f.cause)
     }.ignore
 
   /**
@@ -1077,8 +1077,8 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def onError[R1 <: R](cleanup: Cause[E] => URIO[R1, Any])(implicit trace: Trace): ZIO[R1, E, A] =
     onExit {
-      case _: Exit.Success[?]  => Exit.unit
-      case Exit.Failure(cause) => cleanup(cause)
+      case f: Exit.Failure[E] => cleanup(f.cause)
+      case _                  => Exit.unit
     }
 
   /**
@@ -1132,8 +1132,8 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def onInterrupt[R1 <: R](cleanup: => URIO[R1, Any])(implicit trace: Trace): ZIO[R1, E, A] =
     onExit {
-      case _: Exit.Success[?]  => Exit.unit
-      case Exit.Failure(cause) => if (cause.isInterruptedOnly) cleanup else Exit.unit
+      case f: Exit.Failure[E] if f.cause.isInterruptedOnly => cleanup
+      case _                                               => Exit.unit
     }
 
   /**
@@ -1143,8 +1143,8 @@ sealed trait ZIO[-R, +E, +A]
   final def onInterrupt[R1 <: R](cleanup: Set[FiberId] => URIO[R1, Any])(implicit trace: Trace): ZIO[R1, E, A] =
     // TODO: isInterrupted or isInterruptedOnly?
     onExit {
-      case _: Exit.Success[?]  => Exit.unit
-      case Exit.Failure(cause) => if (cause.isInterruptedOnly) cleanup(cause.interruptors) else Exit.unit
+      case f: Exit.Failure[E] if (f.cause.isInterruptedOnly) => cleanup(f.cause.interruptors)
+      case _                                                 => Exit.unit
     }
 
   /**
@@ -1155,10 +1155,11 @@ sealed trait ZIO[-R, +E, +A]
     cleanup: Cause[Nothing] => URIO[R1, Any]
   )(implicit trace: Trace): ZIO[R1, E, A] =
     onExit {
-      case _: Exit.Success[?] => Exit.unit
-      case Exit.Failure(cause) =>
+      case f: Exit.Failure[E] =>
+        val cause = f.cause
         if (cause.isFailure) Exit.unit
         else cleanup(cause.asInstanceOf[Cause[Nothing]])
+      case _ => Exit.unit
     }
 
   /**
@@ -2623,12 +2624,12 @@ sealed trait ZIO[-R, +E, +A]
                 left.interruptFork *> right.interruptFork *>
                   left.await.zip(right.await).flatMap { case (left, right) =>
                     left.zipWith(right)(f, _ && _) match {
-                      case Exit.Failure(causes) => Exit.failCause(cause.stripFailures && causes)
-                      case _                    => Exit.failCause(cause.stripFailures)
+                      case f: Exit.Failure[E] => Exit.failCause(cause.stripFailures && f.cause)
+                      case _                  => Exit.failCause(cause.stripFailures)
                     }
                   },
               leftWins =>
-                if (leftWins) left.join.zipWith(right.join)((a, b) => f(a, b))
+                if (leftWins) left.join.zipWith(right.join)(f)
                 else right.join.zipWith(left.join)((b, a) => f(a, b))
             )
           }
@@ -3711,8 +3712,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           case None =>
             ZIO.asyncInterrupt { (k: Task[A] => Unit) =>
               f.onComplete {
-                case Success(a) => k(Exit.succeed(a))
-                case Failure(t) => k(ZIO.fail(t))
+                case s: Success[A] => k(Exit.succeed(s.value))
+                case f: Failure[A] => k(ZIO.fail(f.exception))
               }(ec)
 
               Left {
@@ -3747,8 +3748,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           val ec = executor.asExecutionContext
           ZIO.asyncInterrupt { (k: Task[A] => Unit) =>
             f.onComplete {
-              case Success(a) => k(Exit.succeed(a))
-              case Failure(t) => k(ZIO.fail(t))
+              case s: Success[A] => k(Exit.succeed(s.value))
+              case f: Failure[A] => k(ZIO.fail(f.exception))
             }(ec)
             Left {
               f match {
@@ -3800,8 +3801,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           case None =>
             ZIO.async { (cb: Task[A] => Any) =>
               f.onComplete {
-                case Success(a) => latch.success(()); cb(Exit.succeed(a))
-                case Failure(t) => latch.success(()); cb(ZIO.fail(t))
+                case s: Success[A] => latch.success(()); cb(Exit.succeed(s.value))
+                case f: Failure[A] => latch.success(()); cb(ZIO.fail(f.exception))
               }(interruptibleEC)
             }
           case Some(outcome) => outcome.fold(ZIO.fail(_), ZIO.successFn)
@@ -4306,7 +4307,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
         promise <- ref.modifyZIO { map =>
                      map.get(a) match {
                        case Some(promise) => Exit.succeed((promise, map))
-                       case None =>
+                       case _ =>
                          for {
                            promise <- Promise.make[E, (FiberRefs.Patch, B)]
                            _       <- f(a).diffFiberRefs.intoPromise(promise).fork
@@ -5556,18 +5557,15 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       ZIO.fiberIdWith { parentFiberId =>
         self.raceFibersWith[R, Nothing, E, Unit, B1](ZIO.sleep(duration).interruptible)(
           (winner, loser) =>
-            winner.await.flatMap {
-              case Exit.Success(a) =>
-                winner.inheritAll *> loser.interruptAs(parentFiberId).as(f(a))
-              case Exit.Failure(cause) =>
-                winner.inheritAll *> loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
+            winner.await.flatMap { exit =>
+              winner.inheritAll *> loser.interruptAs(parentFiberId) *> exit.mapExit(f)
             },
           (winner, loser) =>
             winner.await.flatMap {
-              case _: Exit.Success[?] =>
+              case e: Exit.Failure[Nothing] =>
+                loser.inheritAll *> loser.interruptAs(parentFiberId) *> e
+              case _ =>
                 loser.inheritAll *> loser.interruptAs(parentFiberId).as(b())
-              case Exit.Failure(cause) =>
-                loser.inheritAll *> loser.interruptAs(parentFiberId) *> Exit.failCause(cause)
             },
           null,
           FiberScope.global
@@ -6383,21 +6381,25 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   /**
    * Replaces the success value with the one provided.
    */
-  final def asExit[B](b: B): Exit[E, B] = mapExit(_ => b)
+  final def asExit[B](b: B): Exit[E, B] =
+    self match {
+      case _: Success[?] => Exit.succeed(b)
+      case e             => e.asInstanceOf[Exit[E, Nothing]]
+    }
 
   /**
    * Returns an option of the cause of failure.
    */
   final def causeOption: Option[Cause[E]] =
     self match {
-      case Failure(cause) => Some(cause)
-      case _              => None
+      case f: Failure[E] => Some(f.cause)
+      case _             => None
     }
 
   private[zio] final def causeOrNull: Cause[E] =
     self match {
-      case Failure(cause) => cause
-      case _              => null.asInstanceOf[Cause[E]]
+      case f: Failure[E] => f.cause
+      case _             => null.asInstanceOf[Cause[E]]
     }
 
   final def exists(p: A => Boolean): Boolean =
@@ -6405,8 +6407,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
 
   override final def flatMap[R1, E1 >: E, B](k: A => ZIO[R1, E1, B])(implicit trace: Trace): ZIO[R1, E1, B] =
     self match {
-      case Success(a)     => k(a)
-      case e @ Failure(_) => e
+      case s: Success[A] => k(s.value)
+      case e             => e.asInstanceOf[Exit[E, Nothing]]
     }
 
   /**
@@ -6414,8 +6416,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def flatMapExit[E1 >: E, A1](f: A => Exit[E1, A1]): Exit[E1, A1] =
     self match {
-      case Success(a)     => f(a)
-      case e @ Failure(_) => e
+      case s: Success[A] => f(s.value)
+      case e             => e.asInstanceOf[Exit[E, Nothing]]
     }
 
   /**
@@ -6423,8 +6425,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def flatMapExitZIO[E1 >: E, R, E2, A1](f: A => ZIO[R, E2, Exit[E1, A1]]): ZIO[R, E2, Exit[E1, A1]] =
     self match {
-      case Success(a)     => f(a)
-      case e @ Failure(_) => Exit.succeed(e)
+      case s: Success[A] => f(s.value)
+      case e             => Exit.succeed(e.asInstanceOf[Exit[E, Nothing]])
     }
 
   /**
@@ -6463,8 +6465,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def foldExit[Z](failed: Cause[E] => Z, completed: A => Z): Z =
     self match {
-      case Success(v)     => completed(v)
-      case Failure(cause) => failed(cause)
+      case s: Success[A] => completed(s.value)
+      case f: Failure[E] => failed(f.cause)
     }
 
   /**
@@ -6475,8 +6477,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     trace: Trace
   ): ZIO[R, E1, B] =
     self match {
-      case Success(v)     => completed(v)
-      case Failure(cause) => failed(cause)
+      case s: Success[A] => completed(s.value)
+      case f: Failure[E] => failed(f.cause)
     }
 
   /**
@@ -6490,8 +6492,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    * Retrieves the `A` if succeeded, or else returns the specified default `A`.
    */
   final def getOrElse[A1 >: A](orElse: Cause[E] => A1): A1 = self match {
-    case Success(value) => value
-    case Failure(cause) => orElse(cause)
+    case s: Success[A] => s.value
+    case f: Failure[E] => orElse(f.cause)
   }
 
   final def getOrThrow()(implicit ev: E <:< Throwable, unsafe: Unsafe): A =
@@ -6509,13 +6511,13 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    * Determines if the result is interrupted.
    */
   final def isInterrupted: Boolean = self match {
-    case _: Success[?] => false
-    case Failure(c)    => c.isInterrupted
+    case f: Failure[?] => f.cause.isInterrupted
+    case _             => false
   }
 
   final def isInterruptedOnly: Boolean = self match {
-    case _: Success[?] => false
-    case Failure(c)    => c.isInterruptedOnly
+    case f: Failure[?] => f.cause.isInterruptedOnly
+    case _             => false
   }
 
   /**
@@ -6535,8 +6537,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def mapExit[A1](f: A => A1): Exit[E, A1] =
     self match {
-      case Success(v)     => Exit.succeed(f(v))
-      case e @ Failure(_) => e
+      case s: Success[A] => Exit.succeed(f(s.value))
+      case e             => e.asInstanceOf[Exit[E, Nothing]]
     }
 
   /**
@@ -6564,8 +6566,8 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def mapErrorExit[E1](f: E => E1): Exit[E1, A] =
     self match {
-      case e: Success[A] => e
-      case Failure(c)    => failCause(c.map(f))
+      case e: Failure[E] => failCause(e.cause.map(f))
+      case s             => s.asInstanceOf[Exit[Nothing, A]]
     }
 
   /**
@@ -6586,7 +6588,7 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   final def mapErrorCauseExit[E1](f: Cause[E] => Cause[E1]): Exit[E1, A] =
     self match {
       case e: Success[A] => e
-      case Failure(c)    => Failure(f(c))
+      case e: Failure[E] => Failure(f(e.cause))
     }
 
   /**
@@ -6607,14 +6609,14 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    * `FiberFailure` (if the result is failed).
    */
   final def toEither: Either[Throwable, A] = self match {
-    case Success(value) => Right(value)
-    case Failure(cause) => Left(FiberFailure(cause))
+    case s: Success[A] => Right(s.value)
+    case f: Failure[E] => Left(FiberFailure(f.cause))
   }
 
   final def toTry(implicit ev: E <:< Throwable): scala.util.Try[A] =
     self match {
-      case Success(value) => scala.util.Try(value)
-      case Failure(cause) => scala.util.Failure(cause.squash)
+      case s: Success[A] => scala.util.Success(s.value)
+      case f: Failure[E] => scala.util.Failure(f.cause.squash)
     }
 
   final def trace: Trace = Trace.empty
@@ -6677,15 +6679,15 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     g: (Cause[E], Cause[E1]) => Cause[E1]
   ): Exit[E1, C] =
     self match {
-      case Success(l) =>
+      case l: Success[A] =>
         that match {
-          case Success(r)     => Exit.succeed(f(l, r))
-          case f: Failure[E1] => f
+          case r: Success[B] => Exit.succeed(f(l.value, r.value))
+          case f             => f.asInstanceOf[Exit[E, C]]
         }
-      case e @ Failure(c1) =>
+      case l: Failure[E] =>
         that match {
-          case Failure(c2) => Exit.failCause(g(c1, c2))
-          case _           => e
+          case r: Failure[E1] => Exit.failCause(g(l.cause, r.cause))
+          case _              => l
         }
     }
 
@@ -6750,11 +6752,11 @@ object Exit extends Serializable {
       while (it.hasNext) {
         val head = it.next()
         head match {
-          case Success(v) =>
-            if (cause eq null) builder.append(v)
-          case Failure(e) =>
-            if (cause eq null) cause = e
-            else cause = combineError(cause, e)
+          case s: Success[A] =>
+            if (cause eq null) builder.append(s.value)
+          case f: Failure[E] =>
+            if (cause eq null) cause = f.cause
+            else cause = combineError(cause, f.cause)
         }
       }
       if (cause eq null) Some(Success(builder.result()))
@@ -6771,10 +6773,10 @@ object Exit extends Serializable {
     while (it.hasNext) {
       val head = it.next()
       head match {
-        case _: Success[?] => ()
-        case Failure(e) =>
-          if (cause eq null) cause = e
-          else cause = combineError(cause, e)
+        case f: Failure[E] =>
+          if (cause eq null) cause = f.cause
+          else cause = combineError(cause, f.cause)
+        case _ => ()
       }
     }
     if (cause eq null) Exit.unit
@@ -6813,16 +6815,13 @@ object Exit extends Serializable {
     g: (Cause[E], Cause[E1]) => Cause[E1]
   ): Exit[E1, A] =
     left match {
-      case _: Success[?] =>
+      case l: Failure[E] =>
         right match {
-          case r: Success[A]  => r
-          case f: Failure[E1] => f
+          case r: Failure[E1] => Exit.failCause(g(l.cause, r.cause))
+          case _              => l
         }
-      case e @ Failure(c1) =>
-        right match {
-          case Failure(c2) => Exit.failCause(g(c1, c2))
-          case _           => e
-        }
+      case _ =>
+        right
     }
 
   /**
