@@ -3493,7 +3493,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           ZIO
             .whileLoop(iterator.hasNext) {
               val kv = iterator.next()
-              ft(kv._1, kv._2)
+              f(kv._1, kv._2)
             }(builder += _)
             .as(builder.result())
         }
