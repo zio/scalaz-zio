@@ -1132,8 +1132,8 @@ sealed trait ZIO[-R, +E, +A]
    */
   final def onInterrupt[R1 <: R](cleanup: => URIO[R1, Any])(implicit trace: Trace): ZIO[R1, E, A] =
     onExit {
-      case f: Exit.Failure[E] => if (f.cause.isInterruptedOnly) cleanup else Exit.unit
-      case _                  => Exit.unit
+      case f: Exit.Failure[E] if f.cause.isInterruptedOnly => cleanup
+      case _                                               => Exit.unit
     }
 
   /**
@@ -1143,10 +1143,8 @@ sealed trait ZIO[-R, +E, +A]
   final def onInterrupt[R1 <: R](cleanup: Set[FiberId] => URIO[R1, Any])(implicit trace: Trace): ZIO[R1, E, A] =
     // TODO: isInterrupted or isInterruptedOnly?
     onExit {
-      case f: Exit.Failure[E] =>
-        val cause = f.cause
-        if (cause.isInterruptedOnly) cleanup(cause.interruptors) else Exit.unit
-      case _ => Exit.unit
+      case f: Exit.Failure[E] if (f.cause.isInterruptedOnly) => cleanup(f.cause.interruptors)
+      case _                                                 => Exit.unit
     }
 
   /**
