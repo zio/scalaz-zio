@@ -683,7 +683,7 @@ sealed trait ZIO[-R, +E, +A]
    * does not fail, but succeeds with the value returned by the left or right
    * function passed to `fold`.
    */
-  def fold[B](failure: E => B, success: A => B)(implicit ev: CanFail[E], trace: Trace): URIO[R, B] =
+  final def fold[B](failure: E => B, success: A => B)(implicit ev: CanFail[E], trace: Trace): URIO[R, B] =
     foldZIO(e => Exit.succeed(failure(e)), a => Exit.succeed(success(a)))
 
   /**
@@ -969,7 +969,7 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Returns an effect whose success is mapped by the specified `f` function.
    */
-  def map[B](f: A => B)(implicit trace: Trace): ZIO[R, E, B] =
+  final def map[B](f: A => B)(implicit trace: Trace): ZIO[R, E, B] =
     flatMap(a => Exit.succeed(f(a)))
 
   /**
@@ -6517,12 +6517,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def isSuccess: Boolean =
     self.isInstanceOf[Success[?]]
-
-  /**
-   * Returns an effect whose success is mapped by the specified `f` function.
-   */
-  override final def map[B](f: A => B)(implicit trace: Trace): ZIO[Any, E, B] =
-    mapExit(f)
 
   /**
    * Maps over the value type.
