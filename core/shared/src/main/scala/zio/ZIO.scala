@@ -187,7 +187,7 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Maps the success value of this effect to the specified constant value.
    */
-  def as[B](b: => B)(implicit trace: Trace): ZIO[R, E, B] =
+  final def as[B](b: => B)(implicit trace: Trace): ZIO[R, E, B] =
     self.flatMap(_ => Exit.succeed(b))
 
   /**
@@ -690,7 +690,7 @@ sealed trait ZIO[-R, +E, +A]
    * A more powerful version of `fold` that allows recovering from any kind of
    * failure except external interruption.
    */
-  def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): URIO[R, B] =
+  final def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): URIO[R, B] =
     foldCauseZIO(c => Exit.succeed(failure(c)), a => Exit.succeed(success(a)))
 
   /**
@@ -983,14 +983,14 @@ sealed trait ZIO[-R, +E, +A]
    * Returns an effect whose failure and success channels have been mapped by
    * the specified pair of functions, `f` and `g`.
    */
-  def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, B] =
+  final def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, B] =
     foldZIO(e => Exit.fail(f(e)), a => Exit.succeed(g(a)))
 
   /**
    * Returns an effect with its error channel mapped using the specified
    * function. This can be used to lift a "smaller" error into a "larger" error.
    */
-  def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, A] =
+  final def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, A] =
     self.mapErrorCause(_.map(f))
 
   /**
@@ -1002,7 +1002,7 @@ sealed trait ZIO[-R, +E, +A]
    *   [[absorb]], [[sandbox]], [[catchAllCause]] - other functions for dealing
    *   with defects
    */
-  def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[R, E2, A] =
+  final def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[R, E2, A] =
     self.foldCauseZIO(c => Exit.failCause(h(c)), ZIO.successFn)
 
   /**
@@ -1234,7 +1234,7 @@ sealed trait ZIO[-R, +E, +A]
    * succeeds with the specified value.
    */
   final def orElseSucceed[A1 >: A](a1: => A1)(implicit ev: CanFail[E], trace: Trace): URIO[R, A1] =
-    orElse(ZIO.succeed(a1))
+    orElse(Exit.succeed(a1))
 
   /**
    * Exposes all parallel errors in a single call
@@ -1618,7 +1618,7 @@ sealed trait ZIO[-R, +E, +A]
    * until the first failure.
    */
   final def repeatUntil(p: A => Boolean)(implicit trace: Trace): ZIO[R, E, A] =
-    repeatUntilZIO(a => ZIO.succeed(p(a)))
+    self.flatMap(a => if (p(a)) Exit.succeed(a) else ZIO.yieldNow *> repeatUntil(p))
 
   /**
    * Repeats this effect until its value is equal to the specified value or
@@ -1639,7 +1639,7 @@ sealed trait ZIO[-R, +E, +A]
    * until the first failure.
    */
   final def repeatWhile(p: A => Boolean)(implicit trace: Trace): ZIO[R, E, A] =
-    repeatWhileZIO(a => ZIO.succeed(p(a)))
+    repeatUntil(e => !p(e))
 
   /**
    * Repeats this effect for as long as its value is equal to the specified
@@ -1756,7 +1756,7 @@ sealed trait ZIO[-R, +E, +A]
    * Retries this effect until its error satisfies the specified predicate.
    */
   final def retryUntil(f: E => Boolean)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E, A] =
-    retryUntilZIO(e => ZIO.succeed(f(e)))
+    retryUntilZIO(e => Exit.boolean(f(e)))
 
   /**
    * Retries this effect until its error is equal to the specified error.
@@ -1777,7 +1777,7 @@ sealed trait ZIO[-R, +E, +A]
    * Retries this effect while its error satisfies the specified predicate.
    */
   final def retryWhile(f: E => Boolean)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E, A] =
-    retryWhileZIO(e => ZIO.succeed(f(e)))
+    retryWhileZIO(e => Exit.boolean(f(e)))
 
   /**
    * Retries this effect for as long as its error is equal to the specified
@@ -2247,7 +2247,7 @@ sealed trait ZIO[-R, +E, +A]
    * Returns the effect resulting from mapping the success of this effect to
    * unit.
    */
-  def unit(implicit trace: Trace): ZIO[R, E, Unit] =
+  final def unit(implicit trace: Trace): ZIO[R, E, Unit] =
     self.flatMap(ZIO.unitZIOFn)
 
   /**
@@ -6274,10 +6274,10 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     ZIO.suspendSucceed {
       val array = Array.ofDim[AnyRef](size)
       val zioFunction: ((A, Int)) => ZIO[R, E, Any] = { case (a, i) =>
-        fn(a).flatMap(b => ZIO.succeed(array(i) = b.asInstanceOf[AnyRef]))
+        fn(a).flatMap { b => array(i) = b.asInstanceOf[AnyRef]; Exit.unit }
       }
-      foreachParDiscard(n)(as.zipWithIndex, size)(zioFunction) *>
-        ZIO.succeed(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
+      foreachParDiscard(n)(as.zipWithIndex, size)(zioFunction)
+        .as(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
     }
 
   private def foreachParDiscard[R, E, A](
@@ -6399,12 +6399,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     zipWith(that)(zippable.zip(_, _), _ ++ _)
 
   /**
-   * Maps the success value of this effect to the specified constant value.
-   */
-  override final def as[B](b: => B)(implicit trace: Trace): ZIO[Any, E, B] =
-    asExit(b)
-
-  /**
    * Replaces the success value with the one provided.
    */
   final def asExit[B](b: B): Exit[E, B] =
@@ -6460,13 +6454,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def flattenExit[E1 >: E, B](implicit ev: A <:< Exit[E1, B]): Exit[E1, B] =
     Exit.flatten(self.mapExit(ev))
-
-  /**
-   * A more powerful version of `fold` that allows recovering from any kind of
-   * failure except external interruption.
-   */
-  override final def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): UIO[B] =
-    Exit.succeed(foldExit(failure, success))
 
   /**
    * A more powerful version of `foldZIO` that allows recovering from any kind
@@ -6554,24 +6541,13 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     }
 
   /**
-   * Returns an effect whose failure and success channels have been mapped by
-   * the specified pair of functions, `f` and `g`.
-   */
-  override final def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[Any, E2, B] =
-    mapBothExit(f, g)
-
-  /**
    * Maps over both the error and value type.
    */
   final def mapBothExit[E1, A1](f: E => E1, g: A => A1): Exit[E1, A1] =
-    mapErrorExit(f).mapExit(g)
-
-  /**
-   * Returns an effect with its error channel mapped using the specified
-   * function. This can be used to lift a "smaller" error into a "larger" error.
-   */
-  override final def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[Any, E2, A] =
-    mapErrorExit(f)
+    self match {
+      case s: Success[A] => Exit.succeed(g(s.value))
+      case e: Failure[E] => failCause(e.cause.map(f))
+    }
 
   /**
    * Maps over the error type.
@@ -6581,18 +6557,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
       case e: Failure[E] => failCause(e.cause.map(f))
       case s             => s.asInstanceOf[Exit[Nothing, A]]
     }
-
-  /**
-   * Returns an effect with its full cause of failure mapped using the specified
-   * function. This can be used to transform errors while preserving the
-   * original structure of `Cause`.
-   *
-   * @see
-   *   [[absorb]], [[sandbox]], [[catchAllCause]] - other functions for dealing
-   *   with defects
-   */
-  override final def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[Any, E2, A] =
-    mapErrorCauseExit(h)
 
   /**
    * Maps over the cause type.
@@ -6634,16 +6598,12 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   final def trace: Trace = Trace.empty
 
   /**
-   * Returns the effect resulting from mapping the success of this effect to
-   * unit.
-   */
-  override final def unit(implicit trace: Trace): ZIO[Any, E, Unit] =
-    unitExit
-
-  /**
    * Discards the value.
    */
-  final def unitExit: Exit[E, Unit] = asExit(())
+  final def unitExit: Exit[E, Unit] = self match {
+    case _: Success[?] => Exit.unit
+    case e             => e.asInstanceOf[Exit[E, Nothing]]
+  }
 
   /**
    * Returns an untraced exit value.
