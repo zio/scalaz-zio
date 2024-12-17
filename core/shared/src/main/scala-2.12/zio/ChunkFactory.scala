@@ -19,5 +19,15 @@ package zio
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.collection.generic.IndexedSeqFactory
+import scala.collection.mutable
 
-private[zio] trait ChunkFactory extends IndexedSeqFactory[Chunk]
+private[zio] trait ChunkFactory extends IndexedSeqFactory[Chunk] {
+
+  final protected def fromArraySeq[A](seq: mutable.ArraySeq[A]): Chunk[A] = {
+    val builder = ChunkBuilder.make[A]()
+    builder.sizeHint(seq)
+    builder ++= seq
+    builder.result()
+  }
+
+}
