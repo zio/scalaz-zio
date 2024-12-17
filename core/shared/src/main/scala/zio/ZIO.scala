@@ -188,7 +188,7 @@ sealed trait ZIO[-R, +E, +A]
    * Maps the success value of this effect to the specified constant value.
    */
   def as[B](b: => B)(implicit trace: Trace): ZIO[R, E, B] =
-    self.map(_ => b)
+    self.flatMap(_ => Exit.succeed(b))
 
   /**
    * Maps the success value of this effect to a left value.
@@ -683,15 +683,15 @@ sealed trait ZIO[-R, +E, +A]
    * does not fail, but succeeds with the value returned by the left or right
    * function passed to `fold`.
    */
-  def fold[B](failure: E => B, success: A => B)(implicit ev: CanFail[E], trace: Trace): URIO[R, B] =
-    foldZIO(e => ZIO.succeed(failure(e)), a => ZIO.succeed(success(a)))
+  final def fold[B](failure: E => B, success: A => B)(implicit ev: CanFail[E], trace: Trace): URIO[R, B] =
+    foldZIO(e => Exit.succeed(failure(e)), a => Exit.succeed(success(a)))
 
   /**
    * A more powerful version of `fold` that allows recovering from any kind of
    * failure except external interruption.
    */
   def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): URIO[R, B] =
-    foldCauseZIO(c => ZIO.succeed(failure(c)), a => ZIO.succeed(success(a)))
+    foldCauseZIO(c => Exit.succeed(failure(c)), a => Exit.succeed(success(a)))
 
   /**
    * A more powerful version of `foldZIO` that allows recovering from any kind
@@ -969,8 +969,8 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Returns an effect whose success is mapped by the specified `f` function.
    */
-  def map[B](f: A => B)(implicit trace: Trace): ZIO[R, E, B] =
-    flatMap(a => ZIO.succeed(f(a)))
+  final def map[B](f: A => B)(implicit trace: Trace): ZIO[R, E, B] =
+    flatMap(a => Exit.succeed(f(a)))
 
   /**
    * Returns an effect whose success is mapped by the specified side effecting
@@ -984,7 +984,7 @@ sealed trait ZIO[-R, +E, +A]
    * the specified pair of functions, `f` and `g`.
    */
   def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, B] =
-    foldZIO(e => Exit.fail(f(e)), a => ZIO.succeed(g(a)))
+    foldZIO(e => Exit.fail(f(e)), a => Exit.succeed(g(a)))
 
   /**
    * Returns an effect with its error channel mapped using the specified
@@ -3094,7 +3094,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * For effectful conditionals, see [[ZIO.ifZIO]]
    */
   def cond[E, A](predicate: => Boolean, result: => A, error: => E)(implicit trace: Trace): IO[E, A] =
-    ZIO.suspendSucceed(if (predicate) ZIO.succeed(result) else ZIO.fail(error))
+    ZIO.suspendSucceed(if (predicate) Exit.succeed(result) else ZIO.fail(error))
 
   /**
    * Uses the current config provider to load the specified config, or fail with
@@ -5609,7 +5609,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
   final class EnvironmentWithPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
     def apply[A](f: ZEnvironment[R] => A)(implicit trace: Trace): URIO[R, A] =
-      ZIO.environmentWithZIO(env => ZIO.succeed(f(env)))
+      ZIO.environmentWithZIO(env => Exit.succeed(f(env)))
   }
 
   final class EnvironmentWithZIOPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
@@ -6145,7 +6145,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       else MakeUninterruptible
 
     def make(implicit trace: Trace): ZIO[Any, Nothing, InterruptibilityRestorer] =
-      ZIO.checkInterruptible(status => ZIO.succeed(InterruptibilityRestorer(status)))
+      ZIO.checkInterruptible(status => Exit.succeed(InterruptibilityRestorer(status)))
 
     case object MakeInterruptible extends InterruptibilityRestorer {
       def apply[R, E, A](effect: => ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
@@ -6436,14 +6436,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     Exit.flatten(self.mapExit(ev))
 
   /**
-   * Folds over the failure value or the success value to yield an effect that
-   * does not fail, but succeeds with the value returned by the left or right
-   * function passed to `fold`.
-   */
-  override final def fold[B](failure: E => B, success: A => B)(implicit ev: CanFail[E], trace: Trace): UIO[B] =
-    foldZIO(e => Exit.succeed(failure(e)), a => Exit.succeed(success(a)))
-
-  /**
    * A more powerful version of `fold` that allows recovering from any kind of
    * failure except external interruption.
    */
@@ -6525,12 +6517,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def isSuccess: Boolean =
     self.isInstanceOf[Success[?]]
-
-  /**
-   * Returns an effect whose success is mapped by the specified `f` function.
-   */
-  override final def map[B](f: A => B)(implicit trace: Trace): ZIO[Any, E, B] =
-    mapExit(f)
 
   /**
    * Maps over the value type.

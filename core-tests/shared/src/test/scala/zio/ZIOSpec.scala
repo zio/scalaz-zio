@@ -4650,6 +4650,28 @@ object ZIOSpec extends ZIOBaseSpec {
           result <- effects.get
         } yield assert(result)(equalTo(List("Closed")))
       }
+    ),
+    suite("Exit")(
+      test("map returns an Exit") {
+        val exit = Exit.succeed(1).map(_ + 1)
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("flatMap(success) returns an exit") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.succeed(a + 1))
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("flatMap(failure) returns an exit") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.fail(a + 1))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("fold(success) returns an exit") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("fold(failure) returns an exit") {
+        val exit = (Exit.fail(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.Success(0))
+      }
     )
   )
 

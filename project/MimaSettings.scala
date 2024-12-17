@@ -24,7 +24,9 @@ object MimaSettings {
         exclude[Problem]("zio.Scope#ReleaseMap*"),
         exclude[Problem]("zio.Scope$ReleaseMap*"),
         exclude[MissingClassProblem]("zio.Scope$Running*"),
-        exclude[MissingClassProblem]("zio.Scope$Exited*")
+        exclude[MissingClassProblem]("zio.Scope$Exited*"),
+        exclude[NewMixinForwarderProblem]("zio.Exit.fold"),
+        exclude[NewMixinForwarderProblem]("zio.Exit.map")
       ),
       mimaFailOnProblem := failOnProblem
     )
