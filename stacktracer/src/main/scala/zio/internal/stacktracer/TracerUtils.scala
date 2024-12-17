@@ -9,10 +9,10 @@ private[internal] object TracerUtils {
    * performances reasons. See zio.internal.stacktracer.Tracer.createTrace for
    * the format of the trace
    */
-  def parse(trace: String): Option[(String, String, Int)] = {
+  def parse(trace: String): ParsedTrace = {
     val length = trace.length
 
-    if (length == 0 || trace.charAt(length - 1) != ')') return None
+    if (length == 0 || trace.charAt(length - 1) != ')') return null
 
     var idx = length - 2 // start from the end - 2 because the last character is ')'
 
@@ -28,7 +28,7 @@ private[internal] object TracerUtils {
       } else idx -= 1
     }
 
-    if (colonIdx == -1) return None
+    if (colonIdx == -1) return null
     else idx = colonIdx - 1
 
     // Finding the opening parentesis
@@ -40,12 +40,12 @@ private[internal] object TracerUtils {
       } else idx -= 1
     }
 
-    if (openingParentesisIdx == -1) None
+    if (openingParentesisIdx == -1) null
     else {
       val location = trace.substring(0, openingParentesisIdx)
       val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
       val line     = trace.substring(colonIdx + 1, length - 1)
-      Some((location, file, line.toInt))
+      ParsedTrace(location = location, file = file, line = line.toInt)
     }
   }
 

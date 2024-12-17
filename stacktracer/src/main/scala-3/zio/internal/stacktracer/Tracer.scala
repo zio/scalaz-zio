@@ -23,7 +23,12 @@ object Tracer {
     type Type = String
     val empty = "".intern()
 
-    def unapply(trace: Type): Option[(String, String, Int)] = TracerUtils.parse(trace)
+    def unapply(trace: Type): Option[(String, String, Int)] = {
+      val parsed = parseOrNull(trace)
+      if (parsed eq null) None else Some((parsed.location, parsed.file, parsed.line))
+    }
+
+    private[zio] def parseOrNull(trace: Type): ParsedTrace = TracerUtils.parse(trace)
 
     def apply(location: String, file: String, line: Int): Type with Traced =
       createTrace(location, file, line).asInstanceOf[Type with Traced]
@@ -38,5 +43,6 @@ sealed trait Tracer {
   type Type <: AnyRef
   val empty: Type
   def unapply(trace: Type): Option[(String, String, Int)]
+  private[zio] def parseOrNull(trace: Type): ParsedTrace
   def apply(location: String, file: String, line: Int): Type with Tracer.Traced
 }
