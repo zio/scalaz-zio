@@ -277,16 +277,18 @@ object ZTestFrameworkSbtSpec {
   }
 
   def assertSourceLocation()(implicit trace: Trace): String = {
-    val filePath = Option(trace).collect { case Trace(_, file, _) =>
-      file
+    val filePath = Option(trace).flatMap { trace =>
+      val parsedTrace = Trace.parseOrNull(trace)
+      if (parsedTrace eq null) None else Some(parsedTrace.file)
     }
     filePath.fold("")(path => cyan(s"at $path:XXX"))
   }
 
   implicit class TestOutputOps(output: String) {
     def withNoLineNumbers(implicit trace: Trace): String = {
-      val filePath = Option(trace).collect { case Trace(_, file, _) =>
-        file
+      val filePath = Option(trace).flatMap { trace =>
+        val parsedTrace = Trace.parseOrNull(trace)
+        if (parsedTrace eq null) None else Some(parsedTrace.file)
       }
       filePath.fold(output)(path => output.replaceAll(Pattern.quote(path + ":") + "\\d+", path + ":XXX"))
     }

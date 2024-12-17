@@ -2257,6 +2257,12 @@ object ZIOSpec extends ZIOBaseSpec {
       test("suspendSucceed must be evaluatable") {
         assertZIO(ZIO.suspendSucceed(ZIO.succeed(42)))(equalTo(42))
       },
+      test("ZIO.suspendSucceed is implemented with a ZIO.unit as first") {
+        ZIO.suspendSucceed(ZIO.succeed(42)) match {
+          case ZIO.FlatMap(_, first, _) => assertTrue(first eq ZIO.unit)
+          case _                        => assertNever("ZIO.suspendSucceed is not implemented as a FlatMap")
+        }
+      },
       test("point, bind, map") {
         def fibIo(n: Int): Task[BigInt] =
           if (n <= 1) ZIO.succeed(n)
@@ -4643,6 +4649,28 @@ object ZIOSpec extends ZIOBaseSpec {
           _      <- ZIO.scoped(ZIO.fromAutoCloseable(closeable))
           result <- effects.get
         } yield assert(result)(equalTo(List("Closed")))
+      }
+    ),
+    suite("Exit")(
+      test("map returns an Exit") {
+        val exit = Exit.succeed(1).map(_ + 1)
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("flatMap(success) returns an exit") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.succeed(a + 1))
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("flatMap(failure) returns an exit") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.fail(a + 1))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("fold(success) returns an exit") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.Success(2))
+      },
+      test("fold(failure) returns an exit") {
+        val exit = (Exit.fail(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.Success(0))
       }
     )
   )

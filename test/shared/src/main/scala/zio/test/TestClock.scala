@@ -105,6 +105,11 @@ object TestClock extends Serializable {
       with TestClockPlatformSpecific {
 
     /**
+     * See https://github.com/zio/zio/issues/9385
+     */
+    private[this] val freezeLock = Semaphore.unsafe.make(1)(Unsafe)
+
+    /**
      * Increments the current clock time by the specified duration. Any effects
      * that were scheduled to occur on or before the new time will be run in
      * order.
@@ -294,12 +299,14 @@ object TestClock extends Serializable {
      * snapshot may not be fully consistent.
      */
     private def freeze(implicit trace: Trace): IO[Unit, Map[FiberId, Fiber.Status]] =
-      supervisedFibers.flatMap { fibers =>
-        ZIO.foldLeft(fibers)(Map.empty[FiberId, Fiber.Status]) { (map, fiber) =>
-          fiber.status.flatMap {
-            case done @ Fiber.Status.Done                    => ZIO.succeed(map.updated(fiber.id, done))
-            case suspended @ Fiber.Status.Suspended(_, _, _) => ZIO.succeed(map.updated(fiber.id, suspended))
-            case _                                           => ZIO.fail(())
+      freezeLock.withPermit {
+        supervisedFibers.flatMap { fibers =>
+          ZIO.foldLeft(fibers)(Map.empty[FiberId, Fiber.Status]) { (map, fiber) =>
+            fiber.status.flatMap {
+              case done @ Fiber.Status.Done                    => ZIO.succeed(map.updated(fiber.id, done))
+              case suspended @ Fiber.Status.Suspended(_, _, _) => ZIO.succeed(map.updated(fiber.id, suspended))
+              case _                                           => ZIO.fail(())
+            }
           }
         }
       }
