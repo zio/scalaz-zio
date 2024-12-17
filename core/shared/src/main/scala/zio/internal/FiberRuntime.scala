@@ -994,6 +994,34 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       } else {
         try {
           cur match {
+            case success: Exit.Success[Any] =>
+              val value = success.value
+
+              cur = null
+
+              while ((cur eq null) && stackIndex > minStackIndex) {
+                stackIndex -= 1
+
+                val continuation = _stack(stackIndex)
+
+                popStackFrame(stackIndex)
+
+                continuation match {
+                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
+                    cur = flatMap.successK(value)
+
+                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
+                    cur = foldZIO.successK(value)
+
+                  case updateFlags: ZIO.UpdateRuntimeFlags =>
+                    cur = patchRuntimeFlags(updateFlags.update, null, null)
+                }
+              }
+
+              if (cur eq null) {
+                return success
+              }
+
             case sync: Sync[Any] =>
               updateLastTrace(sync.trace)
               val value = sync.eval()
@@ -1009,14 +1037,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 continuation match {
                   case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
+                    cur = flatMap.successK(value)
 
                   case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
+                    cur = foldZIO.successK(value)
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
                     cur = patchRuntimeFlags(updateFlags.update, null, null)
@@ -1025,38 +1049,6 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               if (cur eq null) {
                 return Exit.succeed(value)
-              }
-
-            case success: Exit.Success[Any] =>
-              val value = success.value
-
-              cur = null
-
-              while ((cur eq null) && stackIndex > minStackIndex) {
-                stackIndex -= 1
-
-                val continuation = _stack(stackIndex)
-
-                popStackFrame(stackIndex)
-
-                continuation match {
-                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
-
-                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
-
-                  case updateFlags: ZIO.UpdateRuntimeFlags =>
-                    cur = patchRuntimeFlags(updateFlags.update, null, null)
-                }
-              }
-
-              if (cur eq null) {
-                return success
               }
 
             case flatmap: FlatMap[Any, Any, Any, Any] =>
@@ -1217,9 +1209,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                     if (shouldInterrupt()) {
                       cause = cause.stripFailures
                     } else {
-                      val f = foldZIO.failureK
-
-                      cur = f(cause)
+                      cur = foldZIO.failureK(cause)
                     }
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
