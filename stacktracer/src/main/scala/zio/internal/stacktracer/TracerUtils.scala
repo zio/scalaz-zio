@@ -20,14 +20,16 @@ private[internal] object TracerUtils {
     if (closingParentesisIdx < 0 || trace.charAt(closingParentesisIdx) != ')') null
     else {
       // Parsing the line number down to the colon
-      var colonIdx = closingParentesisIdx - 1
-      var digitWeight      = 1
-      var line     = 0
-      var ch: Char = 0
-      while (colonIdx >= 0 && {
-        ch = trace.charAt(colonIdx)
-        ch != ':'
-      }) {
+      var colonIdx    = closingParentesisIdx - 1
+      var digitWeight = 1
+      var line        = 0
+      var ch: Char    = 0
+      while (
+        colonIdx >= 0 && {
+          ch = trace.charAt(colonIdx)
+          ch != ':'
+        }
+      ) {
         if (
           ch < '0' || ch > '9' || (digitWeight == 1000000000 && ch > '2') || {
             line += (ch - '0') * digitWeight
@@ -43,11 +45,12 @@ private[internal] object TracerUtils {
         openingParentesisIdx -= 1
       }
       if (line == 0 || openingParentesisIdx < 0) null
-      else ParsedTrace(
-        location = trace.substring(0, openingParentesisIdx),
-        file = trace.substring(openingParentesisIdx + 1, colonIdx),
-        line = line
-      )
+      else
+        ParsedTrace(
+          location = trace.substring(0, openingParentesisIdx),
+          file = trace.substring(openingParentesisIdx + 1, colonIdx),
+          line = line
+        )
     }
   }
 }

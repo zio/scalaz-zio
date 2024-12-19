@@ -21,7 +21,8 @@ object TracerUtilsSpec extends ZIOBaseSpec {
             TracerUtils.parse(":1)") == null,
             TracerUtils.parse(": )") == null,
             TracerUtils.parse(":a)") == null,
-            TracerUtils.parse("location(file:0)") == null)
+            TracerUtils.parse("location(file:0)") == null
+          )
         },
         test("returns null for too big line number") {
           check(Gen.long(Int.MaxValue.toLong + 1, Long.MaxValue)) { n =>
