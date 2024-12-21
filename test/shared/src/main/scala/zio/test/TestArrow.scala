@@ -228,20 +228,13 @@ object TestArrow {
     }
 
   private def attempt[A](expr: => TestTrace[A]): TestTrace[A] =
-    try {
-      expr
-    } catch {
-      case NonFatal(exception) =>
-        val trace = exception.getStackTrace
-        var met   = false
-        val newTrace = trace.filterNot { trace =>
-          if (trace.toString.contains("zio.test.TestArrow")) {
-            met = true
-          }
-          met
-        }
-        exception.setStackTrace(newTrace)
-        TestTrace.die(exception)
+    try expr
+    catch {
+      case ex if NonFatal(ex) =>
+        ex.setStackTrace(ex.getStackTrace.filterNot { (ste: StackTraceElement) =>
+          ste.getClassName.startsWith("zio.test.TestArrow")
+        })
+        TestTrace.die(ex)
     }
 
   def run[A, B](arrow: TestArrow[A, B], in: Either[Throwable, A]): TestTrace[B] = attempt {
