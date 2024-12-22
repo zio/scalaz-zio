@@ -2257,6 +2257,12 @@ object ZIOSpec extends ZIOBaseSpec {
       test("suspendSucceed must be evaluatable") {
         assertZIO(ZIO.suspendSucceed(ZIO.succeed(42)))(equalTo(42))
       },
+      test("ZIO.suspendSucceed is implemented with a ZIO.unit as first") {
+        ZIO.suspendSucceed(ZIO.succeed(42)) match {
+          case ZIO.FlatMap(_, first, _) => assertTrue(first eq ZIO.unit)
+          case _                        => assertNever("ZIO.suspendSucceed is not implemented as a FlatMap")
+        }
+      },
       test("point, bind, map") {
         def fibIo(n: Int): Task[BigInt] =
           if (n <= 1) ZIO.succeed(n)
@@ -4643,6 +4649,60 @@ object ZIOSpec extends ZIOBaseSpec {
           _      <- ZIO.scoped(ZIO.fromAutoCloseable(closeable))
           result <- effects.get
         } yield assert(result)(equalTo(List("Closed")))
+      }
+    ),
+    suite("eager evaluation of ZIO methods on Exit")(
+      test("as") {
+        val exit = Exit.succeed(1).as(2)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("flatMap(success)") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.succeed(a + 1))
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("flatMap(failure)") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.fail(a + 1))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("fold(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("fold(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(0))
+      },
+      test("foldCause(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).foldCause(_ => -1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("foldCause(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).foldCause(_ => -1, _ + 1)
+        assertTrue(exit == Exit.succeed(-1))
+      },
+      test("map") {
+        val exit = Exit.succeed(1).map(_ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("mapBoth(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).mapBoth(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("mapBoth(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).mapBoth(_ - 1, _ + 1)
+        assertTrue(exit == Exit.fail(0))
+      },
+      test("mapErrorCause(success)") {
+        val exit = Exit.succeed(1).mapErrorCause(_ => Cause.fail(2))
+        assertTrue(exit == Exit.succeed(1))
+      },
+      test("mapErrorCause(failure)") {
+        val exit = Exit.fail(1).mapErrorCause(_ => Cause.fail(2))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("unit") {
+        val exit = Exit.succeed(1).unit
+        assertTrue(exit == Exit.unit)
       }
     )
   )

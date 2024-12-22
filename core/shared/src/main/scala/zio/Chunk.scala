@@ -20,6 +20,7 @@ import java.nio._
 import java.nio.charset.Charset
 import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.Builder
 import scala.math.log
 import scala.reflect.{ClassTag, classTag}
@@ -1272,6 +1273,7 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
       case chunk: Chunk[A]              => chunk
       case iterable if iterable.isEmpty => Empty
       case vector: Vector[A]            => VectorChunk(vector)
+      case arrSeq: mutable.ArraySeq[A]  => fromArraySeq(arrSeq)
       case iterable =>
         val builder = ChunkBuilder.make[A]()
         builder.sizeHint(iterable)

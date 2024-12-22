@@ -118,6 +118,6 @@ trait Dequeue[+A] extends Serializable {
   /**
    * Take the head option of values in the queue.
    */
-  final def poll(implicit trace: Trace): UIO[Option[A]] =
+  def poll(implicit trace: Trace): UIO[Option[A]] =
     takeUpTo(1).map(_.headOption)
 }
