@@ -762,6 +762,8 @@ object Cause extends Serializable {
   def stack[E](cause: Cause[E]): Cause[E]                                              = Stackless(cause, false)
   def stackless[E](cause: Cause[E]): Cause[E]                                          = Stackless(cause, true)
 
+  private[zio] val none: Cause[Option[Nothing]] = fail(None)
+
   trait Folder[-Context, -E, Z] {
     def empty(context: Context): Z
     def failCase(context: Context, error: E, stackTrace: StackTrace): Z

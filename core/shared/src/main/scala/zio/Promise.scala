@@ -279,7 +279,7 @@ final class Promise[E, A] private (
         completeWith(Exit.failCause(e))
 
       def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean =
-        completeWith(ZIO.succeed(a))
+        completeWith(Exit.succeed(a))
     }
 
 }
