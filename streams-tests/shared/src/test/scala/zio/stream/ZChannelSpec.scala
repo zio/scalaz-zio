@@ -183,6 +183,21 @@ object ZChannelSpec extends ZIOBaseSpec {
             }
         }
       ),
+      suite("ZChannel#mapOutZIOPar")(
+        test("mapOutZIOPar in uninterruptible region") {
+          for {
+            _ <- ZChannel.unit.mapOutZIOPar(4)(_ => ZIO.unit).runDrain.uninterruptible
+          } yield assertCompletes
+        } @@ timeout(5.seconds),
+        test("mergeAllWith in uninterruptible region") {
+          for {
+            _ <- ZChannel
+                   .mergeAllWith(ZChannel.unit, 4, mergeStrategy = ZChannel.MergeStrategy.BufferSliding)((l, _) => l)
+                   .runDrain
+                   .uninterruptible
+          } yield assertCompletes
+        } @@ timeout(5.seconds)
+      ),
       suite("ZChannel.concatMap")(
         test("plain") {
           ZChannel.writeAll(1, 2, 3).concatMap(i => ZChannel.writeAll(i, i)).runCollect.map { case (chunk, _) =>
@@ -295,8 +310,8 @@ object ZChannelSpec extends ZIOBaseSpec {
           val conduit = ZChannel
             .writeAll(1, 2, 3)
             .mergeWith(ZChannel.writeAll(4, 5, 6))(
-              ex => ZChannel.MergeDecision.awaitConst(ZIO.done(ex)),
-              ex => ZChannel.MergeDecision.awaitConst(ZIO.done(ex))
+              ZChannel.MergeDecision.awaitConst,
+              ZChannel.MergeDecision.awaitConst
             )
 
           conduit.runCollect.map { case (chunk, _) =>
@@ -308,8 +323,8 @@ object ZChannelSpec extends ZIOBaseSpec {
           val right = ZChannel.write(2) *> ZChannel.fromZIO(ZIO.attempt(true).refineToOrDie[IllegalStateException])
 
           val merged = left.mergeWith(right)(
-            ex => ZChannel.MergeDecision.await(ex2 => ZIO.done(ex <*> ex2)),
-            ex2 => ZChannel.MergeDecision.await(ex => ZIO.done(ex <*> ex2))
+            ex => ZChannel.MergeDecision.await(ex2 => ex <*> ex2),
+            ex2 => ZChannel.MergeDecision.await(ex => ex <*> ex2)
           )
 
           merged.runCollect.map { case (chunk, result) =>
@@ -322,8 +337,8 @@ object ZChannelSpec extends ZIOBaseSpec {
           val right = ZChannel.write(2) *> ZChannel.fail(true).as(true)
 
           val merged = left.mergeWith(right)(
-            ex => ZChannel.MergeDecision.await(ex2 => ZIO.done(ex).flip.zip(ZIO.done(ex2).flip).flip),
-            ex2 => ZChannel.MergeDecision.await(ex => ZIO.done(ex).flip.zip(ZIO.done(ex2).flip).flip)
+            ex => ZChannel.MergeDecision.await(ex2 => ex.flip.zip(ex2.flip).flip),
+            ex2 => ZChannel.MergeDecision.await(ex => ex.flip.zip(ex2.flip).flip)
           )
 
           merged.runDrain.exit.map(ex => assert(ex)(fails(equalTo(("Boom", true)))))
@@ -336,7 +351,7 @@ object ZChannelSpec extends ZIOBaseSpec {
               val right = ZChannel.write(2) *> ZChannel.fromZIO(latch.await)
 
               val merged = left.mergeWith(right)(
-                ex => ZChannel.MergeDecision.done(ZIO.done(ex)),
+                ex => ZChannel.MergeDecision.done(ex),
                 _ => ZChannel.MergeDecision.done(interrupted.get.map(assert(_)(isTrue)))
               )
 
@@ -455,20 +470,6 @@ object ZChannelSpec extends ZIOBaseSpec {
           }
         },
         test("pipeline") {
-          lazy val identity: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
-            ZChannel.readWith(
-              (i: Int) => ZChannel.write(i) *> identity,
-              (_: Any) => ZChannel.unit,
-              (_: Any) => ZChannel.unit
-            )
-
-          lazy val doubler: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
-            ZChannel.readWith(
-              (i: Int) => ZChannel.writeAll(i, i) *> doubler,
-              (_: Any) => ZChannel.unit,
-              (_: Any) => ZChannel.unit
-            )
-
           val effect = ZChannel.fromZIO(Ref.make[List[Int]](Nil)).flatMap { ref =>
             lazy val inner: ZChannel[Any, Any, Int, Any, Nothing, Int, Unit] =
               ZChannel.readWith(

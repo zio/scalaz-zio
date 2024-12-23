@@ -38,28 +38,8 @@ private[zio] trait PlatformSpecific {
    * Adds a signal handler for the specified signal (e.g. "INFO"). This method
    * never fails even if adding the handler fails.
    */
-  final def addSignalHandler(signal: String, action: () => Unit)(implicit unsafe: zio.Unsafe): Unit = {
-    import sun.misc.Signal
-    import sun.misc.SignalHandler
-
-    final case class ZIOSignalHandler(action: () => Unit) extends SignalHandler {
-      private[zio] var signalHandler: SignalHandler = null
-      override def handle(signal: Signal): Unit = {
-        action()
-        if (signalHandler != SignalHandler.SIG_DFL && signalHandler != SignalHandler.SIG_IGN) {
-          signalHandler.handle(signal)
-        }
-      }
-    }
-
-    try {
-      val zioSignal        = new Signal(signal)
-      val zioSignalHandler = ZIOSignalHandler(action)
-      zioSignalHandler.signalHandler = Signal.handle(zioSignal, zioSignalHandler)
-    } catch {
-      case _: Throwable => ()
-    }
-  }
+  final def addSignalHandler(signal: String, action: () => Unit)(implicit unsafe: zio.Unsafe): Unit =
+    Signal.handle(signal, _ => action())
 
   // Check the classpath to see if we're running in an unforked sbt environment.
   private val isUnforkedInSbt =

@@ -25,4 +25,13 @@ object LayerMacros {
     val layerExpr = constructLayer[R0, R, E](layer)
     '{ $zio.provideLayer($layerExpr) }
   }
+
+  def runWithImpl[R: Type, E: Type](
+    layer: Expr[ZLayer[R, E, Unit]],
+    deps: Expr[Seq[ZLayer[_, E, _]]]
+  )(using Quotes) = {
+    val layerExpr = constructLayer[Any, R, E](deps)
+    '{ ZIO.scoped($layer.build).provideLayer($layerExpr).unit }
+  }
+
 }

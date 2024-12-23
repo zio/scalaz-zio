@@ -421,6 +421,47 @@ object TMapSpec extends ZIOBaseSpec {
           res <- map.get("foo").commit
         } yield assertTrue(res.contains(n))
       }
+    ),
+    suite("collection transformation transactions are idempotent")(
+      test("toMap") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toMap.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == Map("a" -> 2),
+          s2 == Map.empty[String, Int]
+        )
+      },
+      test("toList") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toList.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == List("a" -> 2),
+          s2 == List.empty[(String, Int)]
+        )
+      },
+      test("toChunk") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toChunk.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == Chunk("a" -> 2),
+          s2 == Chunk.empty[(String, Int)]
+        )
+      }
     )
   ) @@ exceptJS(nonFlaky)
 

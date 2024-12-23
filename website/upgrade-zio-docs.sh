@@ -12,7 +12,6 @@ packages=(
   "@zio.dev/zio-config"
   "@zio.dev/zio-connect"
   "@zio.dev/zio-constraintless"
-  "@zio.dev/zio-crypto"
   "@zio.dev/zio-deriving"
   "@zio.dev/zio-direct"
   "@zio.dev/zio-dynamodb"
@@ -27,7 +26,6 @@ packages=(
   "@zio.dev/zio-jdbc"
   "@zio.dev/zio-json"
   "@zio.dev/zio-kafka"
-  "@zio.dev/zio-keeper"
   "@zio.dev/zio-lambda"
   "@zio.dev/zio-logging"
   "@zio.dev/zio-memberlist"
@@ -52,7 +50,8 @@ packages=(
   "@zio.dev/zio-telemetry"
   "@zio.dev/zio-webhooks"
   "@zio.dev/zio2-interop-cats2"
-  "@zio.dev/zio2-interop-cats3"
+  # this seems to be deleted and no longer exists
+  # "@zio.dev/zio2-interop-cats3"
 )
 
 # Construct the package add command by joining the packages with a space

@@ -19,7 +19,16 @@ package zio.stream
 import zio._
 import zio.stream.compression.{CompressionException, CompressionLevel, CompressionStrategy, FlushMode}
 
-import java.io._
+import java.io.{
+  File,
+  FileNotFoundException,
+  IOException,
+  InputStream,
+  OutputStream,
+  PipedInputStream,
+  PipedOutputStream,
+  Reader
+}
 import java.net.{InetSocketAddress, SocketAddress, URI}
 import java.nio.channels.{AsynchronousServerSocketChannel, AsynchronousSocketChannel, CompletionHandler, FileChannel}
 import java.nio.file.StandardOpenOption._
@@ -81,7 +90,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] =
             ZChannel.unwrap(
               output.take
-                .flatMap(_.done)
+                .flatMap(_.exit)
                 .fold(
                   maybeError =>
                     ZChannel.fromZIO(output.shutdown) *>
@@ -123,7 +132,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
                  if (_)
                    Pull.end
                  else
-                   output.take.flatMap(_.done).onError(_ => done.set(true) *> output.shutdown)
+                   output.take.flatMap(_.exit).onError(_ => done.set(true) *> output.shutdown)
                }
       } yield pull
     }.flatMap(repeatZIOChunkOption(_))
@@ -153,7 +162,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
     } yield {
       lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] = ZChannel.unwrap(
         output.take
-          .flatMap(_.done)
+          .flatMap(_.exit)
           .foldCauseZIO(
             maybeError =>
               output.shutdown as (maybeError.failureOrCause match {
@@ -228,7 +237,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
             ZStream.repeatZIOChunkOption(
               for {
                 bytesRead <- ZIO.attempt(channel.read(reusableBuffer)).asSomeError
-                _         <- ZIO.fail(None).when(bytesRead == -1)
+                _         <- Exit.failNone.whenDiscard(bytesRead == -1)
                 chunk <- ZIO.succeed {
                            reusableBuffer.flip()
                            Chunk.fromByteBuffer(reusableBuffer)
@@ -271,9 +280,9 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           bufArray  <- ZIO.succeed(Array.ofDim[Char](chunkSize))
           bytesRead <- ZIO.attemptBlockingIO(reader.read(bufArray)).asSomeError
           chars <- if (bytesRead < 0)
-                     ZIO.fail(None)
+                     Exit.failNone
                    else if (bytesRead == 0)
-                     ZIO.succeed(Chunk.empty)
+                     Exit.emptyChunk
                    else if (bytesRead < chunkSize)
                      ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else
@@ -699,8 +708,9 @@ private[stream] trait ZSinkPlatformSpecificConstructors {
    * consumes byte chunks and writes them to the `OutputStream`. The sink will
    * yield the count of bytes written.
    *
-   * The `OutputStream` will be automatically closed after the stream is
-   * finished or an error occurred.
+   * The `Scope` of the provided effect will be automatically closed after the
+   * stream is finished or an error occurred. It's the responsibility of the
+   * user to attach the closing of the `OutputStream` to the `Scope`.
    */
   final def fromOutputStreamScoped(
     os: => ZIO[Scope, IOException, OutputStream]

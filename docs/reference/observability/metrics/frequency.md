@@ -8,11 +8,11 @@ A `Frequency` represents the number of occurrences of specified values. We can t
 Essentially, a `Frequency` is a set of related counters sharing the same name and tags. The counters are set apart from each other by an additional configurable tag. The values of the tag represent the observed distinct values.
 
 ## API
-
+```scala
 object Metric {
   def frequency(name: String): Frequency[String] = ???
 }
-
+```
 ## Use Cases
 
 Sets are used to count the occurrences of distinct string values:

@@ -135,6 +135,49 @@ abstract class Ref[A] extends Serializable {
       val result = pf.applyOrElse[A, A](v, identity)
       (result, result)
     }
+
+  /**
+   * Atomically increments the current value of the `Ref` by 1, returning the
+   * value immediately before modification.
+   */
+  final def getAndIncrement(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    getAndUpdate(v => num.plus(v, num.one))
+
+  /**
+   * Atomically decrements the current value of the `Ref` by 1, returning the
+   * value immediately before modification.
+   */
+  final def getAndDecrement(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    getAndUpdate(v => num.minus(v, num.one))
+
+  /**
+   * Atomically adds `delta` to the current value of the `Ref`, returning the
+   * value immediately before modification.
+   */
+  final def getAndAdd(delta: A)(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    getAndUpdate(v => num.plus(v, delta))
+
+  /**
+   * Atomically increments the current value of the `Ref` by 1 and returns the
+   * updated value.
+   */
+  final def incrementAndGet(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    updateAndGet(v => num.plus(v, num.one))
+
+  /**
+   * Atomically decrements the current value of the `Ref` by 1 and returns the
+   * updated value.
+   */
+  final def decrementAndGet(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    updateAndGet(v => num.minus(v, num.one))
+
+  /**
+   * Atomically adds `delta` to the current value of the `Ref` and returns the
+   * updated value.
+   */
+  final def addAndGet(delta: A)(implicit num: math.Numeric[A], trace: Trace): UIO[A] =
+    updateAndGet(v => num.plus(v, delta))
+
 }
 
 object Ref extends Serializable {
@@ -320,7 +363,7 @@ object Ref extends Serializable {
     override def toString: String =
       s"Ref(${value.get})"
 
-    trait UnsafeAPI {
+    trait UnsafeAPI extends Serializable {
       def get(implicit unsafe: Unsafe): A
       def getAndSet(a: A)(implicit unsafe: Unsafe): A
       def getAndUpdate(f: A => A)(implicit unsafe: Unsafe): A
@@ -335,7 +378,7 @@ object Ref extends Serializable {
       def updateSomeAndGet(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A
     }
 
-    @transient lazy val unsafe: UnsafeAPI =
+    val unsafe: UnsafeAPI =
       new UnsafeAPI {
         def get(implicit unsafe: Unsafe): A =
           value.get

@@ -10,8 +10,11 @@ import zio.internal.stacktracer.Tracer
 private[zio] object LayerMacroUtils {
   type LayerExpr[E] = Expr[ZLayer[_, E, _]]
 
-  def composeLayer[R1, E, O1, O2](lhs: ZLayer[R1, E, O1], rhs: ZLayer[O1, E, O2])(using Trace): ZLayer[R1, E, O2] =
-    lhs.to(rhs)
+  def composeLayer[R1, E, O1, O2](
+    lhs: ZLayer[R1, E, O1],
+    rhs: ZLayer[O1, E, O2]
+  )(using Trace): ZLayer[R1, E, O2] =
+    lhs >>> rhs
 
   def constructLayer[R0: Type, R: Type, E: Type](using Quotes)(
     layers: Seq[LayerExpr[E]],
@@ -42,15 +45,13 @@ private[zio] object LayerMacroUtils {
       loop(TypeRepr.of[T])
     }
 
-    val targetTypes    = getRequirements[R]
-    val remainderTypes = getRequirements[R0]
     val layerToDebug: PartialFunction[LayerExpr[E], ZLayer.Debug] = {
       case '{ ZLayer.Debug.tree }    => ZLayer.Debug.Tree
       case '{ ZLayer.Debug.mermaid } => ZLayer.Debug.Mermaid
     }
 
     '{
-      val trace: Trace = Tracer.newTrace
+      val trace = summonInline[Trace]
 
       ${
         def typeToNode(tpe: TypeRepr): Node[TypeRepr, LayerExpr[E]] =
@@ -61,12 +62,10 @@ private[zio] object LayerMacroUtils {
             case '{ $lhs: ZLayer[i, E, o] } =>
               rhs match {
                 case '{ $rhs: ZLayer[i2, E, o2] } =>
-                  val tag = Expr
-                    .summon[EnvironmentTag[o2]]
-                    .getOrElse(
-                      report.errorAndAbort(s"Cannot find EnvironmentTag[${TypeRepr.of[o2].show}] in implicit scope")
-                    )
-                  '{ $lhs.++($rhs)($tag) }
+                  rhs.asTerm match {
+                    case _: Ident => '{ $lhs.++($rhs)(summonInline) }
+                    case _        => '{ $lhs +!+ $rhs }
+                  }
               }
           }
 
@@ -90,8 +89,8 @@ private[zio] object LayerMacroUtils {
         }
 
         val builder = LayerBuilder[TypeRepr, LayerExpr[E]](
-          target0 = targetTypes,
-          remainder = remainderTypes,
+          target0 = getRequirements[R],
+          remainder = getRequirements[R0],
           providedLayers0 = layers.toList,
           layerToDebug = layerToDebug,
           typeEquals = _ <:< _,

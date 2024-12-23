@@ -16,7 +16,7 @@ In [this article](enable-logging-in-a-zio-application.md), we enabled logging fo
 
 To run the code, clone the repository and checkout the [ZIO Quickstarts](http://github.com/zio/zio-quickstarts) project:
 
-```bash 
+```bash
 $ git clone https://github.com/zio/zio-quickstarts.git
 $ cd zio-quickstarts/zio-quickstart-restful-webservice-custom-logger
 ```
@@ -26,6 +26,18 @@ And finally, run the application using sbt:
 ```bash
 $ sbt run
 ```
+
+Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
+
+```bash
+sbt reStart
+```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Creating a Custom Logger
 
@@ -145,6 +157,7 @@ And then we can run the application again:
 It works! Now, our ZIO application uses SLF4J for its logging backend.
 
 Similarly, we can bind our application to any other logging framework by adding the appropriate dependency to our `build.sbt` file:
+
 - `slf4j-log4j12`
 - `slf4j-reload4j`
 - `slf4j-jdk14`
@@ -160,7 +173,7 @@ To use the `reload4j` logging framework, we need to add the following dependenci
 
 ```diff
 - libraryDependencies += "org.slf4j" % "slf4j-simple" % "1.7.36"
-+ libraryDependencies += "org.slf4j" % "slf4j-reload4j" % "1.7.36" 
++ libraryDependencies += "org.slf4j" % "slf4j-reload4j" % "1.7.36"
 ```
 
 Now we can configure our logger by adding the `log4j.properties` to the resources directory:

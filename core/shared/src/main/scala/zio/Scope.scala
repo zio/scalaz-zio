@@ -18,6 +18,7 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.collection.immutable.LongMap
 
 /**
@@ -85,6 +86,12 @@ object Scope {
     def close(exit: => Exit[Any, Any])(implicit trace: Trace): UIO[Unit]
 
     /**
+     * Returns the number of finalizers that have been added to this scope and
+     * not yet finalized.
+     */
+    def size: Int
+
+    /**
      * Uses the scope by providing it to a `ZIO` workflow that needs a scope,
      * guaranteeing that the scope is closed with the result of that workflow as
      * soon as the workflow completes execution, whether by success, failure, or
@@ -120,7 +127,7 @@ object Scope {
         .acquireReleaseExit(Scope.make(Trace.empty))((scope, exit) => scope.close(exit)(Trace.empty))(
           Trace.empty
         )
-        .map(ZEnvironment.empty.unsafe.addScope(_)(Unsafe.unsafe))(Trace.empty)
+        .map(ZEnvironment.empty.unsafe.addScope(_)(Unsafe))(Trace.empty)
     )(Trace.empty)
 
   /**
@@ -135,6 +142,7 @@ object Scope {
         ZIO.unit
       def forkWith(executionStrategy: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
         makeWith(executionStrategy)
+      def size: Int = 0
     }
 
   /**
@@ -143,31 +151,14 @@ object Scope {
    * closed.
    */
   def make(implicit trace: Trace): UIO[Scope.Closeable] =
-    makeWith(ExecutionStrategy.Sequential)
+    ZIO.succeed(unsafe.make(Unsafe))
 
   /**
    * Makes a scope. Finalizers added to this scope will be run according to the
    * specified `ExecutionStrategy`.
    */
   def makeWith(executionStrategy0: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
-    ReleaseMap.make.map { releaseMap =>
-      new Scope.Closeable { self =>
-        def addFinalizerExit(finalizer: Exit[Any, Any] => UIO[Any])(implicit trace: Trace): UIO[Unit] =
-          releaseMap.add(finalizer).unit
-        def close(exit: => Exit[Any, Any])(implicit trace: Trace): UIO[Unit] =
-          ZIO.suspendSucceed(releaseMap.releaseAll(exit, executionStrategy).unit)
-        override val executionStrategy: ExecutionStrategy =
-          executionStrategy0
-        def forkWith(executionStrategy: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
-          ZIO.uninterruptible {
-            for {
-              scope     <- Scope.makeWith(executionStrategy)
-              finalizer <- releaseMap.add(scope.close(_))
-              _         <- scope.addFinalizerExit(finalizer)
-            } yield scope
-          }
-      }
-    }
+    ZIO.succeed(unsafe.makeWith(executionStrategy0)(Unsafe))
 
   /**
    * Makes a scope. Finalizers added to this scope will be run in parallel when
@@ -176,9 +167,39 @@ object Scope {
   def parallel(implicit trace: Trace): UIO[Scope.Closeable] =
     makeWith(ExecutionStrategy.Parallel)
 
+  object unsafe {
+    def make(implicit unsafe: Unsafe): Scope.Closeable =
+      new CloseableScope(ExecutionStrategy.Sequential)
+
+    def makeWith(executionStrategy: ExecutionStrategy)(implicit unsafe: Unsafe): Scope.Closeable =
+      new CloseableScope(executionStrategy)
+
+    private final class CloseableScope(override val executionStrategy: ExecutionStrategy) extends Scope.Closeable {
+      private[this] val releaseMap = new ReleaseMap
+
+      def addFinalizerExit(finalizer: Exit[Any, Any] => UIO[Any])(implicit trace: Trace): UIO[Unit] =
+        releaseMap.addDiscard(finalizer)
+
+      def close(exit: => Exit[Any, Any])(implicit trace: Trace): UIO[Unit] =
+        releaseMap.releaseAll(exit, executionStrategy)
+
+      def forkWith(executionStrategy: => ExecutionStrategy)(implicit trace: Trace): UIO[Scope.Closeable] =
+        ZIO.uninterruptible {
+          val scope = Scope.unsafe.makeWith(executionStrategy)(Unsafe)
+          releaseMap
+            .add(scope.close(_))
+            .flatMap(scope.addFinalizerExit)
+            .zipRight(Exit.succeed(scope))
+        }
+
+      def size: Int =
+        releaseMap.size
+    }
+  }
+
   final class ExtendPartiallyApplied[R](private val scope: Scope) extends AnyVal {
     def apply[E, A](zio: => ZIO[Scope with R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      zio.provideSomeEnvironment[R](_.unsafe.addScope(scope)(Unsafe.unsafe))
+      zio.provideSomeEnvironment[R](_.unsafe.addScope(scope)(Unsafe))
   }
 
   final class UsePartiallyApplied[R](private val scope: Scope.Closeable) extends AnyVal {
@@ -189,9 +210,17 @@ object Scope {
   private type Finalizer = Exit[Any, Any] => UIO[Any]
 
   private sealed abstract class State
-  private final case class Exited(nextKey: Long, exit: Exit[Any, Any], update: Finalizer => Finalizer) extends State
-  private final case class Running(nextKey: Long, finalizers: LongMap[Finalizer], update: Finalizer => Finalizer)
-      extends State
+  private object State {
+    // The sorting order of the LongMap uses bit ordering (000, 001, ... 111 but with 64 bits). This
+    // works out to be `0 ... Long.MaxValue, Long.MinValue, ... -1`. The order of the map is mainly
+    // important for the finalization, in which we want to walk it in reverse order. So we insert
+    // into the map using keys that will build it in reverse. That way, when we do the final iteration,
+    // the finalizers are already in correct order.
+    final val initial: State = Running(-1L, LongMap.empty)
+
+    final case class Exited(nextKey: Long, exit: Exit[Any, Any])            extends State
+    final case class Running(nextKey: Long, finalizers: LongMap[Finalizer]) extends State
+  }
 
   /**
    * A `ReleaseMap` represents the finalizers associated with a scope.
@@ -200,12 +229,25 @@ object Scope {
    * Snoyman @snoyberg.
    * (https://github.com/snoyberg/conduit/blob/master/resourcet/Control/Monad/Trans/Resource/Internal.hs)
    */
-  private abstract class ReleaseMap extends Serializable {
+  private final class ReleaseMap extends AtomicReference[State](State.initial) with Serializable {
+    ref: AtomicReference[State] =>
+    import State.{Exited, Running}
 
-    /**
-     * An opaque identifier for a finalizer stored in the map.
-     */
-    type Key
+    private[this] def next(l: Long) =
+      if (l == 0L) throw new RuntimeException("ReleaseMap wrapped around")
+      else if (l == Long.MinValue) Long.MaxValue
+      else l - 1
+
+    private[this] def modify[B](f: State => (UIO[B], State))(implicit trace: Trace): UIO[B] =
+      ZIO.suspendSucceed {
+        var b = null.asInstanceOf[UIO[B]]
+        while (b eq null) {
+          val current        = ref.get()
+          val (value, state) = f(current)
+          if (ref.compareAndSet(current, state)) b = value
+        }
+        b
+      }
 
     /**
      * Adds a finalizer to the finalizers associated with this scope. If the
@@ -215,176 +257,125 @@ object Scope {
      * The finalizer returned from this method will remove the original
      * finalizer from the map and run it.
      */
-    def add(finalizer: Finalizer)(implicit trace: Trace): UIO[Finalizer]
+    def add(finalizer: Finalizer)(implicit trace: Trace): UIO[Finalizer] =
+      modify {
+        case Running(nextKey, fins) =>
+          (
+            Exit.succeed(release(nextKey, _)),
+            Running(next(nextKey), fins.updated(nextKey, finalizer))
+          )
+        case Exited(nextKey, exit) =>
+          (
+            ZIO.suspendSucceed(finalizer(exit)) *> ReleaseMap.noopFinalizer,
+            Exited(next(nextKey), exit)
+          )
+      }
 
     /**
      * Adds a finalizer to the finalizers associated with this scope. If the
-     * scope is still open, a [[Key]] will be returned. This is an opaque
-     * identifier that can be used to activate this finalizer and remove it from
-     * the map. from the map. If the scope has been closed, the finalizer will
-     * be executed immediately (with the [[Exit]] value with which the scope has
-     * ended) and no Key will be returned.
+     * finalizers associated with this scope have already been run this
+     * finalizer will be run immediately.
      */
-    def addIfOpen(finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Key]]
-
-    /**
-     * Retrieves the finalizer associated with this key.
-     */
-    def get(key: Key)(implicit trace: Trace): UIO[Option[Finalizer]]
+    def addDiscard(finalizer: Finalizer)(implicit trace: Trace): UIO[Unit] =
+      modify {
+        case Running(nextKey, fins) =>
+          (
+            Exit.unit,
+            Running(next(nextKey), fins.updated(nextKey, finalizer))
+          )
+        case Exited(nextKey, exit) =>
+          (
+            ZIO.suspendSucceed(finalizer(exit).unit),
+            Exited(next(nextKey), exit)
+          )
+      }
 
     /**
      * Runs the specified finalizer and removes it from the finalizers
      * associated with this scope.
      */
-    def release(key: Key, exit: Exit[Any, Any])(implicit trace: Trace): UIO[Any]
+    def release(key: Long, exit: Exit[Any, Any])(implicit trace: Trace): UIO[Any] =
+      modify {
+        case s @ Running(_, fins) =>
+          (
+            ZIO.suspendSucceed {
+              val fin = fins.getOrElse(key, null)
+              if (fin eq null) Exit.unit
+              else fin(exit)
+            },
+            s.copy(finalizers = fins - key)
+          )
+        case s: Exited => (Exit.unit, s)
+      }
 
     /**
      * Runs the finalizers associated with this scope using the specified
      * execution strategy. After this action finishes, any finalizers added to
      * this scope will be run immediately.
      */
-    def releaseAll(exit: Exit[Any, Any], execStrategy: ExecutionStrategy)(implicit trace: Trace): UIO[Any]
+    def releaseAll(exit: Exit[Any, Any], execStrategy: ExecutionStrategy)(implicit trace: Trace): UIO[Unit] =
+      modify {
+        case s: Exited => (Exit.unit, s)
+        case Running(nextKey, fins) if fins.size == 1 =>
+          (
+            ZIO.suspendSucceed(fins.values.head(exit).unit),
+            Exited(nextKey, exit)
+          )
+        case Running(nextKey, fins) =>
+          execStrategy match {
+            case ExecutionStrategy.Sequential =>
+              (
+                ZIO.suspendSucceed {
+                  var error = null.asInstanceOf[Cause[Nothing]]
+                  val it    = fins.values.iterator
+                  ZIO
+                    .whileLoop(it.hasNext)(it.next()(exit).exit) {
+                      case _: Exit.Success[?]               => ()
+                      case Exit.Failure(c) if error eq null => error = c
+                      case Exit.Failure(c)                  => error = error ++ c
+                    }
+                    .flatMap(_ => if (error eq null) Exit.unit else Exit.failCause(error))
+                },
+                Exited(nextKey, exit)
+              )
+
+            case ExecutionStrategy.Parallel =>
+              (
+                ZIO
+                  .foreachPar(fins.values)(fin => fin(exit).exit)
+                  .flatMap(Exit.collectAllParDiscard),
+                Exited(nextKey, exit)
+              )
+
+            case ExecutionStrategy.ParallelN(n) =>
+              (
+                ZIO
+                  .foreachPar(fins.values)(fin => fin(exit).exit)
+                  .flatMap(Exit.collectAllParDiscard)
+                  .withParallelism(n),
+                Exited(nextKey, exit)
+              )
+
+          }
+      }
 
     /**
-     * Removes the finalizer associated with this key and returns it.
+     * Number of finalizers that have not yet been run
      */
-    def remove(key: Key)(implicit trace: Trace): UIO[Option[Finalizer]]
-
-    /**
-     * Replaces the finalizer associated with this key and returns it. If the
-     * finalizers associated with this scope have already been run this
-     * finalizer will be run immediately.
-     */
-    def replace(key: Key, finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Finalizer]]
-
-    /**
-     * Updates the finalizers associated with this scope using the specified
-     * function.
-     */
-    def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit]
+    def size: Int =
+      ref.get match {
+        case _: Exited        => 0
+        case Running(_, fins) => fins.size
+      }
   }
 
   private object ReleaseMap {
+    private val noopFinalizer = Exit.succeed((_: Exit[Any, Any]) => Exit.unit)
 
     /**
      * Creates a new ReleaseMap.
      */
     def make(implicit trace: Trace): UIO[ReleaseMap] =
-      ZIO.succeed(unsafe.make()(Unsafe.unsafe))
-
-    private object unsafe {
-
-      /**
-       * Creates a new ReleaseMap.
-       */
-      def make()(implicit Unsafe: Unsafe) = {
-        // The sorting order of the LongMap uses bit ordering (000, 001, ... 111 but with 64 bits). This
-        // works out to be `0 ... Long.MaxValue, Long.MinValue, ... -1`. The order of the map is mainly
-        // important for the finalization, in which we want to walk it in reverse order. So we insert
-        // into the map using keys that will build it in reverse. That way, when we do the final iteration,
-        // the finalizers are already in correct order.
-        val initialKey: Long = -1L
-
-        def next(l: Long) =
-          if (l == 0L) throw new RuntimeException("ReleaseMap wrapped around")
-          else if (l == Long.MinValue) Long.MaxValue
-          else l - 1
-
-        val ref: Ref[State] =
-          Ref.unsafe.make(Running(initialKey, LongMap.empty, identity))
-
-        new ReleaseMap {
-          type Key = Long
-
-          def add(finalizer: Finalizer)(implicit trace: Trace): UIO[Finalizer] =
-            addIfOpen(finalizer).map {
-              case Some(key) => release(key, _)
-              case None      => _ => ZIO.unit
-            }
-
-          def addIfOpen(finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Key]] =
-            ref.modify {
-              case Exited(nextKey, exit, update) =>
-                finalizer(exit).as(None) -> Exited(next(nextKey), exit, update)
-              case Running(nextKey, fins, update) =>
-                ZIO.succeed(Some(nextKey)) -> Running(next(nextKey), fins.updated(nextKey, finalizer), update)
-            }.flatten
-
-          def get(key: Key)(implicit trace: Trace): UIO[Option[Finalizer]] =
-            ref.get.map {
-              case Exited(_, _, _)     => None
-              case Running(_, fins, _) => fins get key
-            }
-
-          def release(key: Key, exit: Exit[Any, Any])(implicit trace: Trace): UIO[Any] =
-            ref.modify {
-              case s @ Exited(_, _, _) => (ZIO.unit, s)
-              case s @ Running(_, fins, update) =>
-                (
-                  fins.get(key).fold(ZIO.unit: UIO[Any])(fin => update(fin)(exit)),
-                  s.copy(finalizers = fins - key)
-                )
-            }.flatten
-
-          def releaseAll(exit: Exit[Any, Any], execStrategy: ExecutionStrategy)(implicit trace: Trace): UIO[Any] =
-            ref.modify {
-              case s @ Exited(_, _, _) => (ZIO.unit, s)
-              case Running(nextKey, fins, update) =>
-                execStrategy match {
-                  case ExecutionStrategy.Sequential =>
-                    (
-                      ZIO
-                        .foreach(fins: Iterable[(Long, Finalizer)]) { case (_, fin) =>
-                          update(fin).apply(exit).exit
-                        }
-                        .flatMap(results => ZIO.done(Exit.collectAll(results) getOrElse Exit.unit)),
-                      Exited(nextKey, exit, update)
-                    )
-
-                  case ExecutionStrategy.Parallel =>
-                    (
-                      ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
-                        }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit)),
-                      Exited(nextKey, exit, update)
-                    )
-
-                  case ExecutionStrategy.ParallelN(n) =>
-                    (
-                      ZIO
-                        .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
-                          update(finalizer)(exit).exit
-                        }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit))
-                        .withParallelism(n),
-                      Exited(nextKey, exit, update)
-                    )
-
-                }
-            }.flatten
-
-          def remove(key: Key)(implicit trace: Trace): UIO[Option[Finalizer]] =
-            ref.modify {
-              case Exited(nk, exit, update)  => (None, Exited(nk, exit, update))
-              case Running(nk, fins, update) => (fins get key, Running(nk, fins - key, update))
-            }
-
-          def replace(key: Key, finalizer: Finalizer)(implicit trace: Trace): UIO[Option[Finalizer]] =
-            ref.modify {
-              case Exited(nk, exit, update) => (finalizer(exit).as(None), Exited(nk, exit, update))
-              case Running(nk, fins, update) =>
-                (ZIO.succeed(fins get key), Running(nk, fins.updated(key, finalizer), update))
-            }.flatten
-
-          def updateAll(f: Finalizer => Finalizer)(implicit trace: Trace): UIO[Unit] =
-            ref.update {
-              case Exited(key, exit, update)  => Exited(key, exit, update.andThen(f))
-              case Running(key, exit, update) => Running(key, exit, update.andThen(f))
-            }
-        }
-      }
-    }
+      ZIO.succeed(new ReleaseMap)
   }
 }

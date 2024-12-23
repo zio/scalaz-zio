@@ -4,7 +4,7 @@ title: "Tutorial: How to Build a GraphQL Web Service"
 sidebar_label: "Building a GraphQL Web Service"
 ---
 
-Having GraphQL APIs enables the clients the ability to query the exact data they need. This powerful feature makes GraphQL more flexible than RESTful APIs. 
+Having GraphQL APIs enables the clients the ability to query the exact data they need. This powerful feature makes GraphQL more flexible than RESTful APIs.
 
 Instead of having endpoints for our resources, the GraphQL API only provides a set of types and fields in terms of schemas. The client can ask for this schema, and that will help the client to know what kind of data they can expect from the server, and finally, the client can use the schema to build its queries.
 
@@ -88,6 +88,7 @@ case class Queries(
 ## Running the GraphQL Server
 
 After defining all the queries, in order to serve the GraphQL API, we need to perform the following steps:
+
 1. Create a `GraphQLInterpreter` instance, which is a wrapper around the _GraphQL API_. It allows us to add some middleware around the query execution.
 2. Create an `HttpApp` instance from the `GraphQLInterpreter` instance. We can do this by using the `ZHttpAdapter.makeHttpService` defined in the `caliban-zio-http` module.
 3. Serve the resulting `HttpApp` instance using the `Server.start` method of the _ZIO HTTP_ module.
@@ -126,6 +127,12 @@ object MainApp extends zio.ZIOAppDefault {
 }
 ```
 
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
+
 ## Effectful Queries
 
 In the previous section, we used an in-memory data structure to store the data. But, in real-world applications we usually want to perform some kind of effectful queries to retrieve the data from the database. In such cases, we can use queries that return `ZIO` values:
@@ -148,8 +155,8 @@ In this project, we have defined models of our employees with their names and ro
 So we can query all the employees that are software developers using the GraphQL query:
 
 ```graphql
-query{
-  employees(role: SoftwareDeveloper){
+query {
+  employees(role: SoftwareDeveloper) {
     name
     role
   }
@@ -166,15 +173,15 @@ The response will be as follows:
 
 ```json
 {
-  "data" : {
-    "employees" : [
+  "data": {
+    "employees": [
       {
-        "name" : "Maria",
-        "role" : "SoftwareDeveloper"
+        "name": "Maria",
+        "role": "SoftwareDeveloper"
       },
       {
-        "name" : "Peter",
-        "role" : "SoftwareDeveloper"
+        "name": "Peter",
+        "role": "SoftwareDeveloper"
       }
     ]
   }

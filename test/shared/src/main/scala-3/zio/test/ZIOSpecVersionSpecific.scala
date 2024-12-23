@@ -25,11 +25,11 @@ object ZIOSpecVersionSpecificMacros {
         case Block(stats, expr) =>
           stats.flatMap(collectTests) ++ collectTests(expr)
 
-        case vd @ ValDef(_, _, _) =>
-          List(TestOrStatement.StatementCase(vd))
-
         case spec: Term if spec.tpe <:< TypeRepr.of[Spec[_, _]] =>
           List(TestOrStatement.SpecCase(spec))
+
+        case vd: Statement =>
+          List(TestOrStatement.StatementCase(vd))
 
         case other =>
           throw new Error("UNHANDLED: " + other)

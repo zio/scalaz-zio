@@ -303,6 +303,23 @@ trait FiberRef[A] extends Serializable { self =>
         override def initialValue(): A = initial
       }
     }
+
+  /**
+   * Flag used to determine whether Patch created by the fork method creates an
+   * empty Patch that doesn't modify the value.
+   *
+   * '''NOTE FOR ZIO LIBRARIES''' This method is package-private only so that it
+   * can be accessed from `FiberRefs`. Do not use it
+   */
+  private[zio] def hasIdentityFork: Boolean = false
+
+  /**
+   * Flag used to determine whether join method returns
+   *
+   * '''NOTE FOR ZIO LIBRARIES''' This method is package-private only so that it
+   * can be accessed from `FiberRefs`. Do not use it
+   */
+  private[zio] def hasSecondFnJoin: Boolean = false
 }
 
 object FiberRef {
@@ -326,6 +343,10 @@ object FiberRef {
     override def fork: Patch = delegate.fork
 
     override def join(oldValue: Value, newValue: Value): Value = delegate.join(oldValue, newValue)
+
+    override def hasIdentityFork: Boolean = delegate.hasIdentityFork
+
+    override def hasSecondFnJoin: Boolean = delegate.hasSecondFnJoin
   }
 
   type WithPatch[Value0, Patch0] = FiberRef[Value0] { type Patch = Patch0 }
@@ -482,33 +503,30 @@ object FiberRef {
             if (newRefs eq oldRefs) zio
             else {
               fiberState.setFiberRefs(newRefs)
-              zio.onExit { _ =>
-                val currentRefs = fiberState.getFiberRefs(false)
-                if (newRefs eq currentRefs) {
-                  // FiberRefs were not modified, we can just restore the old state
-                  fiberState.setFiberRefs(oldRefs)
-                } else {
-                  // They were modified, we need to update only the current FiberRef
+              ZIO.uninterruptibleMask { restore =>
+                restore(zio).exitWith { exit =>
                   val oldValue = oldRefs.getOrNull(self)
                   if (oldValue == null) fiberState.resetFiberRef(self)
                   else fiberState.setFiberRef(self, oldValue)
+                  exit
                 }
-                Exit.unit
               }
             }
-
           }
 
         override def set(value: Value)(implicit trace: Trace): UIO[Unit] =
           ZIO.withFiberRuntime[Any, Nothing, Unit] { (fiberState, _) =>
             fiberState.setFiberRef(self, value)
 
-            ZIO.unit
+            Exit.unit
           }
 
         // Store the hash code in a val to avoid recomputing it on every access of the FiberRefs map
         // Ideally we'd do that in `FiberRef` itself, but that's not binary compatible
         final override val hashCode: Int = super.hashCode()
+
+        final override private[zio] val hasIdentityFork: Boolean = fork0 == differ.empty
+        final override private[zio] val hasSecondFnJoin: Boolean = join0 == ZIO.secondFn[Value0]
       }
 
     def makeRuntimeFlags(

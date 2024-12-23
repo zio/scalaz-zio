@@ -24,7 +24,6 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.IntFunction
 import java.util.{Set => JavaSet}
 import scala.annotation.tailrec
 
@@ -158,7 +157,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       if (isAlive()) {
         getChildren().add(child)
 
-        if (isInterrupted())
+        if (shouldInterrupt())
           child.tellInterrupt(getInterruptedCause())
       } else {
         child.tellInterrupt(getInterruptedCause())
@@ -170,7 +169,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     if (isAlive()) {
       val childs = getChildren()
 
-      if (isInterrupted()) {
+      if (shouldInterrupt()) {
         val cause = getInterruptedCause()
         while (iter.hasNext) {
           val child = iter.next()
@@ -410,7 +409,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           }
 
           val exit =
-            runLoop(effect, 0, _stackSize, initialDepth).asInstanceOf[Exit[E, A]]
+            runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
           if (null eq exit) {
             // Terminate this evaluation, async resumption will continue evaluation:
@@ -962,13 +961,14 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     effect: ZIO.Erased,
     minStackIndex: Int,
     startStackIndex: Int,
-    currentDepth: Int
+    currentDepth: Int,
+    currentOps: Int
   ): Exit[Any, Any] = {
     assert(DisableAssertions || running.get)
 
     // Note that assigning `cur` as the result of `try` or `if` can cause Scalac to box local variables.
     var cur        = effect
-    var ops        = 0
+    var ops        = currentOps
     var stackIndex = startStackIndex
 
     if (currentDepth >= FiberRuntime.MaxDepthBeforeTrampoline) {
@@ -994,6 +994,34 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       } else {
         try {
           cur match {
+            case success: Exit.Success[Any] =>
+              val value = success.value
+
+              cur = null
+
+              while ((cur eq null) && stackIndex > minStackIndex) {
+                stackIndex -= 1
+
+                val continuation = _stack(stackIndex)
+
+                popStackFrame(stackIndex)
+
+                continuation match {
+                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
+                    cur = flatMap.successK(value)
+
+                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
+                    cur = foldZIO.successK(value)
+
+                  case updateFlags: ZIO.UpdateRuntimeFlags =>
+                    cur = patchRuntimeFlags(updateFlags.update, null, null)
+                }
+              }
+
+              if (cur eq null) {
+                return success
+              }
+
             case sync: Sync[Any] =>
               updateLastTrace(sync.trace)
               val value = sync.eval()
@@ -1009,14 +1037,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 continuation match {
                   case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
+                    cur = flatMap.successK(value)
 
                   case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
+                    cur = foldZIO.successK(value)
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
                     cur = patchRuntimeFlags(updateFlags.update, null, null)
@@ -1027,57 +1051,26 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 return Exit.succeed(value)
               }
 
-            case success: Exit.Success[Any] =>
-              val value = success.value
-
-              cur = null
-
-              while ((cur eq null) && stackIndex > minStackIndex) {
-                stackIndex -= 1
-
-                val continuation = _stack(stackIndex)
-
-                popStackFrame(stackIndex)
-
-                continuation match {
-                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
-
-                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
-
-                  case updateFlags: ZIO.UpdateRuntimeFlags =>
-                    cur = patchRuntimeFlags(updateFlags.update, null, null)
-                }
-              }
-
-              if (cur eq null) {
-                return success
-              }
-
             case flatmap: FlatMap[Any, Any, Any, Any] =>
               updateLastTrace(flatmap.trace)
 
-              stackIndex = pushStackFrame(flatmap, stackIndex)
+              val first = flatmap.first
 
-              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1)
-
-              if (null eq result)
-                return null
+              if (first eq ZIO.unit) cur = flatmap.successK(())
               else {
+                stackIndex = pushStackFrame(flatmap, stackIndex)
+
+                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
+
+                if (null eq result) return null
+
                 stackIndex -= 1
                 popStackFrame(stackIndex)
 
                 result match {
-                  case s: Success[Any] =>
-                    cur = flatmap.successK(s.value)
-
-                  case failure =>
-                    cur = failure
+                  case s: Success[Any] => cur = flatmap.successK(s.value)
+                  case failure         => cur = failure
                 }
               }
             case stateful: Stateful[Any, Any, Any] =>
@@ -1094,27 +1087,20 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               stackIndex = pushStackFrame(fold, stackIndex)
 
-              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1)
-              if (null eq result)
-                return null
-              else {
-                stackIndex -= 1
-                popStackFrame(stackIndex)
+              val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
+              ops += 1
 
-                result match {
-                  case s: Success[Any] =>
-                    cur = fold.successK(s.value)
+              if (null eq result) return null
 
-                  case f: Failure[Any] =>
-                    val cause = f.cause
-                    if (shouldInterrupt()) {
-                      cur = Exit.Failure(cause.stripFailures)
-                    } else {
-                      val f = fold.failureK
+              stackIndex -= 1
+              popStackFrame(stackIndex)
 
-                      cur = f(cause)
-                    }
-                }
+              result match {
+                case s: Success[Any] => cur = fold.successK(s.value)
+                case f: Failure[Any] =>
+                  val cause = f.cause
+                  if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
+                  else cur = fold.failureK(cause)
               }
 
             case async: Async[Any, Any, Any] =>
@@ -1159,18 +1145,16 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 stackIndex = pushStackFrame(k, stackIndex)
 
-                val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1)
+                val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
 
-                if (null eq exit)
-                  return null
-                else {
+                if (null eq exit) return null
 
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
+                stackIndex -= 1
+                popStackFrame(stackIndex)
 
-                  // Go backward, on the stack:
-                  cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
-                }
+                // Go backward, on the stack:
+                cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
               }
 
             case iterate: WhileLoop[Any, Any, Any] =>
@@ -1178,20 +1162,14 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               val check = iterate.check
 
-              val k = // TODO: Push into WhileLoop so we don't have to allocate here
-                ZIO.Continuation({ (element: Any) =>
-                  iterate.process(element)
-                  iterate
-                })(iterate.trace)
-
-              stackIndex = pushStackFrame(k, stackIndex)
+              stackIndex = pushStackFrame(iterate.k, stackIndex)
 
               val nextDepth = currentDepth + 1
 
               cur = null
 
               while ((cur eq null) && check()) {
-                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth) match {
+                runLoop(iterate.body(), stackIndex, stackIndex, nextDepth, ops) match {
                   case s: Success[Any] =>
                     iterate.process(s.value)
                   case null =>
@@ -1199,6 +1177,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                   case failure =>
                     cur = failure
                 }
+                ops += 1
               }
 
               stackIndex -= 1
@@ -1230,9 +1209,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                     if (shouldInterrupt()) {
                       cause = cause.stripFailures
                     } else {
-                      val f = foldZIO.failureK
-
-                      cur = f(cause)
+                      cur = foldZIO.failureK(cause)
                     }
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
@@ -1509,6 +1486,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       def poll(implicit unsafe: Unsafe): Option[Exit[E, A]] =
         Option(self.exitValue())
+
+      override def interrupt(cause: Cause[Nothing])(implicit unsafe: Unsafe): Unit =
+        self.tellInterrupt(cause)
     }
 
   private[this] val _hashCode: Int = fiberId.hashCode()

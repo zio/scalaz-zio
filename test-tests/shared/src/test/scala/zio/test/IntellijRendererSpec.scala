@@ -125,13 +125,26 @@ object IntellijRendererSpec extends ZIOBaseSpec {
     testFailed(
       "labeled failures",
       Vector(
-        withOffset(2)("✗ 0 was not equal to 1\n"),
-        withOffset(2)("third\n"),
-        withOffset(2)("c did not satisfy isSome(equalTo(1)).label(\"third\")\n"),
-        withOffset(2)("isSome = 0\n"),
-        withOffset(2)("c = Some(0)\n"),
-        withOffset(2)(assertSourceLocation()),
-        "\n"
+        """  ✗ Option was None
+          |  someB
+          |  b did not satisfy isSome(equalTo(1).label("eqB")).label("someB")
+          |  b = None
+          |""".stripMargin,
+        withOffset(2)(assertSourceLocation()) + '\n',
+        """  ✗ 0 was not equal to 1
+          |  eqC
+          |  c did not satisfy isSome(equalTo(1).label("eqC")).label("someC")
+          |  isSome = 0
+          |  c = Some(0)
+          |""".stripMargin,
+        withOffset(2)(assertSourceLocation()) + '\n',
+        """  ✗ 0 was not equal to 1
+          |  lblD
+          |  d did not satisfy isSome(equalTo(1))
+          |  isSome = 0
+          |  d = Some(0)
+          |""".stripMargin,
+        withOffset(2)(assertSourceLocation()) + '\n'
       )
     )
   )
