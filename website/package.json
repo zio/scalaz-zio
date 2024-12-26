@@ -78,7 +78,7 @@
     "babel": "^6.23.0",
     "blended-include-code-plugin": "0.1.2",
     "clsx": "2.1.1",
-    "highlight.js": "11.11.0",
+    "highlight.js": "11.11.1",
     "node-fetch": "^3.3.2",
     "postcss": "8.4.49",
     "prism-react-renderer": "1.3.5",
