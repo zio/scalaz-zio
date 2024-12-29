@@ -880,6 +880,26 @@ object ChunkSpec extends ZIOBaseSpec {
         val chunk2 = Chunk.fill(10000)(1L)
         assertTrue(chunk1 == chunk2)
       }
+    ),
+    suite("fromIterable array")(
+      test("objects") {
+        Chunk.fromIterable(Array("a", "b", "c")) match {
+          case c: Chunk.AnyRefArray[String] => assertTrue(c == Chunk("a", "b", "c"))
+          case _                            => assertNever("Expected Chunk.AnyRefArray")
+        }
+      },
+      test("primitives") {
+        Chunk.fromIterable(Array(1, 2, 3)) match {
+          case c: Chunk.IntArray => assertTrue(c == Chunk(1, 2, 3))
+          case _                 => assertNever("Expected Chunk.IntArray")
+        }
+      },
+      test("mix") {
+        Chunk.fromIterable(Array(1, "a", true)) match {
+          case c: Chunk.AnyRefArray[?] => assertTrue(c == Chunk(1, "a", true))
+          case _                       => assertNever("Expected Chunk.AnyRefArray")
+        }
+      }
     )
   )
 }

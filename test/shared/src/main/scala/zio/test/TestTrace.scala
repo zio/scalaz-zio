@@ -94,8 +94,9 @@ sealed trait TestTrace[+A] { self =>
   def withCustomLabel(customLabel: Option[String]): TestTrace[A] =
     if (customLabel.isDefined) {
       self match {
-        case node: TestTrace.Node[_] =>
-          node.copy(customLabel = customLabel, children = node.children.map(_.withCustomLabel(customLabel)))
+        case node: TestTrace.Node[A] =>
+          if (node.customLabel.isDefined) node
+          else node.copy(customLabel = customLabel, children = node.children.map(_.withCustomLabel(customLabel)))
         case TestTrace.AndThen(left, right) =>
           TestTrace.AndThen(left.withCustomLabel(customLabel), right.withCustomLabel(customLabel))
         case and: TestTrace.And =>
