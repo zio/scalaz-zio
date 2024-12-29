@@ -246,6 +246,7 @@ It is possible to configure the Runtime to use Java virtual threads if you are u
 ZIO offers two ways to utilize virtual threads:
 
 1. For the main executor (handles non-blocking ZIO operations):
+
 ```scala
 import zio._
 
