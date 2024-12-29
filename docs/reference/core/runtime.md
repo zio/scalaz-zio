@@ -262,7 +262,7 @@ object MainApp extends ZIOAppDefault {
 
 2. For the blocking executor (handles blocking operations):
 
-```scala
+```scala mdoc:compile-only
 import zio._
 
 object MainApp extends ZIOAppDefault {
