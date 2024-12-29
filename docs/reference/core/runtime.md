@@ -256,7 +256,7 @@ object MainApp extends ZIOAppDefault {
     Runtime.enableLoomBasedExecutor
 
   override def run = ZIO.attempt {
-    println(s"Task running on a virtual-thread: ${Thread.isVirtual()}")
+    println(s"Task running on a virtual-thread: ${Thread.currentThread().getName()}")
   }
 }
 ```
@@ -272,7 +272,7 @@ object MainApp extends ZIOAppDefault {
     Runtime.enableLoomBasedBlockingExecutor
 
   override def run = ZIO.attemptBlocking {
-    println(s"Blocking task running on a virtual-thread: ${Thread.isVirtual()}")
+    println(s"Blocking task running on a virtual-thread: ${Thread.currentThread().getName()}")
   }
 }
 ```
