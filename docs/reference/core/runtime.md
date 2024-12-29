@@ -247,7 +247,7 @@ ZIO offers two ways to utilize virtual threads:
 
 1. For the main executor (handles non-blocking ZIO operations):
 
-```scala
+```scala mdoc:compile-only
 import zio._
 
 object MainApp extends ZIOAppDefault {
