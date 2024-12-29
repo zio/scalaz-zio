@@ -261,6 +261,7 @@ object MainApp extends ZIOAppDefault {
 ```
 
 2. For the blocking executor (handles blocking operations):
+
 ```scala
 import zio._
 
