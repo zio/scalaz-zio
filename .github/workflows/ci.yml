@@ -300,10 +300,17 @@ jobs:
           git add package.json
           commit_message="Update $package_name to $package_version"
           git commit -m "$commit_message" || echo "No changes to commit"
-
-      - name: Create Pull Request to Update Docs
-        uses: peter-evans/create-pull-request@v4.2.4
+      - name: Generate a token
+        id: generate-tokens
+        uses: actions/create-github-app-token@v1.11.1
         with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+      - name: Create Pull Request to Update Docs
+        uses: peter-evans/create-pull-request@v7.0.6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
           body: |-
             The new version of ${{ github.event.client_payload.package_name }} was released.
             Let's update the zio.dev to reflect the latest docs. 
