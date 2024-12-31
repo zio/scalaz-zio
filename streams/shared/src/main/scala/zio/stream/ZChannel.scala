@@ -1948,7 +1948,7 @@ object ZChannel {
           val bufferSize0    = bufferSize
           val mergeStrategy0 = mergeStrategy
           val outgoing =
-            Queue.unsafe.bounded[ZIO[Env, Either[OutErr, OutDone], OutElem]](bufferSize0, fiberId)(Unsafe.unsafe)
+            Queue.unsafe.bounded[Exit[Either[OutErr, OutDone], OutElem]](bufferSize0, fiberId)(Unsafe.unsafe)
           val cancelers   = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
           val lastDone    = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe.unsafe)
           val errorSignal = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
@@ -2040,15 +2040,15 @@ object ZChannel {
           } yield {
             lazy val consumer: ZChannel[Env, Any, Any, Any, OutErr, OutElem, OutDone] =
               unwrap[Env, Any, Any, Any, OutErr, OutElem, OutDone] {
-                outgoing.take.flatten.foldCause(
-                  cause =>
-                    cause.failureOrCause match {
+                outgoing.take.map {
+                  case s: Exit.Success[OutElem] => ZChannel.write(s.value) *> consumer
+                  case f: Exit.Failure[Either[OutErr, OutDone]] =>
+                    f.cause.failureOrCause match {
                       case Left(Right(outDone)) => ZChannel.succeedNow(outDone)
                       case Left(Left(outErr))   => ZChannel.fail(outErr)
                       case Right(cause)         => ZChannel.refailCause(cause)
-                    },
-                  outElem => ZChannel.write(outElem) *> consumer
-                )
+                    }
+                }
               }
 
             consumer.embedInput(input)
