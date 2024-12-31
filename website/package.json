@@ -37,7 +37,7 @@
     "@zio.dev/zio-constraintless": "0.3.3",
     "@zio.dev/zio-deriving": "0.1.0-SNAPSHOT",
     "@zio.dev/zio-direct": "1.0.0-RC7",
-    "@zio.dev/zio-dynamodb": "0.2.4",
+    "@zio.dev/zio-dynamodb": "1.0.0-RC18",
     "@zio.dev/zio-flow": "1.0.0-RC4",
     "@zio.dev/zio-ftp": "0.4.3",
     "@zio.dev/zio-http": "3.0.1",
