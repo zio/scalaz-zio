@@ -1,10 +1,9 @@
 package zio.stream
 
-import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
+import zio.stream.internal.ChannelExecutor.ChannelState
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
-import ChannelExecutor.ChannelState
-import zio.internal.FiberScope
+import zio.{ZIO, _}
 
 /**
  * A `ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone]` is a nexus
@@ -1938,7 +1937,20 @@ object ZChannel {
     mergeStrategy: => MergeStrategy = MergeStrategy.BackPressure
   )(
     f: (OutDone, OutDone) => OutDone
-  )(implicit trace: Trace): ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone] =
+  )(implicit trace: Trace): ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone] = {
+    sealed trait Result
+    object Result {
+      final case class Value(value: OutElem)        extends Result
+      final case class Error(error: OutErr)         extends Result
+      final case class Done(done: OutDone)          extends Result
+      final case class Fatal(cause: Cause[Nothing]) extends Result
+
+      def value(v: OutElem): Result            = Value(v)
+      def error(e: OutErr): Result             = Error(e)
+      def done(d: OutDone): Result             = Done(d)
+      def fatal(cause: Cause[Nothing]): Result = Fatal(cause)
+    }
+
     unwrapScopedWith { scope =>
       ZIO.fiberIdWith { fiberId =>
         ZIO.suspendSucceed {
@@ -1947,18 +1959,17 @@ object ZChannel {
           val n0             = n.toLong
           val bufferSize0    = bufferSize
           val mergeStrategy0 = mergeStrategy
-          val outgoing =
-            Queue.unsafe.bounded[Exit[Either[OutErr, OutDone], OutElem]](bufferSize0, fiberId)(Unsafe.unsafe)
-          val cancelers   = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
-          val lastDone    = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe.unsafe)
-          val errorSignal = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-          val permits     = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
+          val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe.unsafe)
+          val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
+          val lastDone       = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe.unsafe)
+          val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+          val permits        = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
 
           type Pull[A] = ZIO[Env, Either[OutErr, OutDone], A]
 
           def evaluatePull(pull: Pull[OutElem]): URIO[Env, Unit] =
             pull
-              .flatMap(outElem => outgoing.offer(Exit.succeed(outElem)))
+              .flatMap(outElem => outgoing.offer(Result.value(outElem)))
               .forever
               .catchAllCause(cause =>
                 cause.failureOrCause match {
@@ -1967,10 +1978,10 @@ object ZChannel {
                       case null     => x.value
                       case lastDone => f(lastDone, x.value)
                     }
-                  case Left(_: Left[OutErr, OutDone]) =>
-                    outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
+                  case Left(l: Left[OutErr, OutDone]) =>
+                    outgoing.offer(Result.error(l.value)) *> errorSignal.succeed(()).unit
                   case Right(cause) =>
-                    outgoing.offer(Exit.failCause(cause)) *> errorSignal.succeed(()).unit
+                    outgoing.offer(Result.fatal(cause)) *> errorSignal.succeed(()).unit
                 }
               )
 
@@ -2028,11 +2039,11 @@ object ZChannel {
                        case Left(x: Right[OutErr, OutDone]) =>
                          permits.withPermits(n0)(ZIO.unit).interruptible *>
                            lastDone.get.flatMap {
-                             case null     => outgoing.offer(Exit.fail(Right(x.value)))
-                             case lastDone => outgoing.offer(Exit.fail(Right(f(lastDone, x.value))))
+                             case null     => outgoing.offer(Result.done(x.value))
+                             case lastDone => outgoing.offer(Result.done(f(lastDone, x.value)))
                            }
-                       case Left(_: Left[OutErr, OutDone]) => outgoing.offer(Exit.failCause(cause))
-                       case Right(cause)                   => outgoing.offer(Exit.failCause(cause.map(Left(_))))
+                       case Left(l: Left[OutErr, OutDone]) => outgoing.offer(Result.error(l.value))
+                       case Right(cause)                   => outgoing.offer(Result.fatal(cause))
                      }
                    )
                    .raceFirst(awaitErrorSignal(childScope, fiberId)(errorSignal))
@@ -2041,13 +2052,10 @@ object ZChannel {
             lazy val consumer: ZChannel[Env, Any, Any, Any, OutErr, OutElem, OutDone] =
               unwrap[Env, Any, Any, Any, OutErr, OutElem, OutDone] {
                 outgoing.take.map {
-                  case s: Exit.Success[OutElem] => ZChannel.write(s.value) *> consumer
-                  case f: Exit.Failure[Either[OutErr, OutDone]] =>
-                    f.cause.failureOrCause match {
-                      case Left(Right(outDone)) => ZChannel.succeedNow(outDone)
-                      case Left(Left(outErr))   => ZChannel.fail(outErr)
-                      case Right(cause)         => ZChannel.refailCause(cause)
-                    }
+                  case Result.Value(outElem)  => ZChannel.write(outElem) *> consumer
+                  case Result.Done(outDone)   => ZChannel.succeedNow(outDone)
+                  case Result.Error(outError) => ZChannel.fail(outError)
+                  case Result.Fatal(cause)    => ZChannel.refailCause(cause)
                 }
               }
 
@@ -2056,6 +2064,7 @@ object ZChannel {
         }
       }
     }
+  }
 
   @deprecated("use mergeAllWith with `MergeStrategy`", "2.1.7")
   def mergeAllWith[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone](
