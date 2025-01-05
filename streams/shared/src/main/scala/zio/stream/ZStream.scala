@@ -4924,7 +4924,13 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    * Repeats the provided value infinitely.
    */
   def repeat[A](a: => A)(implicit trace: Trace): ZStream[Any, Nothing, A] =
-    new ZStream(ZChannel.succeed(a).flatMap(a => ZChannel.write(Chunk.single(a)).repeated))
+    new ZStream(
+      ZChannel.suspend {
+        val a0 = a
+        val v  = Chunk.single(a0)
+        ZChannel.write(v).repeated
+      }
+    )
 
   /**
    * Repeats the value using the provided schedule.
