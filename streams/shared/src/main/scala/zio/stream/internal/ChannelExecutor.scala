@@ -999,16 +999,13 @@ private[zio] class SingleProducerAsyncInput[Err, Elem, Done](
 
 private[zio] object SingleProducerAsyncInput {
   def make[Err, Elem, Done](implicit trace: Trace): UIO[SingleProducerAsyncInput[Err, Elem, Done]] =
-    Promise
-      .make[Nothing, Unit]
-      .flatMap(p => Ref.make[State[Err, Elem, Done]](State.Empty(p)))
-      .map(new SingleProducerAsyncInput(_))
+    ZIO.fiberIdWith(fiberId => ZIO.succeed(unsafe.make(fiberId)(Unsafe)))
 
   object unsafe {
-    def make[Err, Elem, Done](fiberId: FiberId)(implicit trace: Trace): SingleProducerAsyncInput[Err, Elem, Done] = {
-      val promise: Promise[Nothing, Unit]      = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+    def make[Err, Elem, Done](fiberId: FiberId)(implicit unsafe: Unsafe): SingleProducerAsyncInput[Err, Elem, Done] = {
+      val promise: Promise[Nothing, Unit]      = Promise.unsafe.make[Nothing, Unit](fiberId)
       val initialState: State[Err, Elem, Done] = State.Empty[Err, Elem, Done](promise)
-      val ref: Ref[State[Err, Elem, Done]]     = Ref.unsafe.make(initialState)(Unsafe.unsafe)
+      val ref: Ref[State[Err, Elem, Done]]     = Ref.unsafe.make(initialState)
       new SingleProducerAsyncInput[Err, Elem, Done](ref)
     }
   }

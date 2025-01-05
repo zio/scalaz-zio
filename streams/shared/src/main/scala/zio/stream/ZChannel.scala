@@ -1951,7 +1951,7 @@ object ZChannel {
 
     unwrapScopedWith { scope =>
       ZIO.fiberIdWith { fiberId =>
-        val input          = SingleProducerAsyncInput.unsafe.make[InErr, InElem, InDone](fiberId)
+        val input          = SingleProducerAsyncInput.unsafe.make[InErr, InElem, InDone](fiberId)(Unsafe)
         val incoming       = ZChannel.fromInput(input)
         val n0             = n.toLong
         val bufferSize0    = bufferSize
