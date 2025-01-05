@@ -1956,11 +1956,11 @@ object ZChannel {
         val n0             = n.toLong
         val bufferSize0    = bufferSize
         val mergeStrategy0 = mergeStrategy
-        val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe.unsafe)
-        val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
+        val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe)
+        val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe)
         val lastDone       = new AtomicReference(null.asInstanceOf[OutDone])
-        val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-        val permits        = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
+        val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
+        val permits        = Semaphore.unsafe.make(n0)(Unsafe)
 
         type Pull[A] = ZIO[Env, Either[OutErr, OutDone], A]
 
@@ -1990,7 +1990,7 @@ object ZChannel {
           mergeStrategy0 match {
             case MergeStrategy.BackPressure =>
               pull.flatMap { channel =>
-                val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+                val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
                 val raceIOs =
                   ZIO.scopedWith { scope =>
                     (incoming >>> channel)
@@ -2005,8 +2005,8 @@ object ZChannel {
               }
             case MergeStrategy.BufferSliding =>
               pull.flatMap { channel =>
-                val canceler = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
-                val latch    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
+                val canceler = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
+                val latch    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
 
                 for {
                   size <- cancelers.size
