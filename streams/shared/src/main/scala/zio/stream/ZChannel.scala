@@ -1945,11 +1945,6 @@ object ZChannel {
       final case class Error(error: OutErr)         extends Result
       final case class Done(done: OutDone)          extends Result
       final case class Fatal(cause: Cause[Nothing]) extends Result
-
-      def value(v: OutElem): Result            = Value(v)
-      def error(e: OutErr): Result             = Error(e)
-      def done(d: OutDone): Result             = Done(d)
-      def fatal(cause: Cause[Nothing]): Result = Fatal(cause)
     }
 
     unwrapScopedWith { scope =>
@@ -1970,7 +1965,7 @@ object ZChannel {
 
           def evaluatePull(pull: Pull[OutElem]): URIO[Env, Unit] =
             pull
-              .flatMap(outElem => outgoing.offer(Result.value(outElem)))
+              .flatMap(outElem => outgoing.offer(Result.Value(outElem)))
               .forever
               .catchAllCause(cause =>
                 cause.failureOrCause match {
@@ -1980,9 +1975,9 @@ object ZChannel {
                       case lastDone => f(lastDone, x.value)
                     }
                   case Left(l: Left[OutErr, OutDone]) =>
-                    outgoing.offer(Result.error(l.value)) *> errorSignal.succeed(()).unit
+                    outgoing.offer(Result.Error(l.value)) *> errorSignal.succeed(()).unit
                   case Right(cause) =>
-                    outgoing.offer(Result.fatal(cause)) *> errorSignal.succeed(()).unit
+                    outgoing.offer(Result.Fatal(cause)) *> errorSignal.succeed(()).unit
                 }
               )
 
@@ -2040,11 +2035,11 @@ object ZChannel {
                        case Left(x: Right[OutErr, OutDone]) =>
                          permits.withPermits(n0)(ZIO.unit).interruptible *>
                            lastDone.get.flatMap {
-                             case null     => outgoing.offer(Result.done(x.value))
-                             case lastDone => outgoing.offer(Result.done(f(lastDone, x.value)))
+                             case null     => outgoing.offer(Result.Done(x.value))
+                             case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
                            }
-                       case Left(l: Left[OutErr, OutDone]) => outgoing.offer(Result.error(l.value))
-                       case Right(cause)                   => outgoing.offer(Result.fatal(cause))
+                       case Left(l: Left[OutErr, OutDone]) => outgoing.offer(Result.Error(l.value))
+                       case Right(cause)                   => outgoing.offer(Result.Fatal(cause))
                      }
                    )
                    .raceFirst(awaitErrorSignal(childScope, fiberId)(errorSignal))
