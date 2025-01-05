@@ -4597,7 +4597,7 @@ object ZStreamSpec extends ZIOBaseSpec {
         test("toIterator") {
           ZIO.scoped {
             (for {
-              counter <- Ref.make(0) //Increment and get the value
+              counter  <- Ref.make(0) // Increment and get the value
               effect    = counter.updateAndGet(_ + 1)
               iterator <- ZStream.repeatZIO(effect).toIterator
               n         = 2000

@@ -2213,7 +2213,7 @@ object ZChannel {
     case class BothRunning[Env, Err, Err1, Err2, Elem, Done, Done1, Done2](
       left: Fiber.Runtime[Err, Either[Done, Elem]],
       right: Fiber.Runtime[Err1, Either[Done1, Elem]],
-      preferLeft: Boolean //to maintain fairness when polling fibers
+      preferLeft: Boolean // to maintain fairness when polling fibers
     ) extends MergeState[Env, Err, Err1, Err2, Elem, Done, Done1, Done2]
     case class LeftDone[Env, Err, Err1, Err2, Elem, Done, Done1, Done2](
       f: Exit[Err1, Done1] => ZIO[Env, Err2, Done2]

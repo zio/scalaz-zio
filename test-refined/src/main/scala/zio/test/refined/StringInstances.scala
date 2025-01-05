@@ -35,7 +35,7 @@ trait StringInstances {
     ws: Witness.Aux[S],
     charGen: Gen[R, Char]
   ): Gen[R, Refined[String, EndsWith[S]]] =
-    Gen.string1(charGen).map(v => Refined.unsafeApply(v + ws.value)) //Only String can call `+` since scala 2.13.0.
+    Gen.string1(charGen).map(v => Refined.unsafeApply(v + ws.value)) // Only String can call `+` since scala 2.13.0.
 
   def endsWithStringNGen[R, S <: String, P](implicit
     ws: Witness.Aux[S],

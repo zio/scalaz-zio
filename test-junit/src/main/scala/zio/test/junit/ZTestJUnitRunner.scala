@@ -45,12 +45,11 @@ class ZTestJUnitRunner(klass: Class[_]) extends Runner with Filterable {
 
   private val className = klass.getName.stripSuffix("$")
 
-  private lazy val spec: ZIOSpecAbstract = {
+  private lazy val spec: ZIOSpecAbstract =
     klass
       .getDeclaredConstructor()
       .newInstance()
       .asInstanceOf[ZIOSpecAbstract]
-  }
 
   private var filter = Filter.ALL
 

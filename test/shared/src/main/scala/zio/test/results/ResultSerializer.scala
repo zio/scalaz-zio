@@ -17,8 +17,8 @@ object ResultSerializer {
           s"""
              |    {
              |       "name" : "$fullyQualifiedName/${labelsReversed.reverse
-            .map(s => s.replace("/", "\\/"))
-            .mkString("/")}",
+              .map(s => s.replace("/", "\\/"))
+              .mkString("/")}",
              |       "status" : "${render(test)}",
              |       "durationMillis" : "$duration",
              |       "annotations" : "${render(annotations)}",
