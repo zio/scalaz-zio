@@ -6,6 +6,8 @@ import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecu
 import ChannelExecutor.ChannelState
 import zio.internal.FiberScope
 
+import java.util.concurrent.atomic.AtomicReference
+
 /**
  * A `ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone]` is a nexus
  * of I/O operations, which supports both reading and writing. A channel may
@@ -1956,7 +1958,7 @@ object ZChannel {
         val mergeStrategy0 = mergeStrategy
         val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe.unsafe)
         val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe.unsafe)
-        val lastDone       = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe.unsafe)
+        val lastDone       = new AtomicReference(null.asInstanceOf[OutDone])
         val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe.unsafe)
         val permits        = Semaphore.unsafe.make(n0)(Unsafe.unsafe)
 
@@ -1969,9 +1971,11 @@ object ZChannel {
             .catchAllCause(cause =>
               cause.failureOrCause match {
                 case Left(x: Right[OutErr, OutDone]) =>
-                  lastDone.update {
-                    case null     => x.value
-                    case lastDone => f(lastDone, x.value)
+                  ZIO.succeed {
+                    lastDone.updateAndGet {
+                      case null     => x.value
+                      case lastDone => f(lastDone, x.value)
+                    }
                   }
                 case Left(l: Left[OutErr, OutDone]) =>
                   outgoing.offer(Result.Error(l.value)) *> errorSignal.succeed(()).unit
@@ -2033,9 +2037,11 @@ object ZChannel {
                    cause.failureOrCause match {
                      case Left(x: Right[OutErr, OutDone]) =>
                        permits.withPermits(n0)(ZIO.unit).interruptible *>
-                         lastDone.get.flatMap {
-                           case null     => outgoing.offer(Result.Done(x.value))
-                           case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
+                         ZIO.succeed {
+                           lastDone.get match {
+                             case null     => outgoing.offer(Result.Done(x.value))
+                             case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
+                           }
                          }
                      case Left(l: Left[OutErr, OutDone]) => outgoing.offer(Result.Error(l.value))
                      case Right(cause)                   => outgoing.offer(Result.Fatal(cause))
