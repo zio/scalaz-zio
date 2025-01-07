@@ -212,7 +212,7 @@ final class FiberRefs private (
           val parentHead  = parentStack.head
           val oldValue    = parentHead.value.asInstanceOf[ref.Value]
 
-          val newValue0 = {
+          val newValue0 =
             // Shortcut when the stack wasn't changed: We don't have to find the ancestor.
             // NOTE: We could technically exit here, but we need to call `join`
             // to accommodate for cases that it returns a different value than the child
@@ -224,18 +224,16 @@ final class FiberRefs private (
               val patch      = ref.diff(ancestor, childValue)
               ref.patch(patch)(oldValue)
             }
-          }
 
           val newValue = ref.join(oldValue, newValue0)
           if (!eqWithBoxedNumericEquality(oldValue, newValue)) {
             val parentFiberId = parentHead.id
             val parentVersion = parentHead.version
-            val newEntry = {
+            val newEntry =
               if (parentFiberId eq fiberId)
                 Value(::(StackEntry(parentFiberId, newValue, parentVersion + 1), parentStack.tail), parentDepth)
               else
                 Value(::(StackEntry(fiberId, newValue, 0), parentStack), parentDepth + 1)
-            }
             fiberRefLocals0 = fiberRefLocals0.updated(ref, newEntry)
           }
         }

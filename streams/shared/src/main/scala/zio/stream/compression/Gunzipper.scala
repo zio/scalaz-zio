@@ -64,7 +64,7 @@ private[compression] class Gunzipper private (bufferSize: Int) {
 
   private class ParseHeaderStep(acc: Array[Byte], crc32: CRC32) extends State {
 
-    //TODO: If whole input is shorther than fixed header, not output is produced and no error is singaled. Is it ok?
+    // TODO: If whole input is shorther than fixed header, not output is produced and no error is singaled. Is it ok?
     override def feed(chunkBytes: Array[Byte]): (State, Chunk[Byte]) = {
 
       val bytes = acc ++ chunkBytes
@@ -123,7 +123,7 @@ private[compression] class Gunzipper private (bufferSize: Int) {
   private class CheckCrc16Step(pastCrc16Bytes: Array[Byte], crcValue: Long) extends State {
     override def feed(chunkBytes: Array[Byte]): (State, Chunk[Byte]) = {
       val (crc16Bytes, leftover) = (pastCrc16Bytes ++ chunkBytes).splitAt(2)
-      //Unlikely but possible that chunk was 1 byte only, leftover is empty.
+      // Unlikely but possible that chunk was 1 byte only, leftover is empty.
       if (crc16Bytes.length < 2) {
         (new CheckCrc16Step(crc16Bytes, crcValue), Chunk.empty)
       } else {

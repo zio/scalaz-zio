@@ -125,12 +125,12 @@ object ProducerConsumerBenchmark {
   @State(Scope.Thread)
   @AuxCounters(AuxCounters.Type.EVENTS)
   class PollCounters(var failedPolls: Long, var madePolls: Long) {
-    def this() = { this(0, 0) }
+    def this() = this(0, 0)
   }
 
   @State(Scope.Thread)
   @AuxCounters(AuxCounters.Type.EVENTS)
   class OfferCounters(var failedOffers: Long, var madeOffers: Long) {
-    def this() = { this(0, 0) }
+    def this() = this(0, 0)
   }
 }

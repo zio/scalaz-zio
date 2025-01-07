@@ -1207,12 +1207,11 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
         for {
           remainingChars <- ZIO.succeed {
                               val bufRemaining = charBuffer.remaining()
-                              val (decodeChars, remainingChars) = {
+                              val (decodeChars, remainingChars) =
                                 if (inChars.length > bufRemaining) {
                                   inChars.splitAt(bufRemaining)
                                 } else
                                   (inChars, Chunk.empty)
-                              }
                               charBuffer.put(decodeChars.toArray)
                               charBuffer.flip()
                               remainingChars
@@ -1253,11 +1252,10 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
           } yield result
       }
 
-      val createPush: ZIO[Any, Nothing, Option[Chunk[Char]] => IO[CharacterCodingException, Chunk[Byte]]] = {
+      val createPush: ZIO[Any, Nothing, Option[Chunk[Char]] => IO[CharacterCodingException, Chunk[Byte]]] =
         for {
           _ <- ZIO.succeed(encoder.reset)
         } yield push
-      }
 
       ZPipeline.fromPush(createPush)
     }

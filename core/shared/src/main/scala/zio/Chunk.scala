@@ -1019,7 +1019,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
     builder.result()
   }
 
-  //noinspection AccessorLikeMethodIsUnit
+  // noinspection AccessorLikeMethodIsUnit
   protected[zio] final def toArray[A1 >: A](n: Int, dest: Array[A1]): Unit =
     toArray(0, dest, n, length)
 

@@ -26,13 +26,12 @@ import scala.scalajs.js.Dynamic.global
 private[zio] trait SystemPlatformSpecific { self: System.type =>
 
   private[zio] val environmentProvider = new EnvironmentProvider {
-    private val envMap: mutable.Map[String, String] = {
+    private val envMap: mutable.Map[String, String] =
       if (js.typeOf(global.process) != "undefined" && js.typeOf(global.process.env) != "undefined") {
         global.process.env.asInstanceOf[js.Dictionary[String]]
       } else {
         mutable.Map.empty
       }
-    }
 
     override def env(variable: String): Option[String] =
       envMap.get(variable)

@@ -66,7 +66,7 @@ private[zio] class ZInputStream(private var chunks: Iterator[Chunk[Byte]]) exten
     if (done) {
       -1
     } else {
-      //cater to InputStream specification
+      // cater to InputStream specification
       if (len != 0) {
         val written = doRead(bytes, off, len, 0)
         if (written == 0) -1 else written
