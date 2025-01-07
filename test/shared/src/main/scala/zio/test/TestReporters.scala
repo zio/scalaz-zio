@@ -1,11 +1,11 @@
 package zio.test
 
-import zio.{Ref, ZIO}
+import zio.{Ref, Unsafe, ZIO}
 
 object TestReporters {
   val make: ZIO[Any, Nothing, TestReporters] = {
     // This SuiteId should probably be passed in a more obvious way
-    Ref.make(List(SuiteId.global)).map(TestReporters(_))
+    ZIO.succeed(TestReporters(Ref.unsafe.make(List(SuiteId.global))(Unsafe)))
   }
 }
 
@@ -13,17 +13,13 @@ case class TestReporters(reportersStack: Ref[List[SuiteId]]) {
 
   def attemptToGetPrintingControl(id: SuiteId, ancestors: List[SuiteId]): ZIO[Any, Nothing, Boolean] =
     reportersStack.updateSomeAndGet {
-      case Nil =>
-        List(id)
-
-      case reporters if ancestors.nonEmpty && reporters.head == ancestors.head =>
-        id :: reporters
+      case Nil                                                   => List(id)
+      case rs if ancestors.nonEmpty && rs.head == ancestors.head => id :: rs
     }.map(_.head == id)
 
   def relinquishPrintingControl(id: SuiteId): ZIO[Any, Nothing, Unit] =
     reportersStack.updateSome {
-      case currentReporter :: reporters if currentReporter == id =>
-        reporters
+      case currentReporter :: reporters if currentReporter == id => reporters
     }
 
 }

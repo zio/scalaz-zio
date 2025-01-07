@@ -39,7 +39,7 @@ object ZTestLogger {
     ZLayer.scoped {
       for {
         testLogger <- ZTestLogger.make
-        acquire    <- FiberRef.currentLoggers.locallyScopedWith(_ + testLogger)
+        _          <- FiberRef.currentLoggers.locallyScopedWith(_ + testLogger)
       } yield ()
     }
 
@@ -48,9 +48,7 @@ object ZTestLogger {
    */
   val logOutput: UIO[Chunk[ZTestLogger.LogEntry]] =
     ZIO.loggersWith { loggers =>
-      loggers.collectFirst { case testLogger: ZTestLogger[_, _] =>
-        testLogger.logOutput
-      }
+      loggers.collectFirst { case testLogger: ZTestLogger[_, _] => testLogger.logOutput }
         .getOrElse(ZIO.dieMessage("Defect: ZTestLogger is missing"))
     }
 

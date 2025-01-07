@@ -16,6 +16,7 @@
 
 package zio.test
 
+import zio.Clock.ClockLive
 import zio._
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
@@ -802,14 +803,14 @@ object TestRandom extends Serializable {
   val deterministic: Layer[Nothing, TestRandom] =
     make(DefaultData)
 
-  val random: ZLayer[Clock, Nothing, TestRandom] = {
+  val random: ZLayer[Any, Nothing, TestRandom] = {
     implicit val trace = Tracer.newTrace
-    (ZLayer.service[Clock] ++ deterministic) >>> ZLayer {
-      for {
-        testRandom <- ZIO.service[TestRandom]
-        time       <- Clock.nanoTime
-        _          <- TestRandom.setSeed(time)
-      } yield testRandom
+    deterministic >>> ZLayer {
+      ZIO.serviceWithZIO[TestRandom] { testRandom =>
+        ClockLive.nanoTime
+          .flatMap(testRandom.setSeed)
+          .as(testRandom)
+      }
     }
   }
 

@@ -972,17 +972,15 @@ package object test extends CompileVariants {
     Spec.labeled(
       label,
       if (specs.isEmpty) Spec.empty
-      else if (specs.length == 1) {
-        wrapIfLabelledCase(specs.head)
-      } else Spec.multiple(Chunk.fromIterable(specs).map(spec => suiteConstructor(spec)))
+      else if (specs.length == 1) wrapIfLabelledCase(specs.head)
+      else Spec.multiple(Chunk.fromIterable(specs.map(spec => suiteConstructor(spec))))
     )
 
   // Ensures we render suite label when we have an individual Labeled test case
   private def wrapIfLabelledCase[In](spec: In)(implicit suiteConstructor: SuiteConstructor[In], trace: Trace) =
     spec match {
-      case Spec(LabeledCase(_, _)) =>
-        Spec.multiple(Chunk(suiteConstructor(spec)))
-      case _ => suiteConstructor(spec)
+      case Spec(_: LabeledCase[?]) => Spec.multiple(Chunk.single(suiteConstructor(spec)))
+      case _                       => suiteConstructor(spec)
     }
 
   /**

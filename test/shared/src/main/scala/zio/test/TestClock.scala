@@ -292,8 +292,8 @@ object TestClock extends Serializable {
         val ref = new AtomicBoolean(false)
 
         def allSuspendedUnchanged(
-          l: mu.HashMap[FiberId, Fiber.Status],
-          r: mu.HashMap[FiberId, Fiber.Status]
+          l: collection.Map[FiberId, Fiber.Status],
+          r: collection.Map[FiberId, Fiber.Status]
         ): Boolean = {
           val it = r.iterator
           while (it.hasNext) {
@@ -305,9 +305,9 @@ object TestClock extends Serializable {
         }
 
         // Sleep and yield a few times to give suspended fibers a chance to resume
-        val f = ClockLive.sleep(2.millis) *> ZIO.yieldNow.replicateZIODiscard(10) *> freeze
+        def f(d: Duration) = ClockLive.sleep(d) *> freeze
 
-        f.zipWith(f)(allSuspendedUnchanged)
+        (f(1.milli) *> f).zipWith(f(5.millis))(allSuspendedUnchanged)
           .flatMap {
             if (_) ZIO.succeed(ref.get)
             else if (ref.compareAndSet(false, true)) suspendedWarningStart *> Exit.failUnit
@@ -324,11 +324,11 @@ object TestClock extends Serializable {
      * synchronize on the status of multiple fibers at the same time this
      * snapshot may not be fully consistent.
      */
-    private val freeze: IO[Unit, mu.HashMap[FiberId, Fiber.Status]] = {
+    private val freeze: IO[Unit, collection.Map[FiberId, Fiber.Status]] = {
       implicit val trace: Trace = Trace.empty
       ZIO.fiberIdWith { fiberId =>
         annotations.get(TestAnnotation.fibers).flatMap {
-          case Left(_) => Exit.succeed(mu.HashMap.empty)
+          case _: Left[?, ?] => Exit.succeed(Map.empty)
           case Right(refs) =>
             val map  = mu.HashMap.empty[FiberId, Fiber.Status]
             val it   = refs.iterator.flatMap(_.get())
