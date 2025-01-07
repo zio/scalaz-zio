@@ -1,10 +1,9 @@
 package zio.stream
 
-import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
+import zio.stream.internal.ChannelExecutor.ChannelState
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
-import ChannelExecutor.ChannelState
-import zio.internal.FiberScope
+import zio.{ZIO, _}
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -1958,7 +1957,7 @@ object ZChannel {
         val mergeStrategy0 = mergeStrategy
         val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe)
         val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe)
-        val lastDone       = new AtomicReference(null.asInstanceOf[OutDone])
+        val lastDone       = new AtomicReference(null).asInstanceOf[AtomicReference[OutDone]]
         val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
         val permits        = Semaphore.unsafe.make(n0)(Unsafe)
 
