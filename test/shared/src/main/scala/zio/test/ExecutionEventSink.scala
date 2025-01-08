@@ -14,7 +14,7 @@ object ExecutionEventSink {
   def process(event: ExecutionEvent): ZIO[ExecutionEventSink, Nothing, Unit] =
     ZIO.serviceWithZIO[ExecutionEventSink](_.process(event))
 
-  private def ExecutionEventSinkLive(testOutput: TestOutput): ZIO[Any, Nothing, ExecutionEventSink] =
+  def ExecutionEventSinkLive(testOutput: TestOutput): ZIO[Any, Nothing, ExecutionEventSink] =
     ZIO.succeed {
       new ExecutionEventSink {
         private val summary = Ref.unsafe.make(Summary.empty)(Unsafe)
