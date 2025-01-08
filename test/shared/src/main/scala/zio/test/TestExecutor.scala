@@ -72,9 +72,10 @@ object TestExecutor {
                   loop(label :: labels, spec, exec, ancestors, sectionId)
 
                 case Spec.ScopedCase(managed) =>
+                  val spec = managed.flatMap(loop(labels, _, exec, ancestors, sectionId))
                   Scope.make.flatMap { scope =>
                     scope
-                      .extend(managed.flatMap(loop(labels, _, exec, ancestors, sectionId)))
+                      .extend(spec)
                       .onExit { exit =>
                         implicit val unsafe: Unsafe = Unsafe
                         val latch                   = Promise.unsafe.make[Nothing, Either[Unit, Unit]](FiberId.None)
@@ -120,7 +121,8 @@ object TestExecutor {
                       val newAncestors = sectionId :: ancestors
                       val start        = ExecutionEvent.SectionStart(labels, newMultiSectionId, newAncestors)
                       val end          = ExecutionEvent.SectionEnd(labels, newMultiSectionId, newAncestors)
-                      val run          = ZIO.foreachExec(specs)(exec)(loop(labels, _, exec, newAncestors, newMultiSectionId))
+                      val specs0       = specs.map(loop(labels, _, exec, newAncestors, newMultiSectionId))
+                      val run          = ZIO.foreachExec(specs0)(exec)(ZIO.identityFn)
                       processEvent(start) *> restore(run).exitWith(exit => processEvent(end) *> exit.unitExit)
                     }
                   )
