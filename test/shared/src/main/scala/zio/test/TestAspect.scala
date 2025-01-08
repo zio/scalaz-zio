@@ -508,7 +508,7 @@ object TestAspect extends TimeoutVariants {
    * [[TestAnnotation.fibers]]. Applied by default in [[ZIOSpecAbstract]]. This
    * aspect is required for the proper functioning of `TestClock.adjust`.
    */
-  lazy val fibers: TestAspectPoly = {
+  lazy val fibers: TestAspectPoly =
     new PerTest.Poly {
       private implicit val trace: Trace = Trace.empty
 
@@ -538,7 +538,6 @@ object TestAspect extends TimeoutVariants {
           Supervisor.fibersIn(_).flatMap(test.supervised(_))
         }
     }
-  }
 
   /**
    * An aspect that retries a test until success, with a default limit, for use

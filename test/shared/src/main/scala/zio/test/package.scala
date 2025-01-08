@@ -928,7 +928,7 @@ package object test extends CompileVariants {
   /**
    * A `Runner` that provides a default testable environment.
    */
-  lazy val defaultTestRunner: TestRunner[TestEnvironment, Any] = {
+  lazy val defaultTestRunner: TestRunner[TestEnvironment, Any] =
     TestRunner(
       TestExecutor.default(
         testEnvironment,
@@ -937,7 +937,6 @@ package object test extends CompileVariants {
         ZTestEventHandler.silent // The default test runner handles its own events, writing their output to the provided sink.
       )
     )
-  }
 
   /**
    * Creates a failed test result with the specified runtime cause.
@@ -1111,7 +1110,7 @@ package object test extends CompileVariants {
                 (test(input) @@ testConfig.checkAspect)
                   .map(_.setGenFailureDetails(GenFailureDetails(initial.value, input, index)))
                   .either
-              // convert test failures to failures to terminate parallel tests on first failure
+                // convert test failures to failures to terminate parallel tests on first failure
               }.flatMap(sample => sample.value.fold(_ => ZIO.fail(sample), _ => ZIO.succeed(sample)))
             // move failures back into success channel for shrinking logic
             }
