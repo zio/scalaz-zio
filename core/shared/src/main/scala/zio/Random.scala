@@ -535,8 +535,7 @@ object Random extends Serializable {
     ZIO.randomWith(_.nextDoubleBetween(minInclusive, maxExclusive))
 
   /**
-   * Generates a pseudo-random, uniformly distributed float between 0.0 and
-   * 1.0.
+   * Generates a pseudo-random, uniformly distributed float between 0.0 and 1.0.
    */
   def nextFloat(implicit trace: Trace): UIO[Float] =
     ZIO.randomWith(_.nextFloat)

@@ -623,7 +623,7 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
        * Used to discard a predefined Default instance for [[ZLayer.derive]].
        *
        * @example
-       * {{{
+       *   {{{
        * class Wheels(number: Int)
        * object Wheels {
        *   implicit val defaultWheels: ZLayer.Default.WithContext[Any, Nothing, Wheels] =
@@ -639,7 +639,7 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
        *
        *   ZLayer.derive[Car]
        * }
-       * }}}
+       *   }}}
        */
       def service[A: Tag](implicit trace: Trace): Default.WithContext[A, Nothing, A] =
         fromLayer(ZLayer.service[A])
@@ -1531,18 +1531,63 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
     ]] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q) => R] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q,
           Nothing,
           R
         ]
         def apply(f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q) => R)(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q,
           Nothing,
           R
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
             ] { env =>
               ZEnvironment(
                 f(
@@ -1590,26 +1635,90 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
       R: Tag,
       S: Tag
     ]: FunctionConstructor.WithOut[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R) => S, ZLayer[
-      A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R,
+      A with B
+        with C
+        with D
+        with E
+        with F
+        with G
+        with H
+        with I
+        with J
+        with K
+        with L
+        with M
+        with N
+        with O
+        with P
+        with Q
+        with R,
       Nothing,
       S
     ]] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R) => S] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R,
           Nothing,
           S
         ]
         def apply(
           f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R) => S
         )(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R,
           Nothing,
           S
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
+                with R
             ] { env =>
               ZEnvironment(
                 f(
@@ -1658,27 +1767,98 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
       R: Tag,
       S: Tag,
       T: Tag
-    ]: FunctionConstructor.WithOut[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S) => T, ZLayer[
-      A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S,
-      Nothing,
-      T
-    ]] =
+    ]: FunctionConstructor.WithOut[
+      (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S) => T,
+      ZLayer[
+        A with B
+          with C
+          with D
+          with E
+          with F
+          with G
+          with H
+          with I
+          with J
+          with K
+          with L
+          with M
+          with N
+          with O
+          with P
+          with Q
+          with R
+          with S,
+        Nothing,
+        T
+      ]
+    ] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S) => T] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S,
           Nothing,
           T
         ]
         def apply(
           f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S) => T
         )(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S,
           Nothing,
           T
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
+                with R
+                with S
             ] { env =>
               ZEnvironment(
                 f(
@@ -1729,27 +1909,102 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
       S: Tag,
       T: Tag,
       U: Tag
-    ]: FunctionConstructor.WithOut[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) => U, ZLayer[
-      A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T,
-      Nothing,
-      U
-    ]] =
+    ]: FunctionConstructor.WithOut[
+      (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) => U,
+      ZLayer[
+        A with B
+          with C
+          with D
+          with E
+          with F
+          with G
+          with H
+          with I
+          with J
+          with K
+          with L
+          with M
+          with N
+          with O
+          with P
+          with Q
+          with R
+          with S
+          with T,
+        Nothing,
+        U
+      ]
+    ] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) => U] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T,
           Nothing,
           U
         ]
         def apply(
           f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) => U
         )(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T,
           Nothing,
           U
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
+                with R
+                with S
+                with T
             ] { env =>
               ZEnvironment(
                 f(
@@ -1802,27 +2057,106 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
       T: Tag,
       U: Tag,
       V: Tag
-    ]: FunctionConstructor.WithOut[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U) => V, ZLayer[
-      A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U,
-      Nothing,
-      V
-    ]] =
+    ]: FunctionConstructor.WithOut[
+      (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U) => V,
+      ZLayer[
+        A with B
+          with C
+          with D
+          with E
+          with F
+          with G
+          with H
+          with I
+          with J
+          with K
+          with L
+          with M
+          with N
+          with O
+          with P
+          with Q
+          with R
+          with S
+          with T
+          with U,
+        Nothing,
+        V
+      ]
+    ] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U) => V] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T
+            with U,
           Nothing,
           V
         ]
         def apply(
           f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U) => V
         )(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T
+            with U,
           Nothing,
           V
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
+                with R
+                with S
+                with T
+                with U
             ] { env =>
               ZEnvironment(
                 f(
@@ -1877,27 +2211,110 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
       U: Tag,
       V: Tag,
       W: Tag
-    ]: FunctionConstructor.WithOut[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V) => W, ZLayer[
-      A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U with V,
-      Nothing,
-      W
-    ]] =
+    ]: FunctionConstructor.WithOut[
+      (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V) => W,
+      ZLayer[
+        A with B
+          with C
+          with D
+          with E
+          with F
+          with G
+          with H
+          with I
+          with J
+          with K
+          with L
+          with M
+          with N
+          with O
+          with P
+          with Q
+          with R
+          with S
+          with T
+          with U
+          with V,
+        Nothing,
+        W
+      ]
+    ] =
       new FunctionConstructor[(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V) => W] {
         type Out = ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U with V,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T
+            with U
+            with V,
           Nothing,
           W
         ]
         def apply(
           f: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V) => W
         )(implicit trace: Trace): ZLayer[
-          A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U with V,
+          A with B
+            with C
+            with D
+            with E
+            with F
+            with G
+            with H
+            with I
+            with J
+            with K
+            with L
+            with M
+            with N
+            with O
+            with P
+            with Q
+            with R
+            with S
+            with T
+            with U
+            with V,
           Nothing,
           W
         ] =
           ZLayer.fromZIOEnvironment {
             ZIO.environmentWith[
-              A with B with C with D with E with F with G with H with I with J with K with L with M with N with O with P with Q with R with S with T with U with V
+              A with B
+                with C
+                with D
+                with E
+                with F
+                with G
+                with H
+                with I
+                with J
+                with K
+                with L
+                with M
+                with N
+                with O
+                with P
+                with Q
+                with R
+                with S
+                with T
+                with U
+                with V
             ] { env =>
               ZEnvironment(
                 f(

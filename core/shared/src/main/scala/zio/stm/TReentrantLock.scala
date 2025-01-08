@@ -181,7 +181,7 @@ final class TReentrantLock private (data: TRef[LockState]) {
 
           newTotal
 
-        case _ => throw ZSTM.RetryException //another fiber is holding a write lock
+        case _ => throw ZSTM.RetryException // another fiber is holding a write lock
       }
     )
 }

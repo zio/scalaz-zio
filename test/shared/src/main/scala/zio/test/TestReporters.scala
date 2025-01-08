@@ -3,10 +3,9 @@ package zio.test
 import zio.{Ref, Unsafe, ZIO}
 
 object TestReporters {
-  val make: ZIO[Any, Nothing, TestReporters] = {
+  val make: ZIO[Any, Nothing, TestReporters] =
     // This SuiteId should probably be passed in a more obvious way
     ZIO.succeed(TestReporters(Ref.unsafe.make(List(SuiteId.global))(Unsafe)))
-  }
 }
 
 case class TestReporters(reportersStack: Ref[List[SuiteId]]) {

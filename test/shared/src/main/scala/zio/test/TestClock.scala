@@ -109,6 +109,11 @@ object TestClock extends Serializable {
       with TestClockPlatformSpecific {
 
     /**
+     * See https://github.com/zio/zio/issues/9385
+     */
+    private[this] val freezeLock = Semaphore.unsafe.make(1)(Unsafe)
+
+    /**
      * Increments the current clock time by the specified duration. Any effects
      * that were scheduled to occur on or before the new time will be run in
      * order.
@@ -307,7 +312,8 @@ object TestClock extends Serializable {
         // Sleep and yield a few times to give suspended fibers a chance to resume
         def f(d: Duration) = ClockLive.sleep(d) *> freeze
 
-        (f(1.milli) *> f).zipWith(f(5.millis))(allSuspendedUnchanged)
+        (f(1.milli) *> f)
+          .zipWith(f(5.millis))(allSuspendedUnchanged)
           .flatMap {
             if (_) ZIO.succeed(ref.get)
             else if (ref.compareAndSet(false, true)) suspendedWarningStart *> Exit.failUnit
@@ -326,22 +332,24 @@ object TestClock extends Serializable {
      */
     private val freeze: IO[Unit, collection.Map[FiberId, Fiber.Status]] = {
       implicit val trace: Trace = Trace.empty
-      ZIO.fiberIdWith { fiberId =>
-        annotations.get(TestAnnotation.fibers).flatMap {
-          case _: Left[?, ?] => Exit.succeed(Map.empty)
-          case Right(refs) =>
-            val map  = mu.HashMap.empty[FiberId, Fiber.Status]
-            val it   = refs.iterator.flatMap(_.get())
-            var fail = false
-            while (it.hasNext && !fail) {
-              val f = it.next().asInstanceOf[FiberRuntime[Any, Any]]
-              if (f.id ne fiberId) f.getStatus() match {
-                case s: Fiber.Status.Suspended => map.update(f.id, s)
-                case Fiber.Status.Done         => ()
-                case _                         => fail = true
+      freezeLock.withPermit {
+        ZIO.fiberIdWith { fiberId =>
+          annotations.get(TestAnnotation.fibers).flatMap {
+            case _: Left[?, ?] => Exit.succeed(Map.empty)
+            case Right(refs) =>
+              val map  = mu.HashMap.empty[FiberId, Fiber.Status]
+              val it   = refs.iterator.flatMap(_.get())
+              var fail = false
+              while (it.hasNext && !fail) {
+                val f = it.next().asInstanceOf[FiberRuntime[Any, Any]]
+                if (f.id ne fiberId) f.getStatus() match {
+                  case s: Fiber.Status.Suspended => map.update(f.id, s)
+                  case Fiber.Status.Done         => ()
+                  case _                         => fail = true
+                }
               }
-            }
-            if (fail) Exit.failUnit else Exit.succeed(map)
+              if (fail) Exit.failUnit else Exit.succeed(map)
+          }
         }
       }
     }

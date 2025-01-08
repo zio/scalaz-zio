@@ -13,7 +13,7 @@ object ConfigSpec extends ZIOBaseSpec {
     factor: Double = 1.0
   ): ZIO[Any, Throwable, Boolean] = {
 
-    //Box test from "Opportunities and Limits of Remote Timing Attacks", Scott A. Crosby, Dan S. Wallach, Rudolf H. Riedi
+    // Box test from "Opportunities and Limits of Remote Timing Attacks", Scott A. Crosby, Dan S. Wallach, Rudolf H. Riedi
     val i = 0.02
     val j = 0.15
 

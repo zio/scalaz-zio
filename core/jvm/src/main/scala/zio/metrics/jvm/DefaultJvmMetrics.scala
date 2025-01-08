@@ -1,7 +1,6 @@
 package zio.metrics.jvm
 
 import zio._
-import zio.internal.stacktracer.Tracer
 
 /**
  * JVM metrics, compatible with the prometheus-hotspot library, with
@@ -23,9 +22,14 @@ trait DefaultJvmMetrics {
   lazy val live: ZLayer[
     Any,
     Throwable,
-    Reloadable[
-      BufferPools
-    ] with ClassLoading with GarbageCollector with MemoryAllocation with MemoryPools with Standard with Thread with VersionInfo
+    Reloadable[BufferPools]
+      with ClassLoading
+      with GarbageCollector
+      with MemoryAllocation
+      with MemoryPools
+      with Standard
+      with Thread
+      with VersionInfo
   ] =
     jvmMetricsSchedule >>>
       (BufferPools.live ++
