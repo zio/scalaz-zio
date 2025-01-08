@@ -808,7 +808,7 @@ object TestRandom extends Serializable {
     deterministic >>> ZLayer {
       ZIO.serviceWithZIO[TestRandom] { testRandom =>
         ClockLive.nanoTime
-          .flatMap(testRandom.setSeed)
+          .flatMap(testRandom.setSeed(_))
           .as(testRandom)
       }
     }
