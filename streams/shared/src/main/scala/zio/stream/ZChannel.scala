@@ -2040,7 +2040,7 @@ object ZChannel {
                    cause.failureOrCause match {
                      case Left(x: Right[OutErr, OutDone]) =>
                        permits.withPermits(n0)(ZIO.unit).interruptible *>
-                         lastDone.get.map {
+                         lastDone.get.flatMap {
                            case null     => outgoing.offer(Result.Done(x.value))
                            case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
                          }
