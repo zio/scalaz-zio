@@ -34,7 +34,11 @@ object MimaSettings {
         exclude[NewMixinForwarderProblem]("zio.Exit.mapErrorCause"),
         exclude[NewMixinForwarderProblem]("zio.Exit.unit"),
         exclude[Problem]("zio.test.TestClock#SuspendedWarningData*"),
-        exclude[Problem]("zio.test.TestClock#WarningData*")
+        exclude[Problem]("zio.test.TestClock#WarningData*"),
+        exclude[Problem]("zio.test.TestClock.SuspendedWarningData"),
+        exclude[Problem]("zio.test.TestClock.WarningData"),
+        exclude[DirectMissingMethodProblem]("zio.test.package.testFiberRefGen"),
+        exclude[IncompatibleMethTypeProblem]("zio.test.package.warningEmptyGen")
       ),
       mimaFailOnProblem := failOnProblem
     )
