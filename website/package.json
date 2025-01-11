@@ -48,7 +48,7 @@
     "@zio.dev/zio-interop-twitter": "2022.11.21-9f1a594d033d",
     "@zio.dev/zio-jdbc": "0.1.2",
     "@zio.dev/zio-json": "0.7.4",
-    "@zio.dev/zio-kafka": "2.9.0",
+    "@zio.dev/zio-kafka": "2.9.1",
     "@zio.dev/zio-lambda": "1.0.5",
     "@zio.dev/zio-logging": "2.4.0",
     "@zio.dev/zio-memberlist": "0.0.0--40-a85dc5a1--20221121-1416-SNAPSHOT",
