@@ -1957,7 +1957,7 @@ object ZChannel {
         val mergeStrategy0 = mergeStrategy
         val outgoing       = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe)
         val cancelers      = Queue.unsafe.unbounded[Promise[Nothing, Unit]](fiberId)(Unsafe)
-        val lastDone       = new AtomicReference(null).asInstanceOf[AtomicReference[OutDone]]
+        val lastDone       = Ref.unsafe.make[OutDone](null.asInstanceOf[OutDone])(Unsafe)
         val errorSignal    = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
         val permits        = Semaphore.unsafe.make(n0)(Unsafe)
 
@@ -1970,11 +1970,9 @@ object ZChannel {
             .catchAllCause(cause =>
               cause.failureOrCause match {
                 case Left(x: Right[OutErr, OutDone]) =>
-                  ZIO.succeed {
-                    lastDone.updateAndGet {
-                      case null     => x.value
-                      case lastDone => f(lastDone, x.value)
-                    }
+                  lastDone.update {
+                    case null     => x.value
+                    case lastDone => f(lastDone, x.value)
                   }
                 case Left(l: Left[OutErr, OutDone]) =>
                   outgoing.offer(Result.Error(l.value)) *> errorSignal.succeed(()).unit
@@ -2036,11 +2034,9 @@ object ZChannel {
                    cause.failureOrCause match {
                      case Left(x: Right[OutErr, OutDone]) =>
                        permits.withPermits(n0)(ZIO.unit).interruptible *>
-                         ZIO.succeed {
-                           lastDone.get match {
-                             case null     => outgoing.offer(Result.Done(x.value))
-                             case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
-                           }
+                         lastDone.get.map {
+                           case null     => outgoing.offer(Result.Done(x.value))
+                           case lastDone => outgoing.offer(Result.Done(f(lastDone, x.value)))
                          }
                      case Left(l: Left[OutErr, OutDone]) => outgoing.offer(Result.Error(l.value))
                      case Right(cause)                   => outgoing.offer(Result.Fatal(cause))
