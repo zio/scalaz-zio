@@ -1329,9 +1329,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
           case ChannelState.Effect(zio) =>
             zio *> interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
           case r: ChannelState.Read[Env, OutErr] =>
+            val continue = () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
+
             ChannelExecutor.readUpstream[Env, OutErr, OutErr, Either[OutDone, OutElem]](
               r = r,
-              onSuccess = () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]),
+              onSuccess = continue,
               onFailure = Exit.failCause
             )
         }
