@@ -2024,9 +2024,14 @@ object ZChannel {
               }
           }
 
+        val setFinalizers: UIO[Unit] =
+          ZIO.uninterruptible {
+            scope.addFinalizer(outgoing.shutdown) *>
+              scope.addFinalizer(cancelers.shutdown)
+          }
+
         for {
-          _          <- scope.addFinalizer(outgoing.shutdown)
-          _          <- scope.addFinalizer(cancelers.shutdown)
+          _          <- setFinalizers
           pull       <- (incoming >>> channels).toPullInAlt(scope)
           childScope <- scope.fork
           _ <- pullStrategy(childScope, pull).forever
