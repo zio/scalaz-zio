@@ -1040,7 +1040,7 @@ object ZSinkSpec extends ZIOBaseSpec {
 
                 (channel.run <*> readData.getAndSet(Chunk())).map { case (leftovers, _, takenChunks) =>
                   assert(leftovers.flatten)(equalTo(expectedLeftovers)) &&
-                    assert(takenChunks)(equalTo(expectedTakes))
+                  assert(takenChunks)(equalTo(expectedTakes))
                 }
               }
             }

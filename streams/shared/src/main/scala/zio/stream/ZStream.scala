@@ -3188,28 +3188,27 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    * Takes the last specified number of elements from this stream.
    */
   def takeRight(n: => Int)(implicit trace: Trace): ZStream[R, E, A] =
-    ZStream.succeed(n).flatMap { n =>
-      if (n <= 0) ZStream.empty
-      else
-        new ZStream(
-          ZChannel.unwrap(
-            for {
-              queue <- ZIO.succeed(SingleThreadedRingBuffer[A](n))
-            } yield {
-              lazy val reader: ZChannel[Any, E, Chunk[A], Any, E, Chunk[A], Unit] = ZChannel.readWithCause(
-                (in: Chunk[A]) => {
-                  in.foreach(queue.put)
-                  reader
-                },
-                ZChannel.refailCause,
-                (_: Any) => ZChannel.write(queue.toChunk) *> ZChannel.unit
-              )
+    new ZStream(
+      ZChannel.suspend {
+        val n0 = n
+        if (n0 <= 0) ZChannel.unit
+        else {
+          val queue = SingleThreadedRingBuffer[A](n0)
 
-              (self.channel >>> reader)
-            }
-          )
-        )
-    }
+          lazy val reader: ZChannel[Any, E, Chunk[A], Any, E, Chunk[A], Unit] =
+            ZChannel.readWithCause(
+              in = (in: Chunk[A]) => {
+                in.foreach(queue.put)
+                reader
+              },
+              halt = ZChannel.refailCause,
+              done = (_: Any) => ZChannel.write(queue.toChunk) *> ZChannel.unit
+            )
+
+          self.channel >>> reader
+        }
+      }
+    )
 
   /**
    * Takes all elements of the stream until the specified predicate evaluates to
@@ -4924,7 +4923,13 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    * Repeats the provided value infinitely.
    */
   def repeat[A](a: => A)(implicit trace: Trace): ZStream[Any, Nothing, A] =
-    new ZStream(ZChannel.succeed(a).flatMap(a => ZChannel.write(Chunk.single(a)).repeated))
+    new ZStream(
+      ZChannel.suspend {
+        val a0 = a
+        val v  = Chunk.single(a0)
+        ZChannel.write(v).repeated
+      }
+    )
 
   /**
    * Repeats the value using the provided schedule.

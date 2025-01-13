@@ -1220,6 +1220,25 @@ object ZStreamSpec extends ZIOBaseSpec {
             )(isRight(isUnit))
           }
         ),
+        suite("dropWhileZIO")(
+          test("dropWhileZIO")(
+            check(pureStreamOfInts, Gen.function(Gen.boolean)) { (s, p) =>
+              for {
+                res1 <- s.dropWhileZIO(v => ZIO.succeed(p(v))).runCollect
+                res2 <- s.runCollect.flatMap(_.dropWhileZIO(v => ZIO.succeed(p(v))))
+              } yield assert(res1)(equalTo(res2))
+            }
+          ),
+          test("short circuits") {
+            assertZIO(
+              (ZStream(1) ++ ZStream.fail("Ouch"))
+                .take(1)
+                .dropWhileZIO(_ => ZIO.succeed(true))
+                .runDrain
+                .either
+            )(isRight(isUnit))
+          }
+        ),
         test("either") {
           val s = ZStream(1, 2, 3) ++ ZStream.fail("Boom")
           s.either.runCollect
@@ -4597,7 +4616,7 @@ object ZStreamSpec extends ZIOBaseSpec {
         test("toIterator") {
           ZIO.scoped {
             (for {
-              counter <- Ref.make(0) //Increment and get the value
+              counter  <- Ref.make(0) // Increment and get the value
               effect    = counter.updateAndGet(_ + 1)
               iterator <- ZStream.repeatZIO(effect).toIterator
               n         = 2000

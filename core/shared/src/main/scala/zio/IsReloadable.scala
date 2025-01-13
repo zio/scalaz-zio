@@ -36,7 +36,7 @@ import scala.annotation.implicitNotFound
  *   - `Service` should not have any abstract type members.
  *
  * @example
- * {{{
+ *   {{{
  *   trait MyService { def foo: UIO[String] }
  *
  *   val service1: MyService = new MyService { def foo = ZIO.succeed("zio1") }
@@ -48,7 +48,7 @@ import scala.annotation.implicitNotFound
  *     _         <- ref.set(ZIO.succeed(service2))
  *     res2      <- reloadable.foo
  *   } yield assertTrue(res1 == "zio1" && res2 == "zio2")
- * }}}
+ *   }}}
  */
 @implicitNotFound(
   "Unable to generate a reloadable service for ${Service}." +
