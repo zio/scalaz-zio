@@ -109,7 +109,7 @@
   },
   "devDependencies": {
     "@tsconfig/docusaurus": "2.0.3",
-    "@types/react": "19.0.5",
+    "@types/react": "19.0.6",
     "@types/react-helmet": "6.1.11",
     "@types/react-router-dom": "5.3.3",
     "prettier": "3.4.2",
