@@ -143,12 +143,36 @@ object ZSinkSpec extends ZIOBaseSpec {
               .map(assert(_)(equalTo(Map.empty[Int, String])))
           }
         ),
-        test("dropUntil")(
-          assertZIO(
-            ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
-              .pipeThrough(ZSink.dropUntil[Int](_ >= 3))
-              .runCollect
-          )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
+        suite("dropUntil")(
+          test("happy path")(
+            assertZIO(
+              ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
+                .pipeThrough(ZSink.dropUntil[Int](_ >= 3))
+                .runCollect
+            )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
+          ),
+          test("late error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntil(x => x >= 2))
+                .either
+                .runCollect
+            }(
+              equalTo(
+                Chunk(
+                  Right(3) /*, Left("Aie") false expectation since the sink terminates before pulling the failure */
+                )
+              )
+            )
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntil(x => x >= 5))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
+          )
         ),
         suite("dropUntilZIO")(
           test("happy path")(
@@ -158,13 +182,27 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .runCollect
             )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
           ),
-          test("error")(
+          test("late error")(
             assertZIO {
               (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
                 .pipeThrough(ZSink.dropUntilZIO[Any, String, Int](x => ZIO.succeed(x >= 2)))
                 .either
                 .runCollect
-            }(equalTo(Chunk(Right(3), Left("Aie"))))
+            }(
+              equalTo(
+                Chunk(
+                  Right(3) /*, Left("Aie") false expectation since the sink terminates before pulling the failure */
+                )
+              )
+            )
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntilZIO[Any, String, Int](x => ZIO.succeed(x >= 5)))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
           )
         ),
         suite("dropWhile")(

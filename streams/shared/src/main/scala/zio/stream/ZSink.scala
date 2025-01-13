@@ -902,7 +902,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
    * Drops incoming elements until the predicate `p` is satisfied.
    */
   def dropUntil[In](p: In => Boolean)(implicit trace: Trace): ZSink[Any, Nothing, In, In, Any] =
-    new ZSink(ZPipeline.dropUntil(p).toChannel)
+    ZSink.dropWhile((x: In) => !p(x)) *> ZSink.head
 
   /**
    * Drops incoming elements until the effectful predicate `p` is satisfied.
@@ -910,7 +910,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
   def dropUntilZIO[R, InErr, In](
     p: In => ZIO[R, InErr, Boolean]
   )(implicit trace: Trace): ZSink[R, InErr, In, In, Any] =
-    new ZSink(ZPipeline.dropUntilZIO(p).toChannel)
+    ZSink.dropWhileZIO(p(_: In).map(!_)) *> ZSink.head
 
   /**
    * Drops incoming elements as long as the predicate `p` is satisfied.
