@@ -1094,19 +1094,9 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
    */
   def dropUntilZIO[Env, Err, In](
     p: In => ZIO[Env, Err, Boolean]
-  )(implicit trace: Trace): ZPipeline[Env, Err, In, In] = {
-    lazy val loop: ZChannel[Env, Err, Chunk[In], Any, Err, Chunk[In], Any] = ZChannel.readWithCause(
-      (in: Chunk[In]) =>
-        ZChannel.unwrap(in.dropUntilZIO(p).map { leftover =>
-          val more = leftover.isEmpty
-          if (more) loop else ZChannel.write(leftover) *> ZChannel.identity[Err, Chunk[In], Any]
-        }),
-      (e: Cause[Err]) => ZChannel.refailCause(e),
-      (_: Any) => ZChannel.unit
-    )
-
-    new ZPipeline(loop)
-  }
+  )(implicit trace: Trace): ZPipeline[Env, Err, In, In] =
+    ZPipeline.dropWhileZIO(p(_: In).map(!_)) >>>
+      ZPipeline.drop(1)
 
   /**
    * Creates a pipeline that drops elements while the specified predicate

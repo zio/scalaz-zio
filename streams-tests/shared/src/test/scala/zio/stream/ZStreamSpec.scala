@@ -1201,6 +1201,14 @@ object ZStreamSpec extends ZIOBaseSpec {
             } yield assert(res1)(equalTo(res2))
           }
         },
+        test("dropUntilZIO") {
+          check(pureStreamOfInts, Gen.function(Gen.boolean)) { (s, p) =>
+            for {
+              res1 <- (s >>> ZPipeline.dropUntilZIO(p.andThen(ZIO.succeed(_)))).runCollect
+              res2 <- s.runCollect.map(_.dropWhile(!p(_)).drop(1))
+            } yield assert(res1)(equalTo(res2))
+          }
+        },
         suite("dropWhile")(
           test("dropWhile")(
             check(pureStreamOfInts, Gen.function(Gen.boolean)) { (s, p) =>
