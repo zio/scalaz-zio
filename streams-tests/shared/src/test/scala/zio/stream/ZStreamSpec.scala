@@ -5795,7 +5795,7 @@ object ZStreamSpec extends ZIOBaseSpec {
           } yield assertTrue(output == Vector("acquire outer", "release outer"))
         }
       )
-    ) @@ TestAspect.timed @@ TestAspect.fibers
+    ) @@ TestAspect.timed @@ TestAspect.fibers @@ TestAspect.parallelN(2)
 
   trait ChunkCoordination[A] {
     def queue: Queue[Exit[Option[Nothing], Chunk[A]]]
