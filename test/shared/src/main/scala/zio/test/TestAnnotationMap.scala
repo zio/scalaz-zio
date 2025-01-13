@@ -25,29 +25,31 @@ import scala.collection.immutable.Map
  */
 final class TestAnnotationMap private (private val map: Map[TestAnnotation[Any], AnyRef]) { self =>
 
-  def ++(that: TestAnnotationMap): TestAnnotationMap =
-    new TestAnnotationMap(that.map.foldLeft(self.map) { case (acc, (key, value)) =>
-      acc.updated(key, acc.get(key).fold(value)(key.combine(_, value).asInstanceOf[AnyRef]))
-    })
+  def ++(that: TestAnnotationMap): TestAnnotationMap = {
+    val map0 = that.map.foldLeft(self.map) { case (acc, (k, v)) =>
+      acc.updated(k, acc.get(k).fold(v)(k.combine(_, v).asInstanceOf[AnyRef]))
+    }
+    new TestAnnotationMap(map0)
+  }
 
   /**
    * Appends the specified annotation to the annotation map.
    */
-  def annotate[V](key: TestAnnotation[V], value: V): TestAnnotationMap = {
-    val k = key.asInstanceOf[TestAnnotation[Any]]
-    val v = value.asInstanceOf[AnyRef]
-    val map0 = map.updatedWith(k) { v0 =>
-      Some(k.combine(v0.getOrElse(k.initial), v).asInstanceOf[AnyRef])
-    }
-    new TestAnnotationMap(map0)
-  }
+  def annotate[V](key: TestAnnotation[V], value: V): TestAnnotationMap =
+    update[V](key, key.combine(_, value))
 
   /**
    * Retrieves the annotation of the specified type, or its default value if
    * there is none.
    */
   def get[V](key: TestAnnotation[V]): V =
-    map.getOrElse(key.asInstanceOf[TestAnnotation[Any]], key.initial).asInstanceOf[V]
+    map.get(key.asInstanceOf[TestAnnotation[Any]]).fold(key.initial)(_.asInstanceOf[V])
+
+  private def overwrite[V](key: TestAnnotation[V], value: V): TestAnnotationMap =
+    new TestAnnotationMap(map.updated(key.asInstanceOf[TestAnnotation[Any]], value.asInstanceOf[AnyRef]))
+
+  private def update[V](key: TestAnnotation[V], f: V => V): TestAnnotationMap =
+    overwrite(key, f(get(key)))
 
   override def toString: String =
     map.toString
