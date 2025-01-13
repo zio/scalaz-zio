@@ -192,7 +192,7 @@ object ZSinkSpec extends ZIOBaseSpec {
                 }
                 .take(10)
                 .runCollect
-              //seems like the 'trailing' sink invocation is by design
+                // seems like the 'trailing' sink invocation is by design
             )(equalTo(Chunk(Some(1), Some(2), None)))
           }
         ),
@@ -221,7 +221,7 @@ object ZSinkSpec extends ZIOBaseSpec {
                 }
                 .take(10)
                 .runCollect
-              //seems like the 'trailing' sink invocation is by design
+                // seems like the 'trailing' sink invocation is by design
             )(equalTo(Chunk(Some(1), Some(2), None)))
           },
           test("late error")(
@@ -230,7 +230,7 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .pipeThrough(ZSink.dropWhileZIO[Any, String, Int](x => ZIO.succeed(x < 3)))
                 .either
                 .runCollect
-              //I beleive the original assertion had wrong expectations
+              // I beleive the original assertion had wrong expectations
             }(equalTo(Chunk(Right(3) /*, Left("Aie")*/ )))
           ),
           test("early error")(

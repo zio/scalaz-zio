@@ -1229,6 +1229,17 @@ object ZStreamSpec extends ZIOBaseSpec {
               } yield assert(res1)(equalTo(res2))
             }
           ),
+          test("pipeThrough(ZSink.head)")(
+            check(pureStreamOfInts) { ints =>
+              for {
+                res1 <- ints.pipeThrough(ZSink.head).runCollect
+                res2 <- ints.chunks.filter(_.nonEmpty).run(ZSink.head)
+                res3  = res2.toSeq.flatMap(_.drop(1))
+              } yield {
+                assert(res1)(equalTo(res3))
+              }
+            }
+          ),
           test("short circuits") {
             assertZIO(
               (ZStream(1) ++ ZStream.fail("Ouch"))
