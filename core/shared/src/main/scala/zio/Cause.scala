@@ -19,6 +19,7 @@ package zio
 import zio.Cause.Both
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.io.PrintWriter
 import scala.annotation.tailrec
 import scala.runtime.AbstractFunction2
 
@@ -497,35 +498,38 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
 
   final def nonEmpty: Boolean = !isEmpty
 
-  /**
-   * Returns a `String` with the cause pretty-printed.
-   */
+  /** Returns a `String` with the cause pretty-printed. */
   final def prettyPrint: String = {
+    val builder = new StringBuilder
+    prettyPrintWith(builder.append(_).append('\n'))(Unsafe.unsafe)
+    builder.result()
+  }
+
+  /** Pretty-prints this cause with the provided `println` function. */
+  final def prettyPrintWith(println: String => Unit)(implicit unsafe: Unsafe): Unit = {
     import Cause.Unified
 
-    val builder = ChunkBuilder.make[String]()
-    var size    = 0
-
-    def append(string: String): Unit =
+    var size = 0
+    def append(line: String): Unit =
       if (size <= 1024) {
-        builder += string
+        println(line)
         size += 1
       }
 
     def appendCause(cause: Cause[E]): Unit =
       cause.unified.zipWithIndex.foreach {
         case (unified, 0) =>
-          appendUnified(0, "Exception in thread \"" + unified.fiberId.threadName + "\" ", unified)
+          appendUnified(0, "", unified)
         case (unified, n) =>
-          appendUnified(n, s"Suppressed: ", unified)
+          appendUnified(n, "Suppressed: ", unified)
       }
 
     def appendUnified(indent: Int, prefix: String, unified: Unified): Unit = {
       val baseIndent  = "\t" * indent
       val traceIndent = baseIndent + "\t"
 
-      append(s"${baseIndent}${prefix}${unified.className}: ${unified.message}")
-      unified.trace.foreach(trace => append(s"${traceIndent}at ${trace}"))
+      append(s"$baseIndent$prefix${unified.className}: ${unified.message}")
+      unified.trace.foreach(trace => append(s"${traceIndent}at $trace"))
     }
 
     val (die, fail, interrupt) =
@@ -541,7 +545,6 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
     die.foreach(appendCause)
     fail.foreach(appendCause)
     interrupt.foreach(appendCause)
-    builder.result.mkString("\n")
   }
 
   def size: Int = self.foldContext(())(Cause.Folder.Size)
