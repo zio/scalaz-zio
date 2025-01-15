@@ -199,6 +199,15 @@ object ZIOAspect {
     }
 
   /**
+   * An aspect that adjusts the label for the current logging span.
+   */
+  def spanned(label: String): ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] =
+    new ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] {
+      def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+        ZIO.logSpan(label)(zio)
+    }
+
+  /**
    * An aspect that tags each metric in this effect with the specified tags.
    */
   def tagged(tags: (String, String)*): ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] =
