@@ -127,6 +127,38 @@ object RuntimeFlagsSpec extends ZIOBaseSpec {
                 name <- ZIO.succeed(Thread.currentThread().getName)
               } yield assertTrue(name.startsWith("ZScheduler-Worker"))
             }.provide(Runtime.enableFlags(RuntimeFlag.EagerShiftBack))
-        } @@ TestAspect.jvmOnly
+        } @@ TestAspect.jvmOnly +
+        suite("OpLog") {
+          test("enabled") {
+            val effect1 = ZIO.succeed(10)
+            val effect2 = ZIO.attempt(10)
+            val effect3 = effect1 *> effect2
+
+            val effect1Render = ZIO.render(effect1)
+            val effect2Render = ZIO.render(effect2)
+            val effect3Render = ZIO.render(effect3)
+
+            for {
+              _      <- effect3
+              logOut <- ZTestLogger.logOutput
+            } yield assertTrue(
+              logOut.exists(entry => entry.message() == effect1Render && entry.logLevel == LogLevel.Info)
+            ) &&
+              assertTrue(logOut.exists(entry => entry.message() == effect2Render && entry.logLevel == LogLevel.Info)) &&
+              assertTrue(logOut.exists(entry => entry.message() == effect3Render && entry.logLevel == LogLevel.Info))
+
+          }.provide(Runtime.enableFlags(RuntimeFlag.OpLog)) +
+            test("disabled") {
+              val effect1 = ZIO.succeed(10)
+              val effect2 = ZIO.attempt(10)
+              val effect3 = effect1 *> effect2
+
+              for {
+                _      <- effect3
+                logOut <- ZTestLogger.logOutput
+              } yield assertTrue(logOut.isEmpty)
+
+            }.provide(Runtime.disableFlags(RuntimeFlag.OpLog))
+        }
     }
 }
