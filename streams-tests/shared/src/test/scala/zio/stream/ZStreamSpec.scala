@@ -1201,6 +1201,14 @@ object ZStreamSpec extends ZIOBaseSpec {
             } yield assert(res1)(equalTo(res2))
           }
         },
+        test("dropUntilZIO") {
+          check(pureStreamOfInts, Gen.function(Gen.boolean)) { (s, p) =>
+            for {
+              res1 <- (s >>> ZPipeline.dropUntilZIO(p.andThen(ZIO.succeed(_)))).runCollect
+              res2 <- s.runCollect.map(_.dropWhile(!p(_)).drop(1))
+            } yield assert(res1)(equalTo(res2))
+          }
+        },
         suite("dropWhile")(
           test("dropWhile")(
             check(pureStreamOfInts, Gen.function(Gen.boolean)) { (s, p) =>
@@ -1227,6 +1235,17 @@ object ZStreamSpec extends ZIOBaseSpec {
                 res1 <- s.dropWhileZIO(v => ZIO.succeed(p(v))).runCollect
                 res2 <- s.runCollect.flatMap(_.dropWhileZIO(v => ZIO.succeed(p(v))))
               } yield assert(res1)(equalTo(res2))
+            }
+          ),
+          test("pipeThrough(ZSink.head)")(
+            check(pureStreamOfInts) { ints =>
+              for {
+                res1 <- ints.pipeThrough(ZSink.head).runCollect
+                res2 <- ints.chunks.filter(_.nonEmpty).run(ZSink.head)
+                res3  = res2.toSeq.flatMap(_.drop(1))
+              } yield {
+                assert(res1)(equalTo(res3))
+              }
             }
           ),
           test("short circuits") {

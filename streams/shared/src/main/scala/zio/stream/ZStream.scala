@@ -1200,7 +1200,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def dropWhileZIO[R1 <: R, E1 >: E](f: A => ZIO[R1, E1, Boolean])(implicit
     trace: Trace
   ): ZStream[R1, E1, A] =
-    pipeThrough(ZSink.dropWhileZIO[R1, E1, A](f))
+    self >>> ZPipeline.dropWhileZIO(f)
 
   /**
    * Returns a stream whose failures and successes have been lifted into an
