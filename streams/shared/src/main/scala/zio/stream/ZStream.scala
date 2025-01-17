@@ -338,12 +338,39 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    * same elements as this stream. The driver stream will only ever advance the
    * `maximumLag` chunks before the slowest downstream stream.
    */
-  def broadcastDynamic(
-    maximumLag: => Int
-  )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZStream[Any, E, A]] =
-    self
-      .broadcastedQueuesDynamic(maximumLag)
-      .map(ZStream.scoped(_).flatMap(ZStream.fromQueue(_)).flattenTake)
+    def broadcastDynamic(
+      maximumLag: => Int
+    )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZStream[Any, E, A]] = {
+      def mkHub = Hub.bounded[Take[E, A]](maximumLag)
+      
+      ZStream.unwrapScoped {
+        for {
+          hub      <- ZIO.acquireRelease(mkHub)(_.shutdown)
+          scope    <- ZIO.scope
+          runtime  <- ZIO.runtime[Any]
+          consRef  <- Ref.make(0)
+          // Start producer fiber that will manage the upstream
+          producer <- self.tapErrorCause(cause => hub.offer(Take.failCause(cause)))
+                        .runForeachChunk(chunk => hub.offer(Take.chunk(chunk)))
+                        .ensuring(hub.offer(Take.end))
+                        .forkScoped
+          
+          stream = ZStream.acquireReleaseWith(
+            // Acquire subscription and increment consumer count
+            hub.subscribe <* consRef.update(_ + 1)
+          )(queue =>
+            // On release, decrement consumer count and shut down if last consumer
+            consRef.modify { count =>
+              val newCount = count - 1
+              if (newCount == 0) 
+                (queue.shutdown *> producer.interrupt *> hub.shutdown, newCount)
+              else
+                (queue.shutdown, newCount)
+            }.flatten
+          )(queue => ZStream.fromQueueWithShutdown(queue).flattenTake)
+        } yield stream
+      }
+    }
 
   /**
    * Converts the stream to a scoped list of queues. Every value will be
