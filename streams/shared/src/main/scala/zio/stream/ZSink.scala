@@ -925,12 +925,11 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
           else
             ch
         },
-        ZChannel.refailCause(_),
+        ZChannel.refailCause,
         _ => ZChannel.unit
       )
 
-    val s: ZSink[Any, Nothing, In, In, Unit] = ch.toSink
-    s
+    ch.toSink
   }
 
   /**
@@ -953,12 +952,11 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
             }
           }
         },
-        ZChannel.refailCause(_),
+        ZChannel.refailCause,
         _ => ZChannel.unit
       )
 
-    val s: ZSink[R, InErr, In, In, Unit] = ch.toSink
-    s
+    ch.toSink
   }
 
   /**
