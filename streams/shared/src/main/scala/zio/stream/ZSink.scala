@@ -929,8 +929,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
         _ => ZChannel.unit
       )
 
-    val s: ZSink[Any, Nothing, In, In, Unit] = ch.toSink
-    s
+    ch.toSink
   }
 
   /**
