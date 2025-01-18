@@ -1,11 +1,11 @@
 package zio.stream
 
+import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stream.internal.ChannelExecutor.ChannelState
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
 
 import java.util.concurrent.atomic.AtomicReference
-import zio.{ZIO, _}
 
 /**
  * A `ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone]` is a nexus
