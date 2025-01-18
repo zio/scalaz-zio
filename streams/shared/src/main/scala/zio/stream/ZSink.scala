@@ -910,7 +910,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
   def dropUntilZIO[R, InErr, In](
     p: In => ZIO[R, InErr, Boolean]
   )(implicit trace: Trace): ZSink[R, InErr, In, In, Any] =
-    ZSink.dropWhileZIO(p(_: In).map(!_)) *> ZSink.head
+    ZSink.dropWhileZIO(p(_: In).negate) *> ZSink.head
 
   /**
    * Drops incoming elements as long as the predicate `p` is satisfied.

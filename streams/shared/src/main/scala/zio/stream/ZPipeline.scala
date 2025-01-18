@@ -1095,7 +1095,7 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
   def dropUntilZIO[Env, Err, In](
     p: In => ZIO[Env, Err, Boolean]
   )(implicit trace: Trace): ZPipeline[Env, Err, In, In] =
-    ZPipeline.dropWhileZIO(p(_: In).map(!_)) >>>
+    ZPipeline.dropWhileZIO(p(_: In).negate) >>>
       ZPipeline.drop(1)
 
   /**
