@@ -1290,7 +1290,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
    * emitted element.
    */
   final def toPull(implicit trace: Trace): ZIO[Env with Scope, Nothing, ZIO[Env, OutErr, Either[OutDone, OutElem]]] =
-    ZIO.scope.flatMap(scope => self.toPullIn(scope))
+    ZIO.scopeWith(self.toPullIn(_))
 
   final def toPullIn(
     scope: => Scope
