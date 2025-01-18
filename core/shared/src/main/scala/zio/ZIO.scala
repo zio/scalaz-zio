@@ -458,7 +458,7 @@ sealed trait ZIO[-R, +E, +A]
     ZIO.uninterruptibleMask { restore =>
       restore(self).exitWith {
         case exit @ Exit.Success(value) => println(s"$prefix: $value"); exit
-        case exit @ Exit.Failure(cause) => println(s"<FAIL> $prefix: $error"); exit
+        case exit @ Exit.Failure(error) => println(s"<FAIL> $prefix: $error"); exit
       }
     }
 
