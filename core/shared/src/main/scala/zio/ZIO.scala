@@ -455,9 +455,12 @@ sealed trait ZIO[-R, +E, +A]
    * Prefixes the output with the given message.
    */
   final def debug(prefix: => String)(implicit trace: Trace): ZIO[R, E, A] =
-    self
-      .tap(value => ZIO.succeed(println(s"$prefix: $value")))
-      .tapErrorCause(error => ZIO.succeed(println(s"<FAIL> $prefix: $error")))
+    ZIO.uninterruptibleMask { restore =>
+      restore(self).exitWith {
+        case exit @ Exit.Success(value) => println(s"$prefix: $value"); exit
+        case exit @ Exit.Failure(cause) => println(s"<FAIL> $prefix: $error"); exit
+      }
+    }
 
   /**
    * Returns an effect that is delayed from this effect by the specified
