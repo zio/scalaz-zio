@@ -48,7 +48,7 @@
     "@zio.dev/zio-interop-twitter": "2022.11.21-9f1a594d033d",
     "@zio.dev/zio-jdbc": "0.1.2",
     "@zio.dev/zio-json": "0.7.4",
-    "@zio.dev/zio-kafka": "2.9.0",
+    "@zio.dev/zio-kafka": "2.9.1",
     "@zio.dev/zio-lambda": "1.0.5",
     "@zio.dev/zio-logging": "2.4.0",
     "@zio.dev/zio-memberlist": "0.0.0--40-a85dc5a1--20221121-1416-SNAPSHOT",
@@ -80,7 +80,7 @@
     "clsx": "2.1.1",
     "highlight.js": "11.11.1",
     "node-fetch": "^3.3.2",
-    "postcss": "8.4.49",
+    "postcss": "8.5.1",
     "prism-react-renderer": "1.3.5",
     "prism-themes": "1.9.0",
     "prismjs": "^1.29.0",
@@ -93,7 +93,7 @@
     "tslib": "^2.4.0"
   },
   "resolutions": {
-    "cytoscape": "3.30.4"
+    "cytoscape": "3.31.0"
   },
   "browserslist": {
     "production": [
@@ -109,11 +109,11 @@
   },
   "devDependencies": {
     "@tsconfig/docusaurus": "2.0.3",
-    "@types/react": "19.0.4",
+    "@types/react": "19.0.7",
     "@types/react-helmet": "6.1.11",
     "@types/react-router-dom": "5.3.3",
     "prettier": "3.4.2",
-    "prettier-plugin-tailwindcss": "0.6.9",
+    "prettier-plugin-tailwindcss": "0.6.10",
     "typescript": "5.7.3"
   }
 }
