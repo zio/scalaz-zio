@@ -925,7 +925,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
           else
             ch
         },
-        ZChannel.refailCause(_),
+        ZChannel.refailCause,
         _ => ZChannel.unit
       )
 
