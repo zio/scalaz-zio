@@ -952,7 +952,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
             }
           }
         },
-        ZChannel.refailCause(_),
+        ZChannel.refailCause,
         _ => ZChannel.unit
       )
 
