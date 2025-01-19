@@ -155,6 +155,12 @@ object TQueue {
               case None    => throw ZSTM.RetryException
             }
         }
+      val peekAll: USTM[Chunk[A]] =
+        ZSTM.Effect { (journal, fiberId, _) =>
+          val queue = ref.unsafeGet(journal)
+          if (queue eq null) throw ZSTM.InterruptException(fiberId)
+          else Chunk.fromIterable(queue)
+        }
       val peekOption: USTM[Option[A]] =
         ZSTM.Effect { (journal, fiberId, _) =>
           val queue = ref.unsafeGet(journal)

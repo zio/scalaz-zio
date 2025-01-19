@@ -285,6 +285,26 @@ object THub {
             a
           }
         }
+      override def peekAll: ZSTM[Any, Nothing, Chunk[A]] =
+        ZSTM.Effect { (journal, fiberId, _) =>
+          var currentSubscriberHead = subscriberHead.unsafeGet(journal)
+          if (currentSubscriberHead eq null) throw ZSTM.InterruptException(fiberId)
+          else {
+            val builder = ChunkBuilder.make[A]()
+            var loop    = true
+            while (loop) {
+              val node = currentSubscriberHead.unsafeGet(journal)
+              if (node eq null) loop = false
+              else {
+                val head = node.head
+                val tail = node.tail
+                if (head != null) builder += head
+                currentSubscriberHead = tail
+              }
+            }
+            builder.result()
+          }
+        }
       override def peekOption: ZSTM[Any, Nothing, Option[A]] =
         ZSTM.Effect { (journal, fiberId, _) =>
           var currentSubscriberHead = subscriberHead.unsafeGet(journal)

@@ -40,6 +40,11 @@ trait TDequeue[+A] extends Serializable {
   def peek: ZSTM[Any, Nothing, A]
 
   /**
+   * Views all elements in the queue without removing them
+   */
+  def peekAll: ZSTM[Any, Nothing, Chunk[A]]
+
+  /**
    * Views the next element in the queue without removing it, returning `None`
    * if the queue is empty.
    */
