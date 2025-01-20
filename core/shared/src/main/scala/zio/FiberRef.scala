@@ -161,7 +161,7 @@ trait FiberRef[A] extends Serializable { self =>
    * Guarantees that fiber data is properly restored via `acquireRelease`.
    */
   def locally[R, E, B](newValue: A)(zio: ZIO[R, E, B])(implicit trace: Trace): ZIO[R, E, B] =
-    ZIO.acquireReleaseWith(get <* set(newValue))(set)(_ => zio)
+    ZIO.acquireReleaseWith(getAndSet(newValue))(set)(_ => zio)
 
   /**
    * Returns a `ZIO` that runs with `f` applied to the current fiber.
