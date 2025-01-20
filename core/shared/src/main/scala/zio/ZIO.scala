@@ -3240,12 +3240,12 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Returns an effect that models failure with the specified `Cause`.
    */
   def failCause[E](cause: => Cause[E])(implicit trace0: Trace): IO[E, Nothing] =
-    ZIO.stackTrace(trace0).flatMap { trace =>
-      FiberRef.currentLogSpan.getWith { spans =>
-        FiberRef.currentLogAnnotations.getWith { annotations =>
-          Exit.failCause(cause.applyAll(trace, spans, annotations))
-        }
-      }
+    ZIO.withFiberRuntime[Any, E, Nothing] { (state, _) =>
+      val trace = state.generateStackTrace()
+      val refs  = state.getFiberRefs(false)
+      val spans = refs.getOrDefault(FiberRef.currentLogSpan)
+      val anns  = refs.getOrDefault(FiberRef.currentLogAnnotations)
+      Exit.failCause(cause.applyAll(trace, spans, anns))
     }
 
   /**
