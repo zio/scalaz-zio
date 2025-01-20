@@ -4124,20 +4124,30 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   /**
    * Annotates each log in this effect with the specified log annotation.
    */
-  def logAnnotate(key: => String, value: => String): LogAnnotate =
-    logAnnotate(LogAnnotation(key, value))
+  def logAnnotate[R, E, A](key: => String, value: => String)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+    FiberRef.currentLogAnnotations.locallyWith(_.updated(key, value))(zio)
 
   /**
    * Annotates each log in this effect with the specified log annotation.
    */
-  def logAnnotate(logAnnotation: => LogAnnotation, logAnnotations: LogAnnotation*): LogAnnotate =
-    logAnnotate(Set(logAnnotation) ++ logAnnotations.toSet)
+  def logAnnotate[R, E, A](logAnnotation: => LogAnnotation, logAnnotations: LogAnnotation*)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+    FiberRef
+      .currentLogAnnotations
+      .locallyWith(_.updated(logAnnotation.key, logAnnotation.value) ++ logAnnotations.map(a => a.key -> a.value))(zio)
 
   /**
    * Annotates each log in this effect with the specified log annotation.
    */
-  def logAnnotate(logAnnotations: => Set[LogAnnotation]): LogAnnotate =
-    new LogAnnotate(() => logAnnotations)
+  def logAnnotate[R, E, A](logAnnotations: => Set[LogAnnotation])(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+    logAnnotate(logAnnotations.map(a => a.key -> a.value))(zio)
+
+  /**
+   * Annotates each log in this effect with the specified log annotation.
+   */
+  def logAnnotate[R, E, A](logAnnotations: => Set[(String, String)])(zio: ZIO[R, E, A])(implicit trace: Trace, dummy: DummyImplicit): ZIO[R, E, A] =
+    FiberRef
+      .currentLogAnnotations
+      .locallyWith(_ ++ logAnnotations)(zio)
 
   def logAnnotateScoped(key: => String, value: => String)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
     logAnnotateScoped(LogAnnotation(key, value))
@@ -5716,13 +5726,6 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
         FiberRef.currentLogSpan.locally(logSpan :: stack)(zio)
       }
-  }
-
-  final class LogAnnotate(val annotations: () => Set[LogAnnotation]) { self =>
-    def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      FiberRef.currentLogAnnotations.locallyWith(_ ++ annotations().map { case LogAnnotation(key, value) =>
-        key -> value
-      })(zio)
   }
 
   final class Tagged(val tags: () => Set[MetricLabel]) { self =>

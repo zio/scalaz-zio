@@ -87,7 +87,7 @@ object ZIOAspect {
   def annotated(annotations: (String, String)*): ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] =
     new ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] {
       def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-        ZIO.logAnnotate(annotations.map { case (key, value) => LogAnnotation(key, value) }.toSet)(zio)
+        ZIO.logAnnotate(annotations.toSet)(zio)
     }
 
   /**
