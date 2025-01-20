@@ -4869,7 +4869,9 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Capture ZIO stack trace at the current point.
    */
   def stackTrace(implicit trace: Trace): UIO[StackTrace] =
-    GenerateStackTrace(trace)
+    ZIO.withFiberRuntime[Any, Nothing, StackTrace] { (state, _) =>
+      Exit.succeed(state.generateStackTrace())
+    }
 
   /**
    * Tags each metric in this effect with the specific tag.
@@ -6143,6 +6145,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
       def scope(oldRuntimeFlags: RuntimeFlags): ZIO[R, E, A] = f(oldRuntimeFlags)
     }
   }
+  @deprecated("Kept for binary compatibility only", since = "2.1.15")
   private[zio] final case class GenerateStackTrace(trace: Trace) extends ZIO[Any, Nothing, StackTrace]
   private[zio] final case class Stateful[R, E, A](
     trace: Trace,
