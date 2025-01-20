@@ -244,7 +244,9 @@ object Scope {
         while (b eq null) {
           val current = ref.get()
           val kv      = f(current)
-          if (ref.compareAndSet(current, kv._2)) b = kv._1
+          val value = kv._1
+          val state = kv._2
+          if (ref.compareAndSet(current, state)) b = value
         }
         b
       }
