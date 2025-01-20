@@ -185,7 +185,7 @@ trait FiberRef[A] extends Serializable { self =>
    * value when the scope is closed.
    */
   final def locallyScopedWith(f: A => A)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-    getWith(a => locallyScoped(f(a))(trace))
+    ZIO.acquireRelease(modify(a => (a, f(a))))(set).unit
 
   /**
    * Atomically modifies the `FiberRef` with the specified function, which
