@@ -8,45 +8,49 @@ private[internal] object TracerUtils {
    * Implementation note: It parses the string from the end to the beginning for
    * performances reasons. See zio.internal.stacktracer.Tracer.createTrace for
    * the format of the trace
+   *
+   * @param trace
+   *   the trace string
+   * @return
+   *   successfully parsed trace or null if the trace is invalid
    */
   def parse(trace: String): ParsedTrace = {
-    val length = trace.length
-
-    if (length == 0 || trace.charAt(length - 1) != ')') return null
-
-    var idx = length - 2 // start from the end - 2 because the last character is ')'
-
-    var openingParentesisIdx = -1
-    var colonIdx             = -1
-
-    // Finding the colon
-    while (idx > 0) {
-      val c = trace.charAt(idx)
-      if (c == ':') {
-        colonIdx = idx
-        idx = 0 // stop loop
-      } else idx -= 1
-    }
-
-    if (colonIdx == -1) return null
-    else idx = colonIdx - 1
-
-    // Finding the opening parentesis
-    while (idx >= 0) {
-      val c = trace.charAt(idx)
-      if (c == '(') {
-        openingParentesisIdx = idx
-        idx = -1 // stop loop
-      } else idx -= 1
-    }
-
-    if (openingParentesisIdx == -1) null
+    // Checking the closing parentesis starting from the end of the trace
+    val closingParentesisIdx = trace.length - 1
+    if (closingParentesisIdx < 0 || trace.charAt(closingParentesisIdx) != ')') null
     else {
-      val location = trace.substring(0, openingParentesisIdx)
-      val file     = trace.substring(openingParentesisIdx + 1, colonIdx)
-      val line     = trace.substring(colonIdx + 1, length - 1)
-      ParsedTrace(location = location, file = file, line = line.toInt)
+      // Parsing the line number down to the colon
+      var colonIdx    = closingParentesisIdx - 1
+      var digitWeight = 1
+      var line        = 0
+      var ch: Char    = 0
+      while (
+        colonIdx >= 0 && {
+          ch = trace.charAt(colonIdx)
+          ch != ':'
+        }
+      ) {
+        if (
+          ch < '0' || ch > '9' || (digitWeight == 1000000000 && ch > '2') || {
+            line += (ch - '0') * digitWeight
+            digitWeight *= 10
+            line < 0
+          }
+        ) return null
+        colonIdx -= 1
+      }
+      // Finding the opening parentesis
+      var openingParentesisIdx = colonIdx - 1
+      while (openingParentesisIdx >= 0 && trace.charAt(openingParentesisIdx) != '(') {
+        openingParentesisIdx -= 1
+      }
+      if (line == 0 || openingParentesisIdx < 0) null
+      else
+        ParsedTrace(
+          location = trace.substring(0, openingParentesisIdx),
+          file = trace.substring(openingParentesisIdx + 1, colonIdx),
+          line = line
+        )
     }
   }
-
 }

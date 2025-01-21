@@ -1094,19 +1094,9 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
    */
   def dropUntilZIO[Env, Err, In](
     p: In => ZIO[Env, Err, Boolean]
-  )(implicit trace: Trace): ZPipeline[Env, Err, In, In] = {
-    lazy val loop: ZChannel[Env, Err, Chunk[In], Any, Err, Chunk[In], Any] = ZChannel.readWithCause(
-      (in: Chunk[In]) =>
-        ZChannel.unwrap(in.dropUntilZIO(p).map { leftover =>
-          val more = leftover.isEmpty
-          if (more) loop else ZChannel.write(leftover) *> ZChannel.identity[Err, Chunk[In], Any]
-        }),
-      (e: Cause[Err]) => ZChannel.refailCause(e),
-      (_: Any) => ZChannel.unit
-    )
-
-    new ZPipeline(loop)
-  }
+  )(implicit trace: Trace): ZPipeline[Env, Err, In, In] =
+    ZPipeline.dropWhileZIO(p(_: In).negate) >>>
+      ZPipeline.drop(1)
 
   /**
    * Creates a pipeline that drops elements while the specified predicate
@@ -1207,12 +1197,11 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
         for {
           remainingChars <- ZIO.succeed {
                               val bufRemaining = charBuffer.remaining()
-                              val (decodeChars, remainingChars) = {
+                              val (decodeChars, remainingChars) =
                                 if (inChars.length > bufRemaining) {
                                   inChars.splitAt(bufRemaining)
                                 } else
                                   (inChars, Chunk.empty)
-                              }
                               charBuffer.put(decodeChars.toArray)
                               charBuffer.flip()
                               remainingChars
@@ -1253,11 +1242,10 @@ object ZPipeline extends ZPipelinePlatformSpecificConstructors {
           } yield result
       }
 
-      val createPush: ZIO[Any, Nothing, Option[Chunk[Char]] => IO[CharacterCodingException, Chunk[Byte]]] = {
+      val createPush: ZIO[Any, Nothing, Option[Chunk[Char]] => IO[CharacterCodingException, Chunk[Byte]]] =
         for {
           _ <- ZIO.succeed(encoder.reset)
         } yield push
-      }
 
       ZPipeline.fromPush(createPush)
     }

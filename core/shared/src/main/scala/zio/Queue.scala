@@ -219,18 +219,16 @@ object Queue extends QueuePlatformSpecific {
         if (shutdownFlag.get)
           ZIO.interrupt
         else
-          ZIO.succeed(queue.size() - takers.size() + strategy.surplusSize)
+          Exit.succeed(queue.size() - takers.size() + strategy.surplusSize)
       }
 
     def shutdown(implicit trace: Trace): UIO[Unit] =
       ZIO.fiberIdWith { fiberId =>
         shutdownFlag.set(true)
 
-        ZIO
-          .whenZIO(shutdownHook.succeed(()))(
-            ZIO.foreachParDiscard(unsafePollAll(takers))(_.interruptAs(fiberId)) *> strategy.shutdown
-          )
-          .unit
+        ZIO.whenDiscard(shutdownHook.unsafe.completeWith(Exit.unit)(Unsafe))(
+          ZIO.foreachParDiscard(unsafePollAll(takers))(_.interruptAs(fiberId)) *> strategy.shutdown
+        )
       }.uninterruptible
 
     def isShutdown(implicit trace: Trace): UIO[Boolean] = ZIO.succeed(shutdownFlag.get)
@@ -255,7 +253,7 @@ object Queue extends QueuePlatformSpecific {
 
             case item =>
               strategy.unsafeOnQueueEmptySpace(queue, takers)
-              ZIO.succeed(item)
+              Exit.succeed(item)
           }
         }
       }
@@ -264,24 +262,44 @@ object Queue extends QueuePlatformSpecific {
       ZIO.suspendSucceed {
         if (shutdownFlag.get)
           ZIO.interrupt
-        else
-          ZIO.succeed {
-            val as = unsafePollAll(queue)
+        else {
+          val as = unsafePollAll(queue)
+          if (as.nonEmpty) {
             strategy.unsafeOnQueueEmptySpace(queue, takers)
-            as
+            Exit.succeed(as)
+          } else {
+            Exit.emptyChunk
           }
+        }
       }
 
     def takeUpTo(max: Int)(implicit trace: Trace): UIO[Chunk[A]] =
       ZIO.suspendSucceed {
         if (shutdownFlag.get)
           ZIO.interrupt
-        else
-          ZIO.succeed {
-            val as = unsafePollN(queue, max)
+        else {
+          val as = unsafePollN(queue, max)
+          if (as.nonEmpty) {
             strategy.unsafeOnQueueEmptySpace(queue, takers)
-            as
+            Exit.succeed(as)
+          } else {
+            Exit.emptyChunk
           }
+        }
+      }
+
+    override def poll(implicit trace: Trace): UIO[Option[A]] =
+      ZIO.suspendSucceed {
+        if (shutdownFlag.get)
+          ZIO.interrupt
+        else {
+          queue.poll(null.asInstanceOf[A]) match {
+            case null => Exit.none
+            case v =>
+              strategy.unsafeOnQueueEmptySpace(queue, takers)
+              Exit.succeed(Some(v))
+          }
+        }
       }
   }
 

@@ -26,21 +26,21 @@ sealed trait DiffResult {
       s"""
 $label(
   ${indent(
-        fields
-          .filter(_._2.hasDiff)
-          .map {
-            case (Some(label), Different(_, _, Some(custom))) => dim(label + " = ") + indent(custom, label.length + 3)
-            case (Some(label), diff) =>
-              val color = diff match {
-                case Removed(_) => scala.Console.RED
-                case Added(_)   => scala.Console.GREEN
-                case _          => ""
-              }
-              dim(color + label + " = ") + diff.render
-            case (None, diff) => diff.render
-          }
-          .mkString(",\n")
-      )}
+          fields
+            .filter(_._2.hasDiff)
+            .map {
+              case (Some(label), Different(_, _, Some(custom))) => dim(label + " = ") + indent(custom, label.length + 3)
+              case (Some(label), diff) =>
+                val color = diff match {
+                  case Removed(_) => scala.Console.RED
+                  case Added(_)   => scala.Console.GREEN
+                  case _          => ""
+                }
+                dim(color + label + " = ") + diff.render
+              case (None, diff) => diff.render
+            }
+            .mkString(",\n")
+        )}
 )
          """.trim
     case Different(_, _, Some(custom)) =>

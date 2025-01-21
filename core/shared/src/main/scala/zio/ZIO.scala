@@ -187,7 +187,7 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Maps the success value of this effect to the specified constant value.
    */
-  def as[B](b: => B)(implicit trace: Trace): ZIO[R, E, B] =
+  final def as[B](b: => B)(implicit trace: Trace): ZIO[R, E, B] =
     self.flatMap(_ => Exit.succeed(b))
 
   /**
@@ -690,7 +690,7 @@ sealed trait ZIO[-R, +E, +A]
    * A more powerful version of `fold` that allows recovering from any kind of
    * failure except external interruption.
    */
-  def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): URIO[R, B] =
+  final def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): URIO[R, B] =
     foldCauseZIO(c => Exit.succeed(failure(c)), a => Exit.succeed(success(a)))
 
   /**
@@ -983,14 +983,14 @@ sealed trait ZIO[-R, +E, +A]
    * Returns an effect whose failure and success channels have been mapped by
    * the specified pair of functions, `f` and `g`.
    */
-  def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, B] =
+  final def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, B] =
     foldZIO(e => Exit.fail(f(e)), a => Exit.succeed(g(a)))
 
   /**
    * Returns an effect with its error channel mapped using the specified
    * function. This can be used to lift a "smaller" error into a "larger" error.
    */
-  def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, A] =
+  final def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E2, A] =
     self.mapErrorCause(_.map(f))
 
   /**
@@ -1002,7 +1002,7 @@ sealed trait ZIO[-R, +E, +A]
    *   [[absorb]], [[sandbox]], [[catchAllCause]] - other functions for dealing
    *   with defects
    */
-  def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[R, E2, A] =
+  final def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[R, E2, A] =
     self.foldCauseZIO(c => Exit.failCause(h(c)), ZIO.successFn)
 
   /**
@@ -1234,7 +1234,7 @@ sealed trait ZIO[-R, +E, +A]
    * succeeds with the specified value.
    */
   final def orElseSucceed[A1 >: A](a1: => A1)(implicit ev: CanFail[E], trace: Trace): URIO[R, A1] =
-    orElse(ZIO.succeed(a1))
+    orElse(Exit.succeed(a1))
 
   /**
    * Exposes all parallel errors in a single call
@@ -1618,7 +1618,7 @@ sealed trait ZIO[-R, +E, +A]
    * until the first failure.
    */
   final def repeatUntil(p: A => Boolean)(implicit trace: Trace): ZIO[R, E, A] =
-    repeatUntilZIO(a => ZIO.succeed(p(a)))
+    self.flatMap(a => if (p(a)) Exit.succeed(a) else ZIO.yieldNow *> repeatUntil(p))
 
   /**
    * Repeats this effect until its value is equal to the specified value or
@@ -1639,7 +1639,7 @@ sealed trait ZIO[-R, +E, +A]
    * until the first failure.
    */
   final def repeatWhile(p: A => Boolean)(implicit trace: Trace): ZIO[R, E, A] =
-    repeatWhileZIO(a => ZIO.succeed(p(a)))
+    repeatUntil(e => !p(e))
 
   /**
    * Repeats this effect for as long as its value is equal to the specified
@@ -1756,7 +1756,7 @@ sealed trait ZIO[-R, +E, +A]
    * Retries this effect until its error satisfies the specified predicate.
    */
   final def retryUntil(f: E => Boolean)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E, A] =
-    retryUntilZIO(e => ZIO.succeed(f(e)))
+    retryUntilZIO(e => Exit.boolean(f(e)))
 
   /**
    * Retries this effect until its error is equal to the specified error.
@@ -1777,7 +1777,7 @@ sealed trait ZIO[-R, +E, +A]
    * Retries this effect while its error satisfies the specified predicate.
    */
   final def retryWhile(f: E => Boolean)(implicit ev: CanFail[E], trace: Trace): ZIO[R, E, A] =
-    retryWhileZIO(e => ZIO.succeed(f(e)))
+    retryWhileZIO(e => Exit.boolean(f(e)))
 
   /**
    * Retries this effect for as long as its error is equal to the specified
@@ -2247,7 +2247,7 @@ sealed trait ZIO[-R, +E, +A]
    * Returns the effect resulting from mapping the success of this effect to
    * unit.
    */
-  def unit(implicit trace: Trace): ZIO[R, E, Unit] =
+  final def unit(implicit trace: Trace): ZIO[R, E, Unit] =
     self.flatMap(ZIO.unitZIOFn)
 
   /**
@@ -3455,15 +3455,23 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   final def foreach[R, E, A, B: ClassTag](in: Array[A])(f: A => ZIO[R, E, B])(implicit
     trace: Trace
   ): ZIO[R, E, Array[B]] =
-    if (in.isEmpty) ZIO.succeed(Array.empty[B])
-    else
-      ZIO.suspendSucceed {
-        val iterator = in.iterator
-        val builder  = Array.newBuilder[B]
-        builder.sizeHint(in.length)
+    in.length match {
+      case 0 => ZIO.succeed(Array.empty[B])
+      case 1 => ZIO.suspendSucceed(f(in(0)).map(Array(_)))
+      case size =>
+        ZIO.suspendSucceed {
+          val iterator = in.iterator
+          val arr      = Array.ofDim[B](size)
+          var i        = 0
 
-        ZIO.whileLoop(iterator.hasNext)(f(iterator.next()))(builder += _).as(builder.result())
-      }
+          ZIO
+            .whileLoop(iterator.hasNext)(f(iterator.next())) { b =>
+              arr(i) = b
+              i += 1
+            }
+            .as(arr)
+        }
+    }
 
   /**
    * Applies the function `f` to each element of the `Map[Key, Value]` and
@@ -3475,15 +3483,22 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def foreach[R, E, Key, Key2, Value, Value2](
     map: Map[Key, Value]
   )(f: (Key, Value) => ZIO[R, E, (Key2, Value2)])(implicit trace: Trace): ZIO[R, E, Map[Key2, Value2]] =
-    if (map.isEmpty) ZIO.succeed(Map.empty)
-    else
-      ZIO.suspendSucceed {
-        val iterator = map.iterator
-        val builder  = Map.newBuilder[Key2, Value2]
+    map.size match {
+      case 0 => ZIO.succeed(Map.empty)
+      case 1 => ZIO.suspendSucceed(f.tupled(map.head).map(Map.apply(_)))
+      case _ =>
+        ZIO.suspendSucceed {
+          val iterator = map.iterator
+          val builder  = Map.newBuilder[Key2, Value2]
 
-        val ft = f.tupled
-        ZIO.whileLoop(iterator.hasNext)(ft(iterator.next()))(builder += _).as(builder.result())
-      }
+          ZIO
+            .whileLoop(iterator.hasNext) {
+              val kv = iterator.next()
+              f(kv._1, kv._2)
+            }(builder += _)
+            .as(builder.result())
+        }
+    }
 
   /**
    * Applies the function `f` if the argument is non-empty and returns the
@@ -3492,7 +3507,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   final def foreach[R, E, A, B](in: Option[A])(f: A => ZIO[R, E, B])(implicit
     trace: Trace
   ): ZIO[R, E, Option[B]] =
-    in.fold[ZIO[R, E, Option[B]]](none)(f(_).map(Some(_)))
+    in.fold[ZIO[R, E, Option[B]]](none)(a => ZIO.suspendSucceed(f(a).map(Some(_))))
 
   /**
    * Applies the function `f` to each element of the `NonEmptyChunk[A]` and
@@ -3558,12 +3573,17 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   )(
     f: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
-    if (as.isEmpty) ZIO.succeed(bf.fromSpecific(as)(Nil))
-    else
-      ZIO.parallelismWith {
-        case Some(n) => foreachPar(n)(as)(f)
-        case None    => foreachParUnbounded(as)(f)
-      }
+    as.size match {
+      case 0 =>
+        ZIO.succeed(bf.fromSpecific(as)(Nil))
+      case 1 =>
+        ZIO.suspendSucceed(f(as.head)).map(b => bf.fromSpecific(as)(as.map(_ => b)))
+      case size =>
+        ZIO.parallelismWith {
+          case Some(n) if n < size => foreachPar(n)(as, size)(f)
+          case _                   => foreachParUnbounded(as, size)(f)
+        }
+    }
 
   /**
    * Applies the function `f` to each element of the `Set[A]` in parallel, and
@@ -3627,9 +3647,17 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def foreachParDiscard[R, E, A](
     as: => Iterable[A]
   )(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.parallelismWith {
-      case Some(n) => foreachParDiscard(n)(as)(f)
-      case None    => foreachParUnboundedDiscard(as)(f)
+    ZIO.suspendSucceed {
+      val as0 = as
+      as0.size match {
+        case 0 => Exit.unit
+        case 1 => f(as0.head).unit
+        case size =>
+          ZIO.parallelismWith {
+            case Some(n) if n < size => foreachParDiscard(n)(as0, size)(f)
+            case _                   => foreachParUnboundedDiscard(as0, size)(f)
+          }
+      }
     }
 
   /**
@@ -5873,7 +5901,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
     /**
      * Constructs a `ZIO[Any, Throwable, A]` from a function `ExecutionContext
-     * => Future[A]`.
+     * \=> Future[A]`.
      */
     implicit def FutureExecutionContextConstructor[A, FutureLike[A] <: scala.concurrent.Future[A]]
       : WithOut[Any, Throwable, scala.concurrent.ExecutionContext => FutureLike[A], Any, Throwable, A] =
@@ -6232,72 +6260,68 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   private[zio] def succeedNow[A](a: A): UIO[A] =
     succeed(a)(Trace.empty)
 
-  private def collectAllParUnboundedDiscard[R, E, A](as: => Iterable[ZIO[R, E, A]])(implicit
+  private def collectAllParUnboundedDiscard[R, E, A](as: Iterable[ZIO[R, E, A]], size: Int)(implicit
     trace: Trace
   ): ZIO[R, E, Unit] =
-    foreachParUnboundedDiscard(as)(ZIO.identityFn)
+    foreachParUnboundedDiscard(as, size)(ZIO.identityFn)
 
   private def foreachPar[R, E, A, B, Collection[+Element] <: Iterable[Element]](n: => Int)(
-    as: Collection[A]
+    as: Collection[A],
+    size: Int
   )(
     fn: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
     ZIO.suspendSucceed {
-      val array = Array.ofDim[AnyRef](as.size)
+      val array = Array.ofDim[AnyRef](size)
       val zioFunction: ((A, Int)) => ZIO[R, E, Any] = { case (a, i) =>
-        fn(a).flatMap(b => ZIO.succeed(array(i) = b.asInstanceOf[AnyRef]))
+        fn(a).flatMap { b => array(i) = b.asInstanceOf[AnyRef]; Exit.unit }
       }
-      foreachParDiscard(n)(as.zipWithIndex)(zioFunction) *>
-        ZIO.succeed(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
+      foreachParDiscard(n)(as.zipWithIndex, size)(zioFunction)
+        .as(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
     }
 
   private def foreachParDiscard[R, E, A](
-    n: => Int
-  )(as0: => Iterable[A])(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.suspendSucceed {
-      val as   = as0
-      val size = as.size
-      if (size == 0) Exit.unit
-      else if (size == 1) f(as.head).unit
-      else {
-
+    n: Int
+  )(as: Iterable[A], size: Int)(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
+    size match {
+      case 0 => Exit.unit
+      case 1 => f(as.head).unit
+      case size =>
         def worker(queue: Queue[A]): ZIO[R, E, Unit] =
           queue.poll.flatMap {
             case Some(a) => f(a) *> worker(queue)
-            case None    => Exit.unit
+            case _       => Exit.unit
           }
-
-        for {
-          queue <- Queue.bounded[A](size)
-          _     <- queue.offerAll(as)
-          _     <- ZIO.collectAllParUnboundedDiscard(ZIO.replicate(n.min(size))(worker(queue)))
-        } yield ()
-      }
+        Queue.bounded[A](size).flatMap { queue =>
+          val nWorkers = n.min(size)
+          val workers  = ZIO.replicate(nWorkers)(worker(queue))
+          queue.offerAll(as) *> ZIO.collectAllParUnboundedDiscard(workers, nWorkers)
+        }
     }
 
   private def foreachParUnbounded[R, E, A, B, Collection[+Element] <: Iterable[Element]](
-    as: Collection[A]
+    as: Collection[A],
+    size: Int
   )(
     f: A => ZIO[R, E, B]
   )(implicit bf: BuildFrom[Collection[A], B, Collection[B]], trace: Trace): ZIO[R, E, Collection[B]] =
     ZIO.suspendSucceed {
-      val array = Array.ofDim[AnyRef](as.size)
+      val array = Array.ofDim[AnyRef](size)
       val zioFunction: ((A, Int)) => ZIO[R, E, Any] = { case (a, i) =>
         f(a).flatMap(b => ZIO.succeed(array(i) = b.asInstanceOf[AnyRef]))
       }
-      foreachParUnboundedDiscard(as.zipWithIndex)(zioFunction) *>
+      foreachParUnboundedDiscard(as.zipWithIndex, size)(zioFunction) *>
         ZIO.succeed(bf.fromSpecific(as)(array.asInstanceOf[Array[B]]))
     }
 
   private def foreachParUnboundedDiscard[R, E, A](
-    as0: => Iterable[A]
+    as: Iterable[A],
+    size: Int
   )(f: A => ZIO[R, E, Any])(implicit trace: Trace): ZIO[R, E, Unit] =
-    ZIO.suspendSucceed {
-      val as   = as0
-      val size = as.size
-      if (size == 0) Exit.unit
-      else if (size == 1) f(as.head).unit
-      else {
+    size match {
+      case 0 => Exit.unit
+      case 1 => f(as.head).unit
+      case size =>
         ZIO.uninterruptibleMask { restore =>
           val promise = Promise.unsafe.make[Unit, Unit](FiberId.None)(Unsafe)
           val ref     = new java.util.concurrent.atomic.AtomicInteger(size)
@@ -6314,16 +6338,18 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
             restore(promise.await).foldCauseZIO(
               cause =>
                 ZIO
-                  .foreachParUnbounded(fibers)(_.interrupt)
+                  .foreachParUnbounded(fibers, size)(_.interrupt)
                   .flatMap(Exit.collectAllPar(_) match {
                     case Some(Exit.Failure(causes)) => Exit.failCause(cause.stripFailures && causes)
                     case _                          => Exit.failCause(cause.stripFailures)
                   }),
-              _ => ZIO.foreachDiscard(fibers)(_.inheritAll)
+              _ => {
+                val it = fibers.iterator
+                ZIO.whileLoop(it.hasNext)(it.next().inheritAll)(ZIO.unitFn)
+              }
             )
           }
         }
-      }
     }
 }
 
@@ -6371,12 +6397,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def <*>[E1 >: E, B](that: Exit[E1, B])(implicit zippable: Zippable[A, B]): Exit[E1, zippable.Out] =
     zipWith(that)(zippable.zip(_, _), _ ++ _)
-
-  /**
-   * Maps the success value of this effect to the specified constant value.
-   */
-  override final def as[B](b: => B)(implicit trace: Trace): ZIO[Any, E, B] =
-    asExit(b)
 
   /**
    * Replaces the success value with the one provided.
@@ -6434,13 +6454,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
    */
   final def flattenExit[E1 >: E, B](implicit ev: A <:< Exit[E1, B]): Exit[E1, B] =
     Exit.flatten(self.mapExit(ev))
-
-  /**
-   * A more powerful version of `fold` that allows recovering from any kind of
-   * failure except external interruption.
-   */
-  override final def foldCause[B](failure: Cause[E] => B, success: A => B)(implicit trace: Trace): UIO[B] =
-    Exit.succeed(foldExit(failure, success))
 
   /**
    * A more powerful version of `foldZIO` that allows recovering from any kind
@@ -6528,24 +6541,13 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
     }
 
   /**
-   * Returns an effect whose failure and success channels have been mapped by
-   * the specified pair of functions, `f` and `g`.
-   */
-  override final def mapBoth[E2, B](f: E => E2, g: A => B)(implicit ev: CanFail[E], trace: Trace): ZIO[Any, E2, B] =
-    mapBothExit(f, g)
-
-  /**
    * Maps over both the error and value type.
    */
   final def mapBothExit[E1, A1](f: E => E1, g: A => A1): Exit[E1, A1] =
-    mapErrorExit(f).mapExit(g)
-
-  /**
-   * Returns an effect with its error channel mapped using the specified
-   * function. This can be used to lift a "smaller" error into a "larger" error.
-   */
-  override final def mapError[E2](f: E => E2)(implicit ev: CanFail[E], trace: Trace): ZIO[Any, E2, A] =
-    mapErrorExit(f)
+    self match {
+      case s: Success[A] => Exit.succeed(g(s.value))
+      case e: Failure[E] => failCause(e.cause.map(f))
+    }
 
   /**
    * Maps over the error type.
@@ -6555,18 +6557,6 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
       case e: Failure[E] => failCause(e.cause.map(f))
       case s             => s.asInstanceOf[Exit[Nothing, A]]
     }
-
-  /**
-   * Returns an effect with its full cause of failure mapped using the specified
-   * function. This can be used to transform errors while preserving the
-   * original structure of `Cause`.
-   *
-   * @see
-   *   [[absorb]], [[sandbox]], [[catchAllCause]] - other functions for dealing
-   *   with defects
-   */
-  override final def mapErrorCause[E2](h: Cause[E] => Cause[E2])(implicit trace: Trace): ZIO[Any, E2, A] =
-    mapErrorCauseExit(h)
 
   /**
    * Maps over the cause type.
@@ -6608,16 +6598,12 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   final def trace: Trace = Trace.empty
 
   /**
-   * Returns the effect resulting from mapping the success of this effect to
-   * unit.
-   */
-  override final def unit(implicit trace: Trace): ZIO[Any, E, Unit] =
-    unitExit
-
-  /**
    * Discards the value.
    */
-  final def unitExit: Exit[E, Unit] = asExit(())
+  final def unitExit: Exit[E, Unit] = self match {
+    case _: Success[?] => Exit.unit
+    case e             => e.asInstanceOf[Exit[E, Nothing]]
+  }
 
   /**
    * Returns an untraced exit value.
