@@ -188,4 +188,11 @@ object Binding {
         case _ => ???
       }
     }
+
+  implicit val bindingIsBinding: IsBinding[Binding] = 
+    new IsBinding[Binding] {
+      def apply[T, A](fa: Binding[T, A]): Binding[T, A] = fa
+
+      def unapply[T, A](fa: Binding[T, A]): Binding[T, A] = fa
+    }
 }

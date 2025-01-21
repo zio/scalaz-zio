@@ -2,7 +2,9 @@ package zio.blocks.schema
 
 import zio.blocks.schema.binding._
 
-sealed trait Optic[F[_, _], S, A] {
+sealed trait Optic[F[_, _], S, A] { self =>
+  def target: Reflect[F, A]
+
   // Compose this optic with a lens:
   def apply[B](that: Lens[F, A, B]): Optic[F, S, B]
 
@@ -13,19 +15,59 @@ sealed trait Optic[F[_, _], S, A] {
   def apply[B](that: Optional[F, A, B]): Optic[F, S, B]
 
   // Compose this optic with a traversal:
-  def apply[B](that: Traversal[F, A, B]): Optic[F, S, B]
+  def apply[B](that: Traversal[F, A, B]): Traversal[F, S, B]
 
-  def refineBinding[G[_, _]](f: RefineBinding[F, G]): Optic[G, S, A]
+  def refineBinding[G[_, _]](f: RefineBinding[F, G]): Optic[G, S, A]  
 
   def noBinding: Optic[NoBinding, S, A]
 
-  def list[B](implicit ev: A <:< List[B]): Traversal[F, S, B] = ??? // FIXME
+  final def list[B](implicit ev: A <:< List[B], F: IsBinding[F]): Traversal[F, S, B] = {
+    import Reflect.Extractors.List 
 
-  def vector[B](implicit ev: A <:< Vector[B]): Traversal[F, S, B] = ??? // FIXME
+    val list = self.asInstanceOf[Optic[F, S, List[B]]]
 
-  def set[B](implicit ev: A <:< Set[B]): Traversal[F, S, B] = ??? // FIXME
+    list.target match {
+      case List(element) => list(Traversal.list(element))
 
-  def array[B](implicit ev: A <:< Array[B]): Traversal[F, S, B] = ??? // FIXME
+      case _ => sys.error("FIXME - Not a list")
+    }
+  }
+
+  final def vector[B](implicit ev: A <:< Vector[B], F: IsBinding[F]): Traversal[F, S, B] = {
+    import Reflect.Extractors.Vector
+
+    val vector = self.asInstanceOf[Optic[F, S, Vector[B]]]
+
+    vector.target match {
+      case Vector(element) => vector(Traversal.vector(element))
+
+      case _ => sys.error("FIXME - Not a vector")
+    }
+  }    
+
+  final def set[B](implicit ev: A <:< Set[B], F: IsBinding[F]): Traversal[F, S, B] = {
+    import Reflect.Extractors.Set
+
+    val set = self.asInstanceOf[Optic[F, S, Set[B]]]
+
+    set.target match {
+      case Set(element) => set(Traversal.set(element))
+
+      case _ => sys.error("FIXME - Not a set")
+    }
+  }
+
+  final def array[B](implicit ev: A <:< Array[B], F: IsBinding[F]): Traversal[F, S, B] = {
+    import Reflect.Extractors.Array
+
+    val array = self.asInstanceOf[Optic[F, S, Array[B]]]
+
+    array.target match {
+      case Array(element) => array(Traversal.array(element))
+
+      case _ => sys.error("FIXME - Not an array")
+    }
+  }
 }
 
 sealed trait Lens[F[_, _], S, A] extends Optic[F, S, A] {
@@ -56,6 +98,8 @@ object Lens {
   def apply[F[_, _], S, A](parent: Reflect.Record[F, S], child: Term[F, S, A]): Lens[F, S, A] = Root(parent, child)
 
   final case class Root[F[_, _], S, A](parent: Reflect.Record[F, S], child: Term[F, S, A]) extends Lens[F, S, A] {
+    def target: Reflect[F, A] = child.value
+
     private val register: Register[A] =
       parent.registers(parent.fields.indexWhere(_.name == child.name)).asInstanceOf[Register[A]]
 
@@ -83,6 +127,8 @@ object Lens {
     override def noBinding: Root[NoBinding, S, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class LensLens[F[_, _], S, T, A](first: Lens[F, S, T], second: Lens[F, T, A]) extends Lens[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def get(s: S)(implicit d: HasDeconstructor[F]): A = second.get(first.get(s))
 
     def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F]): S =
@@ -133,6 +179,8 @@ object Prism {
         matcher = matchers(parent.cases.indexWhere(_.name == child.name)).asInstanceOf[Matcher[A]]
       }
 
+    def target: Reflect[F, A] = child.value
+
     def getOption(s: S)(implicit m: HasMatchers[F]): Option[A] = {
       init(m)
 
@@ -147,6 +195,8 @@ object Prism {
     override def noBinding: Root[NoBinding, S, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class PrismPrism[F[_, _], S, T, A](first: Prism[F, S, T], second: Prism[F, T, A]) extends Prism[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit m: HasMatchers[F]): Option[A] = first.getOption(s).flatMap(second.getOption)
 
     def reverseGet(a: A): S = first.reverseGet(second.reverseGet(a))
@@ -183,6 +233,8 @@ object Optional {
   type Bound[S, A] = Optional[Binding, S, A]
 
   final case class LensPrism[F[_, _], S, T, A](first: Lens[F, S, T], second: Prism[F, T, A]) extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] = second.getOption(first.get(s))
 
     def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
@@ -195,6 +247,8 @@ object Optional {
   }
   final case class LensOptional[F[_, _], S, T, A](first: Lens[F, S, T], second: Optional[F, T, A])
       extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] = second.getOption(first.get(s))
 
     def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
@@ -206,6 +260,8 @@ object Optional {
     override def noBinding: LensOptional[NoBinding, S, T, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class PrismLens[F[_, _], S, T, A](first: Prism[F, S, T], second: Lens[F, T, A]) extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
       first.getOption(s).map(second.get)
 
@@ -221,6 +277,8 @@ object Optional {
     first: Prism[F, S, T],
     second: Optional[F, T, A]
   ) extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
@@ -234,6 +292,8 @@ object Optional {
   }
   final case class OptionalLens[F[_, _], S, T, A](first: Optional[F, S, T], second: Lens[F, T, A])
       extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
       first.getOption(s).map(second.get)
 
@@ -247,6 +307,8 @@ object Optional {
   }
   final case class OptionalPrism[F[_, _], S, T, A](first: Optional[F, S, T], second: Prism[F, T, A])
       extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
@@ -260,6 +322,8 @@ object Optional {
   }
   final case class OptionalOptional[F[_, _], S, T, A](first: Optional[F, S, T], second: Optional[F, T, A])
       extends Optional[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
@@ -274,6 +338,8 @@ object Optional {
 }
 
 sealed trait Traversal[F[_, _], S, A] extends Optic[F, S, A] { self =>
+  def target: Reflect[F, A]
+
   def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
     d: HasDeconstructor[F],
     m: HasMatchers[F],
@@ -314,15 +380,17 @@ object Traversal {
 
   def apply[F[_, _], A, C[_]](parent: Reflect.Sequence[F, A, C]): Traversal[F, C[A], A] = Seq(parent)
 
-  def list[A](reflect: Reflect.Bound[A]): Traversal.Bound[List[A], A] = Traversal(Reflect.list(reflect))
+  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, List[A], A] = Traversal(Reflect.list(reflect))
 
-  def set[A](reflect: Reflect.Bound[A]): Traversal.Bound[Set[A], A] = Traversal(Reflect.set(reflect))
+  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Set[A], A] = Traversal(Reflect.set(reflect))
 
-  def vector[A](reflect: Reflect.Bound[A]): Traversal.Bound[Vector[A], A] = Traversal(Reflect.vector(reflect))
+  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Vector[A], A] = Traversal(Reflect.vector(reflect))
 
-  def array[A](reflect: Reflect.Bound[A]): Traversal.Bound[Array[A], A] = Traversal(Reflect.array(reflect))
+  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Array[A], A] = Traversal(Reflect.array(reflect))
 
   final case class Seq[F[_, _], A, C[_]](seq: Reflect.Sequence[F, A, C]) extends Traversal[F, C[A], A] {
+    def target: Reflect[F, A] = seq.element
+
     def fold[Z](s: C[A])(
       zero: Z,
       f: (Z, A) => Z
@@ -402,6 +470,8 @@ object Traversal {
 
   final case class MapKeys[F[_, _], Key, Value, M[_, _]](map: Reflect.Map[F, Key, Value, M])
       extends Traversal[F, M[Key, Value], Key] {
+    def target: Reflect[F, Key] = map.key
+
     def fold[Z](s: M[Key, Value])(
       zero: Z,
       f: (Z, Key) => Z
@@ -452,6 +522,8 @@ object Traversal {
 
   final case class MapValues[F[_, _], Key, Value, M[_, _]](map: Reflect.Map[F, Key, Value, M])
       extends Traversal[F, M[Key, Value], Value] {
+    def target: Reflect[F, Value] = map.value
+
     def fold[Z](s: M[Key, Value])(
       zero: Z,
       f: (Z, Value) => Z
@@ -505,6 +577,8 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -534,6 +608,8 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Lens[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -563,6 +639,8 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Prism[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -592,6 +670,8 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Optional[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -621,6 +701,8 @@ object Traversal {
     first: Lens[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -650,6 +732,8 @@ object Traversal {
     first: Prism[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],
@@ -679,6 +763,8 @@ object Traversal {
     first: Optional[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
+    def target: Reflect[F, A] = second.target
+
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       d: HasDeconstructor[F],
       m: HasMatchers[F],

@@ -51,7 +51,7 @@ object Main {
           Term("name", Reflect.string, Doc.Empty, List.empty),
           Term("age", Reflect.int, Doc.Empty, List.empty),
           Term("address", Reflect.string, Doc.Empty, List.empty),
-          Term("childrenAges", Reflect.list(Reflect.int), Doc.Empty, List.empty)
+          Term("childrenAges", Reflect.list[Binding, Int](Reflect.int), Doc.Empty, List.empty)
         ),
         TypeName(Namespace(List("example"), List.empty), "Person"),
         Binding.Record(constructor, deconstructor),
@@ -66,9 +66,7 @@ object Main {
     val address: Lens.Bound[Person, String] =
       Lens.Root(personRecord, personRecord.fields(2).asInstanceOf[Term.Bound[Person, String]])
     val childrenAges: Traversal.Bound[Person, Int] =
-      (Lens.Root(personRecord, personRecord.fields(3).asInstanceOf[Term.Bound[Person, List[Int]]]))(
-        Traversal.list(Reflect.int)
-      )
+      (Lens.Root(personRecord, personRecord.fields(3).asInstanceOf[Term.Bound[Person, List[Int]]])).list
   }
 
   import Person._

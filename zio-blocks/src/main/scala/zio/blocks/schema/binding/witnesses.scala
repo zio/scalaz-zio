@@ -30,3 +30,9 @@ trait HasMapConstructor[-F[_, _]] {
 trait HasMapDeconstructor[-F[_, _]] {
   def deconstructor[M[_, _], A](fa: F[BindingType.Map[M], A]): MapDeconstructor[M]
 }
+
+trait IsBinding[F[_, _]] {
+  def apply[T, A](fa: F[T, A]): Binding[T, A]
+
+  def unapply[T, A](fa: Binding[T, A]): F[T, A]
+}

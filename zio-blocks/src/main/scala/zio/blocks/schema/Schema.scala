@@ -1,5 +1,7 @@
 package zio.blocks.schema
 
+import zio.blocks.schema.binding.Binding
+
 /**
  * A {{Schema}} is a data type that contains reified information on the
  * structure of a Scala data type, together with the ability to tear down and
@@ -43,13 +45,13 @@ object Schema {
 
   implicit def some[A](implicit element: Schema[A]): Schema[Some[A]] = Schema(Reflect.some(element.reflect))
 
-  implicit def left[A, B](implicit element: Schema[A]): Schema[Left[A, B]] = Schema(Reflect.left[A, B](element.reflect))
+  implicit def left[A, B](implicit element: Schema[A]): Schema[Left[A, B]] = Schema(Reflect.left[Binding, A, B](element.reflect))
 
   implicit def right[A, B](implicit element: Schema[B]): Schema[Right[A, B]] = Schema(
-    Reflect.right[A, B](element.reflect)
+    Reflect.right[Binding, A, B](element.reflect)
   )
 
-  implicit val none: Schema[None.type] = Schema(Reflect.none)
+  implicit val none: Schema[None.type] = Schema(Reflect.none[Binding])
 
   implicit def option[A](implicit element: Schema[A]): Schema[Option[A]] = Schema(Reflect.option(element.reflect))
 

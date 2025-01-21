@@ -13,23 +13,6 @@ sealed trait Reflect[+F[_, _], A] extends Reflectable[A] { self =>
 
   def asTerm[S](name: String): Term[F, S, A] = Term(name, this, Doc.Empty, List.empty)
 
-  def isOptional: Boolean = {
-    val typeName = TypeName.option[Any]
-    self match {
-      case Reflect.Variant(_, `typeName`, _, _, _, _) => true
-      case _                                          => false
-    }
-  }
-
-  def isList: Boolean = {
-    val typeName = TypeName.list[Any]
-
-    self match {
-      case seq: Reflect.Sequence[f, a, c] => seq.typeName == typeName
-      case _                              => false
-    }
-  }
-
   override def hashCode: Int = inner.hashCode
 
   override def equals(obj: Any): Boolean = obj match {
@@ -278,102 +261,94 @@ object Reflect {
       Doc.Empty
     )
 
-  def set[A](element: Reflect.Bound[A]): Sequence.Bound[A, Set] =
-    (Sequence(element, Binding.Seq.set, TypeName.set[A], Doc.Empty))
+  def set[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Sequence[F, A, Set] =
+    (Sequence(element, F.unapply(Binding.Seq.set), TypeName.set[A], Doc.Empty))
 
-  def list[A](element: Reflect.Bound[A]): Sequence.Bound[A, List] =
-    (Sequence(element, Binding.Seq.list, TypeName.list[A], Doc.Empty))
+  def list[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Sequence[F, A, List] =
+    (Sequence(element, F.unapply(Binding.Seq.list), TypeName.list[A], Doc.Empty))
 
-  object IsList {
-    def unapply[F[_, _], A](reflect: Reflect[F, List[A]]): Option[Reflect[F, A]] =
-      reflect match {
-        case Sequence(element, _, tn, _) if tn == TypeName.list => Some(element)
-        case _                                                  => None
-      }
-  }
+  def vector[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Sequence[F, A, Vector] =
+    (Sequence(element, F.unapply(Binding.Seq.vector), TypeName.vector[A], Doc.Empty))
 
-  def vector[A](element: Reflect.Bound[A]): Sequence.Bound[A, Vector] =
-    (Sequence(element, Binding.Seq.vector, TypeName.vector[A], Doc.Empty))
+  def array[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Sequence[F, A, Array] =
+    (Sequence(element, F.unapply(Binding.Seq.array), TypeName.array[A], Doc.Empty))
 
-  def array[A](element: Reflect.Bound[A]): Sequence.Bound[A, Array] =
-    (Sequence(element, Binding.Seq.array, TypeName.array[A], Doc.Empty))
-
-  def some[A](element: Reflect.Bound[A]): Record.Bound[Some[A]] =
+  def some[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Record[F, Some[A]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.some[A],
-      Binding.Record.some[A],
+      F.unapply(Binding.Record.some[A]),
       Doc.Empty,
       List.empty
     )
 
-  val none: Record.Bound[None.type] =
+  def none[F[_, _]](implicit F: IsBinding[F]): Record[F, None.type] =
     Record(
       List.empty,
       TypeName.none,
-      Binding.Record.none,
+      F.unapply(Binding.Record.none),
       Doc.Empty,
       List.empty
     )
 
-  def option[A](element: Reflect.Bound[A]): Variant.Bound[Option[A]] = {
-    val noneTerm: Term.Bound[Option[A], None.type] = Term("None", none, Doc.Empty, List.empty)
+  def option[F[_, _], A](element: Reflect[F, A])(implicit F: IsBinding[F]): Variant[F, Option[A]] = {
+    val noneTerm: Term[F, Option[A], None.type] = Term("None", none, Doc.Empty, List.empty)
 
-    val someTerm: Term.Bound[Option[A], Some[A]] = Term("Some", some[A](element), Doc.Empty, List.empty)
+    val someTerm: Term[F, Option[A], Some[A]] = Term("Some", some[F, A](element), Doc.Empty, List.empty)
 
     Variant(
       List(noneTerm, someTerm),
       TypeName.option[A],
-      Binding.Variant.option[A],
+      F.unapply(Binding.Variant.option[A]),
       Doc.Empty,
       List.empty,
       None
     )
   }
 
-  def left[A, B](element: Reflect.Bound[A]): Record.Bound[Left[A, B]] =
+  def left[F[_, _], A, B](element: Reflect[F, A])(implicit F: IsBinding[F]): Record[F, Left[A, B]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.left[A, B],
-      Binding.Record.left[A, B],
+      F.unapply(Binding.Record.left[A, B]),
       Doc.Empty,
       List.empty
     )
 
-  def right[A, B](element: Reflect.Bound[B]): Record.Bound[Right[A, B]] =
+  def right[F[_, _], A, B](element: Reflect[F, B])(implicit F: IsBinding[F]): Record[F, Right[A, B]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.right[A, B],
-      Binding.Record.right[A, B],
+      F.unapply(Binding.Record.right[A, B]),
       Doc.Empty,
       List.empty
     )
 
-  def either[L, R](l: Reflect.Bound[L], r: Reflect.Bound[R]): Variant.Bound[Either[L, R]] = {
-    val leftTerm: Term.Bound[Either[L, R], Left[L, R]] = Term("Left", left(l), Doc.Empty, List.empty)
+  def either[F[_, _], L, R](l: Reflect[F, L], r: Reflect[F, R])(implicit F: IsBinding[F]): Variant[F, Either[L, R]] = {
+    val leftTerm: Term[F, Either[L, R], Left[L, R]] = Term("Left", left(l), Doc.Empty, List.empty)
 
-    val rightTerm: Term.Bound[Either[L, R], Right[L, R]] = Term("Right", right(r), Doc.Empty, List.empty)
+    val rightTerm: Term[F, Either[L, R], Right[L, R]] = Term("Right", right(r), Doc.Empty, List.empty)
 
     Variant(
       List(leftTerm, rightTerm),
       TypeName.either[L, R],
-      Binding.Variant.either[L, R],
+      F.unapply(Binding.Variant.either[L, R]),
       Doc.Empty,
       List.empty,
       None
     )
   }
 
-  def tuple2[A, B](_1: Reflect.Bound[A], _2: Reflect.Bound[B]): Record.Bound[(A, B)] =
+  def tuple2[F[_, _], A, B](_1: Reflect[F, A], _2: Reflect[F, B])(implicit F: IsBinding[F]): Record[F, (A, B)] =
     Record(
       List(Term("_1", _1, Doc.Empty, List.empty), Term("_2", _2, Doc.Empty, List.empty)),
       TypeName.tuple2[A, B],
-      Binding.Record.tuple2[A, B],
+      F.unapply(Binding.Record.tuple2[A, B]),
       Doc.Empty,
       List.empty
     )
 
-  def tuple3[A, B, C](_1: Reflect.Bound[A], _2: Reflect.Bound[B], _3: Reflect.Bound[C]): Record.Bound[(A, B, C)] =
+  def tuple3[F[_, _], A, B, C](_1: Reflect[F, A], _2: Reflect[F, B], _3: Reflect[F, C])(implicit F: IsBinding[F]): Record[F, (A, B, C)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),
@@ -381,17 +356,17 @@ object Reflect {
         Term("_3", _3, Doc.Empty, List.empty)
       ),
       TypeName.tuple3[A, B, C],
-      Binding.Record.tuple3[A, B, C],
+      F.unapply(Binding.Record.tuple3[A, B, C]),
       Doc.Empty,
       List.empty
     )
 
-  def tuple4[A, B, C, D](
-    _1: Reflect.Bound[A],
-    _2: Reflect.Bound[B],
-    _3: Reflect.Bound[C],
-    _4: Reflect.Bound[D]
-  ): Record.Bound[(A, B, C, D)] =
+  def tuple4[F[_, _], A, B, C, D](
+    _1: Reflect[F, A],
+    _2: Reflect[F, B],
+    _3: Reflect[F, C],
+    _4: Reflect[F, D]
+  )(implicit F: IsBinding[F]): Record[F, (A, B, C, D)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),
@@ -400,18 +375,18 @@ object Reflect {
         Term("_4", _4, Doc.Empty, List.empty)
       ),
       TypeName.tuple4[A, B, C, D],
-      Binding.Record.tuple4[A, B, C, D],
+      F.unapply(Binding.Record.tuple4[A, B, C, D]),
       Doc.Empty,
       List.empty
     )
 
-  def tuple5[A, B, C, D, E](
-    _1: Reflect.Bound[A],
-    _2: Reflect.Bound[B],
-    _3: Reflect.Bound[C],
-    _4: Reflect.Bound[D],
-    _5: Reflect.Bound[E]
-  ): Record.Bound[(A, B, C, D, E)] =
+  def tuple5[F[_, _], A, B, C, D, E](
+    _1: Reflect[F, A],
+    _2: Reflect[F, B],
+    _3: Reflect[F, C],
+    _4: Reflect[F, D],
+    _5: Reflect[F, E]
+  )(implicit F: IsBinding[F]): Record[F, (A, B, C, D, E)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),
@@ -421,8 +396,63 @@ object Reflect {
         Term("_5", _5, Doc.Empty, List.empty)
       ),
       TypeName.tuple5[A, B, C, D, E],
-      Binding.Record.tuple5[A, B, C, D, E],
+      F.unapply(Binding.Record.tuple5[A, B, C, D, E]),
       Doc.Empty,
       List.empty
     )
+
+  object Extractors {
+    object List {
+      def unapply[F[_, _], A](reflect: Reflect[F, List[A]]): Option[Reflect[F, A]] =
+        reflect match {
+          case Sequence(element, _, tn, _) if tn == TypeName.list => Some(element)
+          case _                                                  => None
+        }
+    }
+    object Vector {
+      def unapply[F[_, _], A](reflect: Reflect[F, Vector[A]]): Option[Reflect[F, A]] =
+        reflect match {
+          case Sequence(element, _, tn, _) if tn == TypeName.vector => Some(element)
+          case _                                                    => None
+        }
+    }
+    object Set {
+      def unapply[F[_, _], A](reflect: Reflect[F, Set[A]]): Option[Reflect[F, A]] =
+        reflect match {
+          case Sequence(element, _, tn, _) if tn == TypeName.set => Some(element)
+          case _                                                 => None
+        }
+    }    
+    object Array {
+      def unapply[F[_, _], A](reflect: Reflect[F, Array[A]]): Option[Reflect[F, A]] =
+        reflect match {
+          case Sequence(element, _, tn, _) if tn == TypeName.array => Some(element)
+          case _                                                   => None
+        }
+    }
+    object Option {
+      def unapply[F[_, _], A](reflect: Reflect[F, Option[A]]): Option[Reflect[F, A]] =
+        reflect match {
+          case Variant(noneTerm :: someTerm :: Nil, tn, _, _, _, _) if tn == TypeName.option =>
+            someTerm match {
+              case Term("Some", element, _, _) => Some(element.asInstanceOf[Reflect[F, A]])
+              case _ => None
+            }
+            
+          case _ => None
+        }
+    }
+    object Either {
+      def unapply[F[_, _], L, R](reflect: Reflect[F, Either[L, R]]): Option[(Reflect[F, L], Reflect[F, R])] =
+        reflect match {
+          case Variant(leftTerm :: rightTerm :: Nil, tn, _, _, _, _) if tn == TypeName.either =>
+            (leftTerm, rightTerm) match {
+              case (Term("Left", left, _, _), Term("Right", right, _, _)) => Some((left.asInstanceOf[Reflect[F, L]], right.asInstanceOf[Reflect[F, R]]))
+              case _ => None
+            }
+            
+          case _ => None
+        }
+    }
+  }
 }
