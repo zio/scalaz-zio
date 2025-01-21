@@ -412,7 +412,7 @@ object ZIOSpec extends ZIOBaseSpec {
       },
       test("doesn't catch defects") {
         for {
-          result <- (ZIO.attempt(42) *> ZIO.dieMessage("die")).catchSomeFailure(_ => ZIO.succeed(true)).exit
+          result <- (ZIO.attempt(42) *> ZIO.dieMessage("die")).catchSomeFailure { case _ => ZIO.succeed(true) }.exit
         } yield assert(result)(dies(hasMessage(equalTo("die"))))
       }
     ) @@ zioTag(errors),
