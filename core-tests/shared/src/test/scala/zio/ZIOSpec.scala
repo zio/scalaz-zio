@@ -307,6 +307,29 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield assert(result)((equalTo(t)))
       }
     ) @@ zioTag(errors),
+    suite("catchAllFailure")(
+      test("recovers from all failures") {
+        val s   = "division by zero"
+        val zio = ZIO.fail(new IllegalArgumentException(s))
+        for {
+          result <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage))
+        } yield assert(result)(equalTo(s))
+      },
+      test("leaves defects") {
+        val t   = new IllegalArgumentException("division by zero")
+        val zio = ZIO.attempt(true) *> ZIO.die(t)
+        for {
+          exit <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage)).exit
+        } yield assert(exit)(dies(equalTo(t)))
+      },
+      test("leaves values") {
+        val t   = new IllegalArgumentException("division by zero")
+        val zio = ZIO.attempt(t)
+        for {
+          result <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage))
+        } yield assert(result)((equalTo(t)))
+      }
+    ) @@ zioTag(errors),
     suite("catchSomeCause")(
       test("catches matching cause") {
         ZIO.interrupt.catchSomeCause {
@@ -361,6 +384,36 @@ object ZIOSpec extends ZIOBaseSpec {
                       ZIO.succeed(e.getMessage)
                     }
         } yield assert(result)((equalTo(t)))
+      }
+    ) @@ zioTag(errors),
+    suite("catchSomeFailure")(
+      test("catches matching cause") {
+        ZIO
+          .fail("fail")
+          .catchSomeFailure {
+            case c if c.value == "fail" => ZIO.succeed(true)
+          }
+          .sandbox
+          .map(
+            assert(_)(isTrue)
+          )
+      },
+      test("fails if cause doesn't match") {
+        ZIO
+          .fail("no-match")
+          .catchSomeFailure {
+            case c if c.value == "fail" => ZIO.succeed(true)
+          }
+          .sandbox
+          .either
+          .map(
+            assert(_)(isLeft(equalTo(Cause.fail("no-match"))))
+          )
+      },
+      test("doesn't catch defects") {
+        for {
+          result <- (ZIO.attempt(42) *> ZIO.dieMessage("die")).catchSomeFailure(_ => ZIO.succeed(true)).exit
+        } yield assert(result)(dies(hasMessage(equalTo("die"))))
       }
     ) @@ zioTag(errors),
     suite("collect")(
@@ -3848,6 +3901,24 @@ object ZIOSpec extends ZIOBaseSpec {
                  .exit
           effect <- ref.get
         } yield assert(effect)(equalTo(42))
+      }
+    ),
+    suite("tapFailure")(
+      test("doesn't peek at the defect of this effect") {
+        for {
+          ref    <- Ref.make(false)
+          result <- (ZIO.attempt(42) *> ZIO.dieMessage("die")).tapFailure(_ => ref.set(true)).exit
+          effect <- ref.get
+        } yield assert(result)(dies(hasMessage(equalTo("die")))) &&
+          assert(effect)(isFalse)
+      },
+      test("effectually peeks at the failure of this effect") {
+        for {
+          ref    <- Ref.make(false)
+          result <- ZIO.fail("fail").tapFailure(_ => ref.set(true)).exit
+          effect <- ref.get
+        } yield assert(result)(fails(equalTo("fail"))) &&
+          assert(effect)(isTrue)
       }
     ),
     suite("tapSome")(

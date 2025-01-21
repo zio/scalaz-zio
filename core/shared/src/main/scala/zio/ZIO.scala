@@ -330,6 +330,18 @@ sealed trait ZIO[-R, +E, +A]
     catchSomeDefect { case t => h(t) }
 
   /**
+   * Recovers from all failures with provided function.
+   *
+   * {{{
+   * effect.catchAllFailure(_ => backup())
+   * }}}
+   */
+  final def catchAllFailure[R1 <: R, E1 >: E, A1 >: A](h: Cause.Fail[E] => ZIO[R1, E1, A1])(implicit
+    trace: Trace
+  ): ZIO[R1, E1, A1] =
+    catchSomeFailure { case t => h(t) }
+
+  /**
    * Recovers from all NonFatal Throwables.
    *
    * {{{
@@ -411,6 +423,24 @@ sealed trait ZIO[-R, +E, +A]
     pf: PartialFunction[Throwable, ZIO[R1, E1, A1]]
   )(implicit trace: Trace): ZIO[R1, E1, A1] =
     unrefineWith(pf)(ZIO.failFn).catchAll(identity)
+
+  /**
+   * Recovers from some or all of the failure cases with provided cause.
+   *
+   * {{{
+   * openFile("data.json").catchSomeFailure {
+   *   case c if (c.interrupted) => openFile("backup.json")
+   * }
+   * }}}
+   */
+  final def catchSomeFailure[R1 <: R, E1 >: E, A1 >: A](
+    pf: PartialFunction[Cause.Fail[E], ZIO[R1, E1, A1]]
+  )(implicit trace: Trace): ZIO[R1, E1, A1] = {
+    def tryRescue(c: Cause.Fail[E]): ZIO[R1, E1, A1] =
+      pf.applyOrElse(c, (_: Cause.Fail[E]) => Exit.failCause(c))
+
+    self.foldCauseZIO(c => c.failureCauseOption.fold[ZIO[R1, E1, A1]](Exit.failCause(c))(tryRescue), ZIO.successFn)
+  }
 
   /**
    * Returns an effect that succeeds with the cause of failure of this effect,
@@ -2108,6 +2138,20 @@ sealed trait ZIO[-R, +E, +A]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A] =
     self.foldCauseZIO(
       c => c.failureTraceOrCause.fold(f(_) *> Exit.failCause(c), _ => Exit.failCause(c)),
+      ZIO.successFn
+    )
+
+  /**
+   * Returns an effect that effectfully "peeks" at the failure of this effect.
+   * {{{
+   * readFile("data.json").tapError(logError(_))
+   * }}}
+   */
+  final def tapFailure[R1 <: R, E1 >: E](
+    f: Cause.Fail[E] => ZIO[R1, E1, Any]
+  )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A] =
+    self.foldCauseZIO(
+      c => c.failureCauseOption.fold[ZIO[R1, E1, Nothing]](Exit.failCause(c))(f(_) *> Exit.failCause(c)),
       ZIO.successFn
     )
 

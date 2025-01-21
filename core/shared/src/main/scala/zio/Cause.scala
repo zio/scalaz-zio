@@ -116,6 +116,13 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
     find { case Fail(e, _) => e }
 
   /**
+   * Returns the `Cause.Fail[E]` associated with the first `Fail` in this
+   * `Cause` if one exists.
+   */
+  def failureCauseOption: Option[Fail[E]] =
+    find { case f: Fail[E] => f }
+
+  /**
    * Returns the `E` associated with the first `Fail` in this `Cause` if one
    * exists, along with its (optional) trace.
    */
