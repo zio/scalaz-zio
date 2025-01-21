@@ -3437,7 +3437,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     capacity: => Int
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, Hub[Take[E1, A1]]] =
     for {
-      hub <- Hub.bounded[Take[E1, A1]](capacity)
+      hub <- ZIO.acquireRelease(Hub.bounded[Take[E1, A1]](capacity))(_.shutdown)
       _   <- self.runIntoHubScoped(hub).forkScoped
     } yield hub
 
