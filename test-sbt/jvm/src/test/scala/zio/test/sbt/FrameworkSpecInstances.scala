@@ -14,9 +14,8 @@ object FrameworkSpecInstances {
 
   val counter = new AtomicInteger(0)
 
-  lazy val sharedLayer: ZLayer[Any, Nothing, Int] = {
+  lazy val sharedLayer: ZLayer[Any, Nothing, Int] =
     ZLayer.fromZIO(ZIO.succeed(counter.getAndUpdate(value => value + 1)))
-  }
 
   def numberedTest(specIdx: Int, suiteIdx: Int, testIdx: Int) =
     zio.test.test(s"spec $specIdx suite $suiteIdx test $testIdx") {

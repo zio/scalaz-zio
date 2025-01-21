@@ -954,7 +954,7 @@ object ConfigProviderSpec extends ZIOBaseSpec {
           result <- configProvider.load(config)
         } yield assertTrue(result == Nil)
       } +
-      //FIXME: Failing test
+      // FIXME: Failing test
       test("empty list within indexed list") {
         val configProvider =
           ConfigProvider.fromMap(

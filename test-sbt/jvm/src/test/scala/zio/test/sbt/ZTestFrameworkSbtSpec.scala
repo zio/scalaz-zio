@@ -20,7 +20,7 @@ object ZTestFrameworkSbtSpec {
   def tests: Seq[Try[Unit]] = Seq(
     test("should return correct fingerprints")(testFingerprints()),
     // TODO restore once we are calculating durations again. Fix for #6482
-    //test("should report durations")(testReportDurations()),
+    // test("should report durations")(testReportDurations()),
 //    test("should log messages")(testLogMessages()),
 //    test("should correctly display colorized output for multi-line strings")(testColored()),
 //    test("should test only selected test")(testTestSelection()),

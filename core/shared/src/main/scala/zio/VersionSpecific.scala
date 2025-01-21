@@ -88,13 +88,12 @@ private[zio] trait VersionSpecific {
       case v => v
     }
 
-  private val taggedSubtypes: ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean] = {
+  private val taggedSubtypes: ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean] =
     /*
      * '''NOTE''': Larger maps have lower chance of collision which offers better
      * read performance and smaller chance of entering synchronized blocks during writes
      */
     new ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean](1024)
-  }
 
   private val taggedServices: ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]] =
     new ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]](256)

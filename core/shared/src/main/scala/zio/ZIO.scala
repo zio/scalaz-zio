@@ -5901,7 +5901,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
     /**
      * Constructs a `ZIO[Any, Throwable, A]` from a function `ExecutionContext
-     * => Future[A]`.
+     * \=> Future[A]`.
      */
     implicit def FutureExecutionContextConstructor[A, FutureLike[A] <: scala.concurrent.Future[A]]
       : WithOut[Any, Throwable, scala.concurrent.ExecutionContext => FutureLike[A], Any, Throwable, A] =
