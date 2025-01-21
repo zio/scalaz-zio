@@ -516,6 +516,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     val stack = _stack
     val size  = _stackSize // racy
 
+    builder += _lastTrace
     try {
       if (stack ne null) {
         var i = (if (stack.length < size) stack.length else size) - 1
