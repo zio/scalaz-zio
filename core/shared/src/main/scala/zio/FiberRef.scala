@@ -161,7 +161,7 @@ trait FiberRef[A] extends Serializable { self =>
    * Guarantees that fiber data is properly restored via `acquireRelease`.
    */
   def locally[R, E, B](newValue: A)(zio: ZIO[R, E, B])(implicit trace: Trace): ZIO[R, E, B] =
-    ZIO.acquireReleaseWith(get <* set(newValue))(set)(_ => zio)
+    ZIO.acquireReleaseWith(getAndSet(newValue))(set)(_ => zio)
 
   /**
    * Returns a `ZIO` that runs with `f` applied to the current fiber.
@@ -177,7 +177,7 @@ trait FiberRef[A] extends Serializable { self =>
    * scope is closed.
    */
   final def locallyScoped(value: A)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-    ZIO.acquireRelease(get.flatMap(old => set(value).as(old)))(set).unit
+    ZIO.acquireRelease(getAndSet(value))(set).unit
 
   /**
    * Returns a scoped workflow that updates the value associated with the
@@ -185,7 +185,7 @@ trait FiberRef[A] extends Serializable { self =>
    * value when the scope is closed.
    */
   final def locallyScopedWith(f: A => A)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-    getWith(a => locallyScoped(f(a))(trace))
+    ZIO.acquireRelease(modify(a => (a, f(a))))(set).unit
 
   /**
    * Atomically modifies the `FiberRef` with the specified function, which

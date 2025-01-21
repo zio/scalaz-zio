@@ -712,11 +712,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
           ZChannel.unwrap[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] {
-            outgoing.take.flatMap(_.await).map {
-              case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
+            outgoing.take.flatMap(_.await).flatMap {
+              case s: Exit.Success[OutElem2] => Exit.succeed(ZChannel.write(s.value) *> writer)
               case f: Exit.Failure[Either[Unit, OutDone]] =>
                 val failure0 = failure.unsafe.get(Unsafe)
-                f.cause.failureOrCause match {
+                val out = f.cause.failureOrCause match {
                   case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
                   case Left(x: Right[Unit, OutDone]) =>
                     if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
@@ -724,6 +724,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                   case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
+                outgoing.shutdown.as(out)
             }
           }
 
@@ -793,11 +794,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
       } yield {
         lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
           ZChannel.unwrap[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] {
-            outgoing.take.map {
-              case s: Exit.Success[OutElem2] => ZChannel.write(s.value) *> writer
+            outgoing.take.flatMap {
+              case s: Exit.Success[OutElem2] => Exit.succeed(ZChannel.write(s.value) *> writer)
               case f: Exit.Failure[Either[Unit, OutDone]] =>
                 val failure0 = failure.unsafe.get(Unsafe)
-                f.cause.failureOrCause match {
+                val out = f.cause.failureOrCause match {
                   case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
                   case Left(x: Right[Unit, OutDone]) =>
                     if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
@@ -805,6 +806,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                   case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
                   case Right(cause)                    => ZChannel.refailCause(cause)
                 }
+                outgoing.shutdown.as(out)
             }
           }
 
@@ -2082,11 +2084,11 @@ object ZChannel {
         } yield {
           lazy val consumer: ZChannel[Env, Any, Any, Any, OutErr, OutElem, OutDone] =
             unwrap[Env, Any, Any, Any, OutErr, OutElem, OutDone] {
-              outgoing.take.map {
-                case Result.Value(outElem)  => ZChannel.write(outElem) *> consumer
-                case Result.Done(outDone)   => ZChannel.succeedNow(outDone)
-                case Result.Error(outError) => ZChannel.fail(outError)
-                case Result.Fatal(cause)    => ZChannel.refailCause(cause)
+              outgoing.take.flatMap {
+                case Result.Value(outElem)  => Exit.succeed(ZChannel.write(outElem) *> consumer)
+                case Result.Done(outDone)   => outgoing.shutdown.as(ZChannel.succeedNow(outDone))
+                case Result.Error(outError) => outgoing.shutdown.as(ZChannel.fail(outError))
+                case Result.Fatal(cause)    => outgoing.shutdown.as(ZChannel.refailCause(cause))
               }
             }
 
