@@ -109,15 +109,6 @@ object TQueueSpec extends ZIOBaseSpec {
         } yield (next, size)
         assertZIO(tx.commit)(equalTo((1, 5)))
       },
-      test("peek all the values") {
-        val tx = for {
-          tq   <- TQueue.unbounded[Int]
-          _    <- tq.offerAll(List(1, 2, 3, 4, 5))
-          ans  <- tq.peekAll
-          size <- tq.size
-        } yield (ans, size)
-        assertZIO(tx.commit)(equalTo((Chunk(1, 2, 3, 4, 5), 5)))
-      },
       test("peekOption value") {
         val tx = for {
           tq   <- TQueue.unbounded[Int]

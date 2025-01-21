@@ -155,7 +155,7 @@ object TQueue {
               case None    => throw ZSTM.RetryException
             }
         }
-      override val peekAll: USTM[Chunk[A]] =
+      val peekAll: USTM[Chunk[A]] =
         ZSTM.Effect { (journal, fiberId, _) =>
           val queue = ref.unsafeGet(journal)
           if (queue eq null) throw ZSTM.InterruptException(fiberId)
