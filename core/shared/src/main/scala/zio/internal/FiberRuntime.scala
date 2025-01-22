@@ -779,17 +779,21 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     overrideLogLevel: Option[LogLevel],
     trace: Trace
   ): Unit = {
-    val logLevel =
-      if (overrideLogLevel.isDefined) overrideLogLevel.get
-      else getFiberRef(FiberRef.currentLogLevel)
+    val contextMap = getFiberRefs(false)
+    val loggers    = contextMap.getOrDefault(FiberRef.currentLoggers)
 
-    val spans       = getFiberRef(FiberRef.currentLogSpan)
-    val annotations = getFiberRef(FiberRef.currentLogAnnotations)
-    val loggers     = getLoggers()
-    val contextMap  = getFiberRefs()
+    if (!loggers.isEmpty) {
+      val logLevel =
+        if (overrideLogLevel.isDefined) overrideLogLevel.get
+        else contextMap.getOrDefault(FiberRef.currentLogLevel)
 
-    loggers.foreach { logger =>
-      logger(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      val spans       = contextMap.getOrDefault(FiberRef.currentLogSpan)
+      val annotations = contextMap.getOrDefault(FiberRef.currentLogAnnotations)
+
+      val it = loggers.iterator
+      while (it.hasNext) {
+        it.next()(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      }
     }
   }
 
