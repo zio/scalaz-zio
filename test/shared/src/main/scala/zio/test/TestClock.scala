@@ -238,7 +238,7 @@ object TestClock extends Serializable {
     def timeZone(implicit trace: Trace): UIO[ZoneId] =
       clockState.get.map(_.timeZone)
 
-    override val unsafe: UnsafeAPI =
+    override def unsafe: UnsafeAPI =
       new UnsafeAPI {
         override def currentTime(unit: TimeUnit)(implicit unsafe: Unsafe): Long =
           unit.convert(clockState.unsafe.get.instant.toEpochMilli, TimeUnit.MILLISECONDS)
@@ -310,10 +310,9 @@ object TestClock extends Serializable {
         }
 
         // Sleep to give suspended fibers a chance to resume
-        def f(d: Duration) = ClockLive.sleep(d) *> freeze
+        val f = ClockLive.sleep(2.millis) *> freeze
 
-        f(1.millis)
-          .zipWith(f(2.millis))(allSuspendedUnchanged)
+        f.zipWith(f)(allSuspendedUnchanged)
           .flatMap {
             if (_) ZIO.succeed(ref.get)
             else if (ref.compareAndSet(false, true)) suspendedWarningStart *> Exit.failUnit
@@ -358,15 +357,7 @@ object TestClock extends Serializable {
      * Returns a set of all fibers in this test.
      */
     def supervisedFibers(implicit trace: Trace): UIO[SortedSet[Fiber.Runtime[Any, Any]]] =
-      ZIO.fiberIdWith { fiberId =>
-        annotations.get(TestAnnotation.fibers).map {
-          case Left(_) => SortedSet.empty
-          case Right(refs) =>
-            val builder = SortedSet.newBuilder[Fiber.Runtime[Any, Any]]
-            refs.foreach(_.get().foreach(f => if (f.id != fiberId) builder += f))
-            builder.result()
-        }
-      }
+      annotations.supervisedFibers
 
     /**
      * Runs all effects scheduled to occur on or before the specified instant,
@@ -382,10 +373,10 @@ object TestClock extends Serializable {
             case _ => (None, Data(end, data.sleeps, data.timeZone))
           }
         }.flatMap {
-          case None => Exit.unit
           case Some((end, promise)) =>
             promise.unsafe.done(Exit.unit)(Unsafe)
             ZIO.yieldNow *> run(_ => end)
+          case _ => Exit.unit
         }
 
     /**

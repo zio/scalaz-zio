@@ -32,29 +32,30 @@ object Annotations {
   val tag: Tag[Annotations] = Tag[Annotations]
 
   final case class Test(ref: Ref.Atomic[TestAnnotationMap]) extends Annotations {
+    private implicit val unsafe0: Unsafe = Unsafe
+
     def annotate[V](key: TestAnnotation[V], value: V)(implicit trace: Trace): UIO[Unit] =
       ref.update(_.annotate(key, value))
     def get[V](key: TestAnnotation[V])(implicit trace: Trace): UIO[V] =
-      ref.get.map(_.get(key))
+      ZIO.succeed(ref.unsafe.get.get(key))
     def withAnnotation[R, E](zio: ZIO[R, TestFailure[E], TestSuccess])(implicit
       trace: Trace
     ): ZIO[R, TestFailure[E], TestSuccess] =
-      zio.foldZIO(e => ref.get.map(e.annotated).flip, a => ref.get.map(a.annotated))
+      zio.mapBoth(_.annotated(ref.unsafe.get), _.annotated(ref.unsafe.get))
     def supervisedFibers(implicit trace: Trace): UIO[SortedSet[Fiber.Runtime[Any, Any]]] =
       ZIO.fiberIdWith { fiberId =>
-        get(TestAnnotation.fibers).flatMap {
-          case Left(_) => ZIO.succeed(SortedSet.empty[Fiber.Runtime[Any, Any]])
+        get(TestAnnotation.fibers).map {
+          case Left(_) => SortedSet.empty[Fiber.Runtime[Any, Any]]
           case Right(refs) =>
-            ZIO
-              .foreach(refs)(ref => ZIO.succeed(ref.get))
-              .map(_.foldLeft(SortedSet.empty[Fiber.Runtime[Any, Any]])(_ ++ _))
-              .map(_.filter(_.id != fiberId))
+            val builder = SortedSet.newBuilder[Fiber.Runtime[Any, Any]]
+            refs.foreach(_.get().foreach(f => if (f.id != fiberId) builder += f))
+            builder.result()
         }
       }
     private[zio] def unsafe: UnsafeAPI =
       new UnsafeAPI {
         def annotate[V](key: TestAnnotation[V], value: V)(implicit unsafe: Unsafe): Unit =
-          ref.unsafe.update(_.annotate(key, value))
+          ref.unsafe.update(_.annotate(key, value))(unsafe)
       }
   }
 
