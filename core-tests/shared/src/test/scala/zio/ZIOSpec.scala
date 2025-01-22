@@ -312,21 +312,21 @@ object ZIOSpec extends ZIOBaseSpec {
         val s   = "division by zero"
         val zio = ZIO.fail(new IllegalArgumentException(s))
         for {
-          result <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage))
+          result <- zio.catchAllFailure(e => ZIO.succeed(e.failureOption.get.getMessage))
         } yield assert(result)(equalTo(s))
       },
       test("leaves defects") {
         val t   = new IllegalArgumentException("division by zero")
         val zio = ZIO.attempt(true) *> ZIO.die(t)
         for {
-          exit <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage)).exit
+          exit <- zio.catchAllFailure(e => ZIO.succeed(e.failureOption.get.getMessage)).exit
         } yield assert(exit)(dies(equalTo(t)))
       },
       test("leaves values") {
         val t   = new IllegalArgumentException("division by zero")
         val zio = ZIO.attempt(t)
         for {
-          result <- zio.catchAllFailure(e => ZIO.succeed(e.value.getMessage))
+          result <- zio.catchAllFailure(e => ZIO.succeed(e.failureOption.get.getMessage))
         } yield assert(result)((equalTo(t)))
       }
     ) @@ zioTag(errors),
@@ -391,7 +391,7 @@ object ZIOSpec extends ZIOBaseSpec {
         ZIO
           .fail("fail")
           .catchSomeFailure {
-            case c if c.value == "fail" => ZIO.succeed(true)
+            case c if c.failureOption.get == "fail" => ZIO.succeed(true)
           }
           .sandbox
           .map(
@@ -402,7 +402,7 @@ object ZIOSpec extends ZIOBaseSpec {
         ZIO
           .fail("no-match")
           .catchSomeFailure {
-            case c if c.value == "fail" => ZIO.succeed(true)
+            case c if c.failureOption.get == "fail" => ZIO.succeed(true)
           }
           .sandbox
           .either

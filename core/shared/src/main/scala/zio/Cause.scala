@@ -116,13 +116,6 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
     find { case Fail(e, _) => e }
 
   /**
-   * Returns the `Cause.Fail[E]` associated with the first `Fail` in this
-   * `Cause` if one exists.
-   */
-  def failureCauseOption: Option[Fail[E]] =
-    find { case f: Fail[E] => f }
-
-  /**
    * Returns the `E` associated with the first `Fail` in this `Cause` if one
    * exists, along with its (optional) trace.
    */
@@ -402,6 +395,28 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
       None,
       (_, _, _, _) => None,
       (t, trace, spans, annotations) => Some(Die(t, trace, spans, annotations)),
+      (_, _, _, _) => None
+    )(
+      {
+        case (Some(l), Some(r)) => Some(Then(l, r))
+        case (Some(l), None)    => Some(l)
+        case (None, Some(r))    => Some(r)
+        case (None, None)       => None
+      },
+      {
+        case (Some(l), Some(r)) => Some(Both(l, r))
+        case (Some(l), None)    => Some(l)
+        case (None, Some(r))    => Some(r)
+        case (None, None)       => None
+      },
+      (causeOption, stackless) => causeOption.map(Stackless(_, stackless))
+    )
+
+  def keepFailures: Option[Cause[E]] =
+    foldLog[Option[Cause[E]]](
+      None,
+      (e, trace, spans, annotations) => Some(Fail(e, trace, spans, annotations)),
+      (_, _, _, _) => None,
       (_, _, _, _) => None
     )(
       {

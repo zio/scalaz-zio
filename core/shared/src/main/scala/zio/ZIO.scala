@@ -336,9 +336,9 @@ sealed trait ZIO[-R, +E, +A]
    * effect.catchAllFailure(_ => backup())
    * }}}
    */
-  final def catchAllFailure[R1 <: R, E1 >: E, A1 >: A](h: Cause.Fail[E] => ZIO[R1, E1, A1])(implicit
-    trace: Trace
-  ): ZIO[R1, E1, A1] =
+  final def catchAllFailure[R1 <: R, E1 >: E, A1 >: A](
+    h: Cause[E] => ZIO[R1, E1, A1]
+  )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A1] =
     catchSomeFailure { case t => h(t) }
 
   /**
@@ -434,12 +434,12 @@ sealed trait ZIO[-R, +E, +A]
    * }}}
    */
   final def catchSomeFailure[R1 <: R, E1 >: E, A1 >: A](
-    pf: PartialFunction[Cause.Fail[E], ZIO[R1, E1, A1]]
-  )(implicit trace: Trace): ZIO[R1, E1, A1] = {
-    def tryRescue(c: Cause.Fail[E]): ZIO[R1, E1, A1] =
-      pf.applyOrElse(c, (_: Cause.Fail[E]) => Exit.failCause(c))
+    pf: PartialFunction[Cause[E], ZIO[R1, E1, A1]]
+  )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A1] = {
+    def tryRescue(c: Cause[E]): ZIO[R1, E1, A1] =
+      pf.applyOrElse(c, (_: Cause[E]) => Exit.failCause(c))
 
-    self.foldCauseZIO(c => c.failureCauseOption.fold[ZIO[R1, E1, A1]](Exit.failCause(c))(tryRescue), ZIO.successFn)
+    self.foldCauseZIO(c => c.keepFailures.fold[ZIO[R1, E1, A1]](Exit.failCause(c))(tryRescue), ZIO.successFn)
   }
 
   /**
@@ -2148,10 +2148,10 @@ sealed trait ZIO[-R, +E, +A]
    * }}}
    */
   final def tapFailure[R1 <: R, E1 >: E](
-    f: Cause.Fail[E] => ZIO[R1, E1, Any]
+    f: Cause[E] => ZIO[R1, E1, Any]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A] =
     self.foldCauseZIO(
-      c => c.failureCauseOption.fold[ZIO[R1, E1, Nothing]](Exit.failCause(c))(f(_) *> Exit.failCause(c)),
+      c => c.keepFailures.fold[ZIO[R1, E1, Nothing]](Exit.failCause(c))(f(_) *> Exit.failCause(c)),
       ZIO.successFn
     )
 
