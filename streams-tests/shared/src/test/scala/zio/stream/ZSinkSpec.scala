@@ -143,12 +143,36 @@ object ZSinkSpec extends ZIOBaseSpec {
               .map(assert(_)(equalTo(Map.empty[Int, String])))
           }
         ),
-        test("dropUntil")(
-          assertZIO(
-            ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
-              .pipeThrough(ZSink.dropUntil[Int](_ >= 3))
-              .runCollect
-          )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
+        suite("dropUntil")(
+          test("happy path")(
+            assertZIO(
+              ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
+                .pipeThrough(ZSink.dropUntil[Int](_ >= 3))
+                .runCollect
+            )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
+          ),
+          test("late error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntil(x => x >= 2))
+                .either
+                .runCollect
+            }(
+              equalTo(
+                Chunk(
+                  Right(3) /*, Left("Aie") false expectation since the sink terminates before pulling the failure */
+                )
+              )
+            )
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntil(x => x >= 5))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
+          )
         ),
         suite("dropUntilZIO")(
           test("happy path")(
@@ -158,21 +182,57 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .runCollect
             )(equalTo(Chunk(4, 5, 1, 2, 3, 4, 5)))
           ),
-          test("error")(
+          test("late error")(
             assertZIO {
               (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
                 .pipeThrough(ZSink.dropUntilZIO[Any, String, Int](x => ZIO.succeed(x >= 2)))
                 .either
                 .runCollect
-            }(equalTo(Chunk(Right(3), Left("Aie"))))
+            }(
+              equalTo(
+                Chunk(
+                  Right(3) /*, Left("Aie") false expectation since the sink terminates before pulling the failure */
+                )
+              )
+            )
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropUntilZIO[Any, String, Int](x => ZIO.succeed(x >= 5)))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
           )
         ),
-        test("dropWhile")(
-          assertZIO(
-            ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
-              .pipeThrough(ZSink.dropWhile[Int](_ < 3))
-              .runCollect
-          )(equalTo(Chunk(3, 4, 5, 1, 2, 3, 4, 5)))
+        suite("dropWhile")(
+          test("happy path")(
+            assertZIO(
+              ZStream(1, 2, 3, 4, 5, 1, 2, 3, 4, 5)
+                .pipeThrough(ZSink.dropWhile[Int](_ < 3))
+                .runCollect
+            )(equalTo(Chunk(3, 4, 5, 1, 2, 3, 4, 5)))
+          ),
+          test("correct leftovers behavior") {
+            assertZIO(
+              ZStream
+                .range(0, 20, chunkSize = 3)
+                .run(ZSink.dropWhile[Int](_ <= 10).collectLeftover)
+                .map(_._2)
+            )(equalTo(Chunk(11)))
+          },
+          test("combined with head, transduced") {
+            assertZIO(
+              ZStream(0, 0, 0, 1, 0, 0, 2)
+                .rechunk(3)
+                .transduce {
+                  ZSink.dropWhile[Int](_ == 0) *> ZSink.head[Int]
+                }
+                .take(10)
+                .runCollect
+                // seems like the 'trailing' sink invocation is by design
+            )(equalTo(Chunk(Some(1), Some(2), None)))
+          }
         ),
         suite("dropWhileZIO")(
           test("happy path")(
@@ -182,13 +242,42 @@ object ZSinkSpec extends ZIOBaseSpec {
                 .runCollect
             )(equalTo(Chunk(3, 4, 5, 1, 2, 3, 4, 5)))
           ),
-          test("error")(
+          test("correct leftovers behavior") {
+            assertZIO(
+              ZStream
+                .range(0, 20, chunkSize = 3)
+                .run(ZSink.dropWhileZIO((i: Int) => ZIO.succeed(i <= 10)).collectLeftover)
+                .map(_._2)
+            )(equalTo(Chunk(11)))
+          },
+          test("combined with head, transduced") {
+            assertZIO(
+              ZStream(0, 0, 0, 1, 0, 0, 2)
+                .rechunk(3)
+                .transduce {
+                  ZSink.dropWhileZIO((i: Int) => ZIO.succeed(i == 0)) *> ZSink.head[Int]
+                }
+                .take(10)
+                .runCollect
+                // seems like the 'trailing' sink invocation is by design
+            )(equalTo(Chunk(Some(1), Some(2), None)))
+          },
+          test("late error")(
             assertZIO {
               (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
                 .pipeThrough(ZSink.dropWhileZIO[Any, String, Int](x => ZIO.succeed(x < 3)))
                 .either
                 .runCollect
-            }(equalTo(Chunk(Right(3), Left("Aie"))))
+              // I beleive the original assertion had wrong expectations
+            }(equalTo(Chunk(Right(3) /*, Left("Aie")*/ )))
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream(1, 2, 2) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.dropWhileZIO[Any, String, Int](x => ZIO.succeed(x < 3)))
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
           )
         ),
         suite("ensuring") {
@@ -242,11 +331,29 @@ object ZSinkSpec extends ZIOBaseSpec {
             assertZIO((stream ++ stream).rechunk(3).run(sink))(equalTo(List(1, 2, 3, 4)))
           }
         ),
-        test("head")(
-          check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
-            val headOpt = ZStream.fromChunks(chunks: _*).run(ZSink.head[Int])
-            assertZIO(headOpt)(equalTo(chunks.flatMap(_.toSeq).headOption))
-          }
+        suite("head")(
+          test("basic")(
+            check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
+              val headOpt = ZStream.fromChunks(chunks: _*).run(ZSink.head[Int])
+              assertZIO(headOpt)(equalTo(chunks.flatMap(_.toSeq).headOption))
+            }
+          ),
+          test("late error")(
+            assertZIO {
+              (ZStream(1, 2, 3) ++ ZStream.fail("Aie") ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.head)
+                .either
+                .runCollect
+            }(equalTo(Chunk(Right(2), Right(3))))
+          ),
+          test("early error")(
+            assertZIO {
+              (ZStream.fail("Aie") ++ ZStream(1, 2, 3) ++ ZStream(5, 1, 2, 3, 4, 5))
+                .pipeThrough(ZSink.head)
+                .either
+                .runCollect
+            }(equalTo(Chunk(Left("Aie"))))
+          )
         ),
         test("last")(
           check(Gen.listOf(Gen.small(Gen.chunkOfN(_)(Gen.int)))) { chunks =>
