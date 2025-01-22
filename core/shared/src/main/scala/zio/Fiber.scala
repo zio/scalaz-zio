@@ -608,7 +608,6 @@ object Fiber extends FiberPlatformSpecific {
 
     private[zio] def isAlive(): Boolean
 
-
     /**
      * Determines if the specified throwable is fatal, based on the fatal errors
      * tracked by the fiber's state.
