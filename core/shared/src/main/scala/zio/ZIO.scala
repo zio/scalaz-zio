@@ -437,9 +437,12 @@ sealed trait ZIO[-R, +E, +A]
     pf: PartialFunction[Cause[E], ZIO[R1, E1, A1]]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A1] = {
     def tryRescue(c: Cause[E]): ZIO[R1, E1, A1] =
-      pf.applyOrElse(c, (_: Cause[E]) => Exit.failCause(c))
-
-    self.foldCauseZIO(c => c.keepFailures.fold[ZIO[R1, E1, A1]](Exit.failCause(c))(tryRescue), ZIO.successFn)
+      if (c.isFailureOnly) {
+        pf.applyOrElse(c, (_: Cause[E]) => Exit.failCause(c))
+      } else {
+        Exit.failCause(c)
+      }
+    self.foldCauseZIO(tryRescue, ZIO.successFn)
   }
 
   /**
