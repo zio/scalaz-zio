@@ -5647,7 +5647,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
   final class ScopedPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
     def apply[E, A](zio: => ZIO[Scope with R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      ZIO.suspendSucceed(Scope.unsafe.make.use[R](zio))
+      ZIO.suspendSucceed(Scope.unsafe.make(Unsafe).use[R](zio))
   }
 
   final class UsingPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
