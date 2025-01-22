@@ -309,9 +309,8 @@ object TestClock extends Serializable {
           true
         }
 
-        // Sleep to give suspended fibers a chance to resume
-        val f = ClockLive.sleep(2.millis) *> freeze
-
+        // Sleep and yield to give suspended fibers a chance to resume
+        val f = ClockLive.sleep(2.millis) *> ZIO.yieldNow.repeatN(5) *> freeze
         f.zipWith(f)(allSuspendedUnchanged)
           .flatMap {
             if (_) ZIO.succeed(ref.get)
