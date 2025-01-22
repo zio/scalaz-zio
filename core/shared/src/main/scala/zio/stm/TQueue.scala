@@ -155,7 +155,6 @@ object TQueue {
               case None    => throw ZSTM.RetryException
             }
         }
-      val peekAll: USTM[Chunk[A]] = takeAll.tap(offerAll(_))
       val peekOption: USTM[Option[A]] =
         ZSTM.Effect { (journal, fiberId, _) =>
           val queue = ref.unsafeGet(journal)
@@ -193,6 +192,7 @@ object TQueue {
             Chunk.fromIterable(queue)
           }
         }
+      val peekAll: USTM[Chunk[A]] = takeAll.tap(offerAll(_))
       def takeUpTo(max: Int): ZSTM[Any, Nothing, Chunk[A]] =
         ZSTM.Effect { (journal, fiberId, _) =>
           val queue = ref.unsafeGet(journal)
