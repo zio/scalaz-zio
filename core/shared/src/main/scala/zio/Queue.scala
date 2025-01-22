@@ -226,7 +226,7 @@ object Queue extends QueuePlatformSpecific {
       ZIO.fiberIdWith { fiberId =>
         shutdownFlag.set(true)
 
-        ZIO.whenZIODiscard(shutdownHook.succeed(()))(
+        ZIO.whenDiscard(shutdownHook.unsafe.completeWith(Exit.unit)(Unsafe))(
           ZIO.foreachParDiscard(unsafePollAll(takers))(_.interruptAs(fiberId)) *> strategy.shutdown
         )
       }.uninterruptible
