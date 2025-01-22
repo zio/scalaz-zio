@@ -19,6 +19,7 @@ package zio.stream
 import zio._
 import zio.internal.{SingleThreadedRingBuffer, UniqueKey}
 import zio.metrics.MetricLabel
+import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stm._
 import zio.stream.ZStream.{DebounceState, HandoffSignal, zipChunks}
 import zio.stream.internal.{ZInputStream, ZReader}
