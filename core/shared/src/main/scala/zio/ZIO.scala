@@ -4269,11 +4269,11 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def logSpan(label: => String): LogSpan = new LogSpan(() => label)
 
   def logSpanScoped(label: => String)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-    FiberRef.currentLogSpan.getWith { stack =>
+    FiberRef.currentLogSpan.locallyScopedWith { stack =>
       val instant = java.lang.System.currentTimeMillis()
       val logSpan = zio.LogSpan(label, instant)
 
-      FiberRef.currentLogSpan.locallyScoped(logSpan :: stack)
+      logSpan :: stack
     }
 
   /**
@@ -5647,7 +5647,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
   final class ScopedPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
     def apply[E, A](zio: => ZIO[Scope with R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      Scope.make.flatMap(_.use[R](zio))
+      ZIO.suspendSucceed(Scope.unsafe.make.use[R](zio))
   }
 
   final class UsingPartiallyApplied[R](private val dummy: Boolean = true) extends AnyVal {
@@ -5710,24 +5710,33 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
     import zio.{LogSpan => ZioLogSpan}
 
     def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      FiberRef.currentLogSpan.getWith { stack =>
+      FiberRef.currentLogSpan.locallyWith { stack =>
         val instant = java.lang.System.currentTimeMillis()
         val logSpan = ZioLogSpan(label(), instant)
 
-        FiberRef.currentLogSpan.locally(logSpan :: stack)(zio)
-      }
+        logSpan :: stack
+      }(zio)
   }
 
   final class LogAnnotate(val annotations: () => Set[LogAnnotation]) { self =>
     def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      FiberRef.currentLogAnnotations.locallyWith(_ ++ annotations().map { case LogAnnotation(key, value) =>
-        key -> value
-      })(zio)
+      FiberRef.currentLogAnnotations.locallyWith { stack =>
+        var result = stack
+        val it     = annotations().iterator
+        while (it.hasNext) {
+          val ann = it.next()
+          result = result.updated(ann.key, ann.value)
+        }
+        result
+      }(zio)
   }
 
   final class Tagged(val tags: () => Set[MetricLabel]) { self =>
     def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-      FiberRef.currentTags.locallyWith(_ ++ tags())(zio)
+      FiberRef.currentTags.locallyWith { stack =>
+        if (stack.isEmpty) tags()
+        else stack ++ tags()
+      }(zio)
   }
 
   @inline
