@@ -544,6 +544,13 @@ object Fiber extends FiberPlatformSpecific {
     private[zio] def deleteFiberRef(ref: FiberRef[_]): Unit
 
     /**
+     * Generates a full stack trace from the reified stack.
+     *
+     * '''NOTE''': This method must be invoked by the fiber itself.
+     */
+    private[zio] def generateStackTrace(): StackTrace
+
+    /**
      * Retrieves the current executor that effects are executed on.
      *
      * '''NOTE''': This method is safe to invoke on any fiber, but if not
