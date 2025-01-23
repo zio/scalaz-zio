@@ -18,6 +18,6 @@ package zio.test
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-trait FieldExtractorPlatformSpecific {
+private[test] trait FieldExtractorPlatformSpecific {
   def productFields(obj: Product): Iterator[String] = obj.getClass.getDeclaredFields.iterator.map(_.getName)
 }

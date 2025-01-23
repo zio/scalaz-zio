@@ -5,7 +5,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.io.IOException
 
-trait ZIOCompanionVersionSpecific {
+private[zio] trait ZIOCompanionVersionSpecific {
 
   /**
    * Converts an asynchronous, callback-style API into a ZIO effect, which will
