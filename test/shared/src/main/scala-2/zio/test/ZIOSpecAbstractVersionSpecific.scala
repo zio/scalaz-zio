@@ -1,6 +1,6 @@
 package zio.test
 
-trait ZIOSpecAbstractVersionSpecific {
+private[test] trait ZIOSpecAbstractVersionSpecific {
 
   /**
    * This implicit conversion macro will ensure that the provided ZIO effect

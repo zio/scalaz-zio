@@ -26,12 +26,14 @@ import scala.annotation.implicitAmbiguous
  *
  * Based on https://github.com/milessabin/shapeless.
  */
-abstract class =!=[A, B] extends Serializable
+sealed abstract class =!=[A, B] extends Serializable
 
 object =!= {
+  private val instance: =!=[Any, Any] = new =!=[Any, Any] {}
+
   def unexpected: Nothing = sys.error("Unexpected invocation")
 
-  implicit def neq[A, B]: A =!= B = new =!=[A, B] {}
+  implicit def neq[A, B]: A =!= B = instance.asInstanceOf[=!=[A, B]]
 
   @implicitAmbiguous("Cannot prove that ${A} =!= ${A}")
   implicit def neqAmbig1[A]: A =!= A = unexpected

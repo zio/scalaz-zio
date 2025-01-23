@@ -6,7 +6,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 import java.io.IOException
 import scala.annotation.targetName
 
-transparent trait ZIOCompanionVersionSpecific {
+private[zio] transparent trait ZIOCompanionVersionSpecific {
 
   /**
    * Converts an asynchronous, callback-style API into a ZIO effect, which will

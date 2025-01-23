@@ -23,16 +23,16 @@ import java.util.concurrent.ConcurrentHashMap
 private[zio] trait VersionSpecific {
 
   type EnvironmentTag[A] = izumi.reflect.Tag[A]
-  lazy val EnvironmentTag = izumi.reflect.Tag
+  val EnvironmentTag = izumi.reflect.Tag
 
   type TagK[F[_]] = izumi.reflect.TagK[F]
   lazy val TagK = izumi.reflect.TagK
 
   type TagKK[F[_, _]] = izumi.reflect.TagKK[F]
-  lazy val TagKK = izumi.reflect.TagKK
+  val TagKK = izumi.reflect.TagKK
 
   type TagK3[F[_, _, _]] = izumi.reflect.TagK3[F]
-  lazy val TagK3 = izumi.reflect.TagK3
+  val TagK3 = izumi.reflect.TagK3
 
   type TagK4[F[_, _, _, _]]                                                        = izumi.reflect.TagK4[F]
   type TagK5[F[_, _, _, _, _]]                                                     = izumi.reflect.TagK5[F]
