@@ -26,7 +26,7 @@ private[zio] trait VersionSpecific {
   val EnvironmentTag = izumi.reflect.Tag
 
   type TagK[F[_]] = izumi.reflect.TagK[F]
-  lazy val TagK = izumi.reflect.TagK
+  val TagK = izumi.reflect.TagK
 
   type TagKK[F[_, _]] = izumi.reflect.TagKK[F]
   val TagKK = izumi.reflect.TagKK
