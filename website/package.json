@@ -67,7 +67,7 @@
     "@zio.dev/zio-rocksdb": "0.4.2",
     "@zio.dev/zio-s3": "2022.11.21-367e7009c0f5",
     "@zio.dev/zio-sbt": "0.4.0-alpha.30",
-    "@zio.dev/zio-schema": "1.5.0",
+    "@zio.dev/zio-schema": "1.6.0",
     "@zio.dev/zio-sql": "0.1.2",
     "@zio.dev/zio-sqs": "2022.11.23-5a814304824c",
     "@zio.dev/zio-streams-compress": "1.0.0",
