@@ -36,7 +36,7 @@ object SemaphoreSpec extends ZIOBaseSpec {
       for {
         semaphore    <- Semaphore.make(1)
         promise      <- Promise.make[Nothing, Unit]
-        _            <- ZIO.foreach(1 to 11)(_ => semaphore.withPermit(promise.await).fork)
+        _            <- ZIO.foreachDiscard(1 to 11)(_ => semaphore.withPermit(promise.await).fork)
         waitingStart <- semaphore.awaiting.repeatUntil(_ == 10)
         _            <- promise.succeed(())
         waitingEnd   <- semaphore.awaiting.repeatUntil(_ == 0)
