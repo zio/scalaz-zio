@@ -1,6 +1,5 @@
 package zio
 
-import zio._
 import zio.test.Assertion._
 import zio.test.TestAspect._
 import zio.test._
@@ -17,7 +16,7 @@ object SemaphoreSpec extends ZIOBaseSpec {
         _         <- fiber.interrupt
         permits   <- semaphore.available
       } yield assert(permits)(equalTo(1L))
-    } @@ exceptJS(nonFlaky),
+    },
     test("withPermit acquire is interruptible") {
       for {
         semaphore <- Semaphore.make(0L)
@@ -25,7 +24,7 @@ object SemaphoreSpec extends ZIOBaseSpec {
         fiber     <- effect.fork
         _         <- fiber.interrupt
       } yield assertCompletes
-    } @@ exceptJS(nonFlaky),
+    },
     test("withPermitsScoped releases same number of permits") {
       for {
         semaphore <- Semaphore.make(2L)
@@ -35,21 +34,13 @@ object SemaphoreSpec extends ZIOBaseSpec {
     },
     test("awaiting returns the count of waiting fibers") {
       for {
-        semaphore <- Semaphore.make(1)
-        promise   <- Promise.make[Nothing, Unit]
-        _         <- semaphore.withPermit(promise.await).fork
-        _         <- ZIO.foreach(List.fill(10)(()))(_ => semaphore.withPermit(ZIO.unit).fork)
-        waitingStart <- semaphore.awaiting
-                          .flatMap(awaiting => if (awaiting < 10) ZIO.fail(awaiting) else ZIO.succeed(awaiting))
-                          .retryUntil(_ == 10)
-                          .catchAll(n => ZIO.succeed(n))
-        _ <- promise.succeed(())
-
-        waitingEnd <- semaphore.awaiting
-                        .flatMap(awaiting => if (awaiting > 0) ZIO.fail(awaiting) else ZIO.succeed(awaiting))
-                        .retryUntil(_ == 0)
-                        .catchAll(n => ZIO.succeed(n))
-      } yield assertTrue(waitingStart == 10) && assertTrue(waitingEnd == 0)
-    }
-  )
+        semaphore    <- Semaphore.make(1)
+        promise      <- Promise.make[Nothing, Unit]
+        _            <- ZIO.foreach(1 to 11)(_ => semaphore.withPermit(promise.await).fork)
+        waitingStart <- semaphore.awaiting.repeatUntil(_ == 10)
+        _            <- promise.succeed(())
+        waitingEnd   <- semaphore.awaiting.repeatUntil(_ == 0)
+      } yield assertTrue(waitingStart == 10, waitingEnd == 0)
+    } @@ timeout(10.seconds)
+  ) @@ exceptJS(nonFlaky)
 }
