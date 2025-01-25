@@ -28,9 +28,9 @@ object Reflect {
     typeName: TypeName[A],
     binding: F[BindingType.Record, A],
     doc: Doc,
-    anns: List[Modifier.Record]
+    modifiers: List[Modifier.Record]
   ) extends Reflect[F, A] { self =>
-    protected def inner: Any = (fields, typeName, doc, anns)
+    protected def inner: Any = (fields, typeName, doc, modifiers)
 
     def fieldByName(name: String): Option[Term[F, A, ?]] = fields.find(_.name == name)
 
@@ -44,7 +44,7 @@ object Reflect {
       Some(fields.indexWhere(_.name == name)).filter(_ >= 0).map(registers)
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Record[G, A] =
-      Record(fields.map(_.refineBinding(f)), typeName, f(binding), doc, anns)
+      Record(fields.map(_.refineBinding(f)), typeName, f(binding), doc, modifiers)
 
     val registers: IndexedSeq[Register[?]] =
       fields
@@ -122,10 +122,10 @@ object Reflect {
     typeName: TypeName[A],
     variantBinding: F[BindingType.Variant, A],
     doc: Doc,
-    anns: List[Modifier.Variant],
+    modifiers: List[Modifier.Variant],
     defaultCase: Option[A]
   ) extends Reflect[F, A] {
-    protected def inner: Any = (cases, typeName, doc, anns, defaultCase)
+    protected def inner: Any = (cases, typeName, doc, modifiers, defaultCase)
 
     def caseByName(name: String): Option[Term[F, A, ? <: A]] = cases.find(_.name == name)
 
@@ -134,7 +134,7 @@ object Reflect {
     def prismByName(name: String): Option[Prism[F, A, ? <: A]] = caseByName(name).map(Prism(this, _))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Variant[G, A] =
-      Variant(cases.map(_.refineBinding(f)), typeName, f(variantBinding), doc, anns, defaultCase)
+      Variant(cases.map(_.refineBinding(f)), typeName, f(variantBinding), doc, modifiers, defaultCase)
   }
   object Variant {
     type Bound[A] = Variant[Binding, A]
@@ -147,7 +147,7 @@ object Reflect {
   ) extends Reflect[F, C[A]] {
     protected def inner: Any = (element, typeName, doc)
 
-    def anns: List[Nothing] = List.empty
+    def modifiers: List[Nothing] = List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Sequence[G, A, C] =
       Sequence(element.refineBinding(f), f(binding), typeName, doc)
@@ -166,7 +166,7 @@ object Reflect {
   ) extends Reflect[F, M[Key, Value]] {
     protected def inner: Any = (key, value, typeName, doc)
 
-    def anns: List[Nothing] = List.empty
+    def modifiers: List[Nothing] = List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Map[G, Key, Value, M] =
       Map(key.refineBinding(f), value.refineBinding(f), f(binding), typeName, doc)
@@ -178,8 +178,8 @@ object Reflect {
   object Map {
     type Bound[K, V, M[_, _]] = Map[Binding, K, V, M]
   }
-  final case class Dynamic(anns: List[Modifier.Dynamic], doc: Doc) extends Reflect[Binding.Unused, DynamicValue] {
-    protected def inner: Any = (anns, doc)
+  final case class Dynamic(modifiers: List[Modifier.Dynamic], doc: Doc) extends Reflect[Binding.Unused, DynamicValue] {
+    protected def inner: Any = (modifiers, doc)
 
     def refineBinding[G[_, _]](f: RefineBinding[Binding.Unused, G]): Reflect[G, DynamicValue] = this
   }
@@ -187,7 +187,7 @@ object Reflect {
       extends Reflect[Binding.Unused, A] { self =>
     protected def inner: Any = (primitiveType, typeName, doc)
 
-    def anns: List[Nothing] = List.empty
+    def modifiers: List[Nothing] = List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[Binding.Unused, G]): Primitive[A] = self
   }
@@ -196,7 +196,7 @@ object Reflect {
 
     lazy val value = _value()
 
-    def anns: List[Modifier] = value.anns
+    def modifiers: List[Modifier] = value.modifiers
 
     def doc: Doc = value.doc
 
@@ -348,7 +348,9 @@ object Reflect {
       List.empty
     )
 
-  def tuple3[F[_, _], A, B, C](_1: Reflect[F, A], _2: Reflect[F, B], _3: Reflect[F, C])(implicit F: IsBinding[F]): Record[F, (A, B, C)] =
+  def tuple3[F[_, _], A, B, C](_1: Reflect[F, A], _2: Reflect[F, B], _3: Reflect[F, C])(implicit
+    F: IsBinding[F]
+  ): Record[F, (A, B, C)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),
@@ -422,7 +424,7 @@ object Reflect {
           case Sequence(element, _, tn, _) if tn == TypeName.set => Some(element)
           case _                                                 => None
         }
-    }    
+    }
     object Array {
       def unapply[F[_, _], A](reflect: Reflect[F, Array[A]]): Option[Reflect[F, A]] =
         reflect match {
@@ -436,9 +438,9 @@ object Reflect {
           case Variant(noneTerm :: someTerm :: Nil, tn, _, _, _, _) if tn == TypeName.option =>
             someTerm match {
               case Term("Some", element, _, _) => Some(element.asInstanceOf[Reflect[F, A]])
-              case _ => None
+              case _                           => None
             }
-            
+
           case _ => None
         }
     }
@@ -447,10 +449,11 @@ object Reflect {
         reflect match {
           case Variant(leftTerm :: rightTerm :: Nil, tn, _, _, _, _) if tn == TypeName.either =>
             (leftTerm, rightTerm) match {
-              case (Term("Left", left, _, _), Term("Right", right, _, _)) => Some((left.asInstanceOf[Reflect[F, L]], right.asInstanceOf[Reflect[F, R]]))
+              case (Term("Left", left, _, _), Term("Right", right, _, _)) =>
+                Some((left.asInstanceOf[Reflect[F, L]], right.asInstanceOf[Reflect[F, R]]))
               case _ => None
             }
-            
+
           case _ => None
         }
     }

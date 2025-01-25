@@ -45,7 +45,9 @@ object Schema {
 
   implicit def some[A](implicit element: Schema[A]): Schema[Some[A]] = Schema(Reflect.some(element.reflect))
 
-  implicit def left[A, B](implicit element: Schema[A]): Schema[Left[A, B]] = Schema(Reflect.left[Binding, A, B](element.reflect))
+  implicit def left[A, B](implicit element: Schema[A]): Schema[Left[A, B]] = Schema(
+    Reflect.left[Binding, A, B](element.reflect)
+  )
 
   implicit def right[A, B](implicit element: Schema[B]): Schema[Right[A, B]] = Schema(
     Reflect.right[Binding, A, B](element.reflect)

@@ -17,12 +17,12 @@ sealed trait Optic[F[_, _], S, A] { self =>
   // Compose this optic with a traversal:
   def apply[B](that: Traversal[F, A, B]): Traversal[F, S, B]
 
-  def refineBinding[G[_, _]](f: RefineBinding[F, G]): Optic[G, S, A]  
+  def refineBinding[G[_, _]](f: RefineBinding[F, G]): Optic[G, S, A]
 
   def noBinding: Optic[NoBinding, S, A]
 
   final def list[B](implicit ev: A <:< List[B], F: IsBinding[F]): Traversal[F, S, B] = {
-    import Reflect.Extractors.List 
+    import Reflect.Extractors.List
 
     val list = self.asInstanceOf[Optic[F, S, List[B]]]
 
@@ -43,7 +43,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
       case _ => sys.error("FIXME - Not a vector")
     }
-  }    
+  }
 
   final def set[B](implicit ev: A <:< Set[B], F: IsBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Set
@@ -380,13 +380,21 @@ object Traversal {
 
   def apply[F[_, _], A, C[_]](parent: Reflect.Sequence[F, A, C]): Traversal[F, C[A], A] = Seq(parent)
 
-  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, List[A], A] = Traversal(Reflect.list(reflect))
+  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, List[A], A] = Traversal(
+    Reflect.list(reflect)
+  )
 
-  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Set[A], A] = Traversal(Reflect.set(reflect))
+  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Set[A], A] = Traversal(
+    Reflect.set(reflect)
+  )
 
-  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Vector[A], A] = Traversal(Reflect.vector(reflect))
+  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Vector[A], A] = Traversal(
+    Reflect.vector(reflect)
+  )
 
-  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Array[A], A] = Traversal(Reflect.array(reflect))
+  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Array[A], A] = Traversal(
+    Reflect.array(reflect)
+  )
 
   final case class Seq[F[_, _], A, C[_]](seq: Reflect.Sequence[F, A, C]) extends Traversal[F, C[A], A] {
     def target: Reflect[F, A] = seq.element

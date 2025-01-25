@@ -189,7 +189,7 @@ object Binding {
       }
     }
 
-  implicit val bindingIsBinding: IsBinding[Binding] = 
+  implicit val bindingIsBinding: IsBinding[Binding] =
     new IsBinding[Binding] {
       def apply[T, A](fa: Binding[T, A]): Binding[T, A] = fa
 
