@@ -1335,10 +1335,10 @@ object ZIOSpec extends ZIOBaseSpec {
     ) @@ zioTag(future, interruption) @@ exceptJS,
     suite("head")(
       test("on non empty list") {
-        assertZIO(ZIO.succeed(List(1, 2, 3)).head.either)(isRight(equalTo(1)))
+        assertZIO(ZIO.succeed(Seq(1, 2, 3)).head.either)(isRight(equalTo(1)))
       },
       test("on empty list") {
-        assertZIO(ZIO.succeed(List.empty).head.either)(isLeft(isNone))
+        assertZIO(ZIO.succeed(Seq.empty).head.either)(isLeft(isNone))
       },
       test("on failure") {
         assertZIO(ZIO.fail("Fail").head.either)(isLeft(isSome(equalTo("Fail"))))
