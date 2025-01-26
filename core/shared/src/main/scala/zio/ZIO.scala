@@ -297,11 +297,16 @@ sealed trait ZIO[-R, +E, +A]
     self.foldTraceZIO[R1, E2, A1](h, ZIO.successFn)
 
   /**
-   * Recovers from all errors with provided Cause.
+   * Recovers from all errors and defects with provided Cause.
    *
    * {{{
    * openFile("config.json").catchAllCause(_ => ZIO.succeed(defaultConfig))
    * }}}
+   *
+   * '''WARNING''': There is no sensible way to recover from defects. This
+   * method should be used only at the boundary between ZIO and an external
+   * system, to transmit information on a defect for diagnostic or explanatory
+   * purposes. Consider using `catchAll` or `catchAllFailure` instead.
    *
    * @see
    *   [[absorb]], [[sandbox]], [[mapErrorCause]] - other functions that can
@@ -330,10 +335,15 @@ sealed trait ZIO[-R, +E, +A]
     catchSomeDefect { case t => h(t) }
 
   /**
-   * Recovers from all failures with provided function.
+   * Recovers from all failures with provided function. Equivalent to `catchAll`
+   * but with the provided Cause. If you only care about the error, use
+   * `catchAll` instead.
+   *
+   * This method doesn't recover from defects. If you need to recover from
+   * defects, use `catchAllCause` instead.
    *
    * {{{
-   * effect.catchAllFailure(_ => backup())
+   * effect.catchAllFailure(c => ZIO.logErrorCause("failure", c))
    * }}}
    */
   final def catchAllFailure[R1 <: R, E1 >: E, A1 >: A](
@@ -388,13 +398,18 @@ sealed trait ZIO[-R, +E, +A]
   }
 
   /**
-   * Recovers from some or all of the error cases with provided cause.
+   * Recovers from some or all of the error or defect cases with provided cause.
    *
    * {{{
    * openFile("data.json").catchSomeCause {
    *   case c if (c.interrupted) => openFile("backup.json")
    * }
    * }}}
+   *
+   * '''WARNING''': There is no sensible way to recover from defects. This
+   * method should be used only at the boundary between ZIO and an external
+   * system, to transmit information on a defect for diagnostic or explanatory
+   * purposes. Consider using `catchSomeFailure` instead.
    */
   final def catchSomeCause[R1 <: R, E1 >: E, A1 >: A](
     pf: PartialFunction[Cause[E], ZIO[R1, E1, A1]]
@@ -427,9 +442,12 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Recovers from some or all of the failure cases with provided cause.
    *
+   * This method only recovers from failures. If you need to recover from
+   * defects as well, use `catchSomeCause` or `catchSomeDefect` instead.
+   *
    * {{{
-   * openFile("data.json").catchSomeFailure {
-   *   case c if (c.interrupted) => openFile("backup.json")
+   * effect.catchSomeFailure {
+   *   case _: FileNotFoundException => createFile()
    * }
    * }}}
    */
@@ -2124,6 +2142,10 @@ sealed trait ZIO[-R, +E, +A]
   /**
    * Returns an effect that effectually "peeks" at the cause of the failure of
    * this effect.
+   *
+   * This method "peeks" at both the failure and defect of this effect. If you
+   * only need to "peek" at the failure, use `tapFailure` instead.
+   *
    * {{{
    * readFile("data.json").tapErrorCause(logCause(_))
    * }}}
@@ -2146,6 +2168,10 @@ sealed trait ZIO[-R, +E, +A]
 
   /**
    * Returns an effect that effectfully "peeks" at the failure of this effect.
+   *
+   * This method only "peeks" at the failure of this effect. If you need to
+   * "peek" at defects as well, use `tapErrorCause` or `tapDefect` instead.
+   *
    * {{{
    * readFile("data.json").tapError(logError(_))
    * }}}
