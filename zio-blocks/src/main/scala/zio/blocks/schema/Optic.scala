@@ -69,6 +69,9 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 }
+object Optic {
+  type Bound[S, A] = Optic[Binding, S, A]
+}
 
 sealed trait Lens[F[_, _], S, A] extends Optic[F, S, A] {
   def get(s: S)(implicit d: HasDeconstructor[F]): A

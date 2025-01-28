@@ -8,9 +8,21 @@ import zio.blocks.schema.binding.Binding
  * build up values of that type.
  */
 final case class Schema[A](reflect: Reflect.Bound[A]) {
-  def toDynamicValue(value: A): DynamicValue = ???
+  def toDynamicValue(value: A): DynamicValue = ??? // TODO
 
-  def fromDynamicValue(value: DynamicValue): Either[String, A] = ???
+  def fromDynamicValue(value: DynamicValue): Either[String, A] = ??? // TODO
+
+  def defaultValue[B](optic: Optic.Bound[A, B], value: => B): Schema[A] = ??? // TODO
+
+  def defaultValue(value: => A): Schema[A] = ??? // TODO
+
+  def examples(value: A, values: A*): Schema[A] = ??? // TODO
+
+  def examples[B](optic: Optic.Bound[A, B], value: B, values: B*): Schema[A] = ??? // TODO
+
+  def doc(value: String): Schema[A] = ??? // TODO
+
+  def doc[B](optic: Optic.Bound[A, B], value: String): Schema[A] = ??? // TODO
 }
 object Schema {
   import Reflect._
