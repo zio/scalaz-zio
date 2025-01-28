@@ -54,47 +54,47 @@ object Reflect {
               case PrimitiveType.Unit =>
                 (Register.None :: list, registerOffset)
 
-              case PrimitiveType.Boolean =>
+              case PrimitiveType.Boolean(_) =>
                 val index = RegisterOffset.getBooleans(registerOffset)
 
                 (Register.Boolean(index) :: list, RegisterOffset.incrementBooleans(registerOffset))
 
-              case PrimitiveType.Byte =>
+              case PrimitiveType.Byte(_, _) =>
                 val index = RegisterOffset.getBytes(registerOffset)
 
                 (Register.Byte(index) :: list, RegisterOffset.incrementBytes(registerOffset))
 
-              case PrimitiveType.Short(_) =>
+              case PrimitiveType.Short(_, _, _) =>
                 val index = RegisterOffset.getShorts(registerOffset)
 
                 (Register.Short(index) :: list, RegisterOffset.incrementShorts(registerOffset))
 
-              case PrimitiveType.Int(_) =>
+              case PrimitiveType.Int(_, _, _) =>
                 val index = RegisterOffset.getInts(registerOffset)
 
                 (Register.Int(index) :: list, RegisterOffset.incrementInts(registerOffset))
 
-              case PrimitiveType.Long(_) =>
+              case PrimitiveType.Long(_, _, _) =>
                 val index = RegisterOffset.getLongs(registerOffset)
 
                 (Register.Long(index) :: list, RegisterOffset.incrementLongs(registerOffset))
 
-              case PrimitiveType.Float(_) =>
+              case PrimitiveType.Float(_, _, _) =>
                 val index = RegisterOffset.getFloats(registerOffset)
 
                 (Register.Float(index) :: list, RegisterOffset.incrementFloats(registerOffset))
 
-              case PrimitiveType.Double(_) =>
+              case PrimitiveType.Double(_, _, _) =>
                 val index = RegisterOffset.getDoubles(registerOffset)
 
                 (Register.Double(index) :: list, RegisterOffset.incrementDoubles(registerOffset))
 
-              case PrimitiveType.Char(_) =>
+              case PrimitiveType.Char(_, _, _) =>
                 val index = RegisterOffset.getChars(registerOffset)
 
                 (Register.Char(index) :: list, RegisterOffset.incrementChars(registerOffset))
 
-              case PrimitiveType.String(_) =>
+              case PrimitiveType.String(_, _, _) =>
                 val index = RegisterOffset.getObjects(registerOffset)
 
                 (Register.Object(index) :: list, RegisterOffset.incrementObjects(registerOffset))
@@ -207,10 +207,10 @@ object Reflect {
     Primitive(PrimitiveType.Unit, TypeName.unit, Doc.Empty)
 
   val boolean: Reflect[Binding.Unused, Boolean] =
-    Primitive(PrimitiveType.Boolean, TypeName.boolean, Doc.Empty)
+    Primitive(PrimitiveType.Boolean(), TypeName.boolean, Doc.Empty)
 
   val byte: Reflect[Binding.Unused, Byte] =
-    Primitive(PrimitiveType.Byte, TypeName.byte, Doc.Empty)
+    Primitive(PrimitiveType.Byte(), TypeName.byte, Doc.Empty)
 
   val short: Reflect[Binding.Unused, Short] =
     Primitive(

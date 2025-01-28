@@ -12,13 +12,34 @@ package zio.blocks.schema.binding
  * the reflection type `Int` that has a record binding (and therefore, both a
  * constructor and a deconstructor).
  */
-sealed trait Binding[T, A]
+sealed trait Binding[T, A] {
+
+  /**
+   * An optional generator for a default value for the type `A`.
+   */
+  def defaultValue: Option[() => A]
+
+  /**
+   * A user-defined list of example values for the type `A`, to be used for
+   * testing and documentation.
+   */
+  def examples: List[A]
+}
 object Binding {
   type Unused[T, A] = Nothing
 
-  final case class Record[A](constructor: Constructor[A], deconstructor: Deconstructor[A])
-      extends Binding[BindingType.Record, A] {
-    def transform[B](f: A => B)(g: B => A): Record[B] = Record(constructor.map(f), deconstructor.contramap(g))
+  final case class Record[A](
+    constructor: Constructor[A],
+    deconstructor: Deconstructor[A],
+    defaultValue: Option[() => A] = None,
+    examples: List[A] = Nil
+  ) extends Binding[BindingType.Record, A] {
+    def transform[B](f: A => B)(g: B => A): Record[B] = Record(
+      constructor.map(f),
+      deconstructor.contramap(g),
+      defaultValue.map(thunk => () => f(thunk())),
+      examples.map(f)
+    )
   }
   object Record {
     def apply[A](implicit r: Record[A]): Record[A] = r
@@ -99,8 +120,12 @@ object Binding {
       )
     )
   }
-  final case class Variant[A](discriminator: Discriminator[A], matchers: Matchers[A])
-      extends Binding[BindingType.Variant, A]
+  final case class Variant[A](
+    discriminator: Discriminator[A],
+    matchers: Matchers[A],
+    defaultValue: Option[() => A] = None,
+    examples: List[A] = Nil
+  ) extends Binding[BindingType.Variant, A]
   object Variant {
     def apply[A](implicit v: Variant[A]): Variant[A] = v
 
@@ -109,8 +134,12 @@ object Binding {
     def either[L, R]: Variant[Either[L, R]] = Variant(Discriminator.either[L, R], Matchers(Matcher.left, Matcher.right))
   }
 
-  final case class Seq[C[_], A](constructor: SeqConstructor[C], deconstructor: SeqDeconstructor[C])
-      extends Binding[BindingType.Seq[C], A]
+  final case class Seq[C[_], A](
+    constructor: SeqConstructor[C],
+    deconstructor: SeqDeconstructor[C],
+    defaultValue: Option[() => C[A]] = None,
+    examples: List[C[A]] = Nil
+  ) extends Binding[BindingType.Seq[C], C[A]]
   object Seq {
     def apply[C[_], A](implicit s: Seq[C, A]): Seq[C, A] = s
 
@@ -123,70 +152,141 @@ object Binding {
     def array[A]: Seq[Array, A] = Seq(SeqConstructor.arrayConstructor, SeqDeconstructor.arrayDeconstructor)
   }
 
-  final case class Map[M[_, _], A](constructor: MapConstructor[M], deconstructor: MapDeconstructor[M])
-      extends Binding[BindingType.Map[M], A]
+  final case class Map[M[_, _], K, V](
+    constructor: MapConstructor[M],
+    deconstructor: MapDeconstructor[M],
+    defaultValue: Option[() => M[K, V]] = None,
+    examples: List[M[K, V]] = Nil
+  ) extends Binding[BindingType.Map[M], M[K, V]]
   object Map {
-    def map[A]: Map[Predef.Map, A] = Map(MapConstructor.map, MapDeconstructor.map)
+    def map[K, V]: Map[Predef.Map, K, V] = Map(MapConstructor.map, MapDeconstructor.map)
   }
 
   implicit val bindingHasConstructor: HasConstructor[Binding] =
     new HasConstructor[Binding] {
       def constructor[A](fa: Binding[BindingType.Record, A]): Constructor[A] = fa match {
-        case Binding.Record(constructor, _) => constructor
+        case Binding.Record(constructor, _, _, _) => constructor
 
         case _ => ???
       }
+
+      def updateConstructor[A](
+        fa: Binding[BindingType.Record, A],
+        f: Constructor[A] => Constructor[A]
+      ): Binding[BindingType.Record, A] =
+        fa match {
+          case Binding.Record(constructor, deconstructor, _, _) => Binding.Record(f(constructor), deconstructor)
+
+          case _ => ???
+        }
     }
 
   implicit val bindingHasDeconstructor: HasDeconstructor[Binding] =
     new HasDeconstructor[Binding] {
       def deconstructor[A](fa: Binding[BindingType.Record, A]): Deconstructor[A] = fa match {
-        case Binding.Record(_, deconstructor) => deconstructor
+        case Binding.Record(_, deconstructor, _, _) => deconstructor
 
         case _ => ???
       }
+
+      def updateDeconstructor[A](
+        fa: Binding[BindingType.Record, A],
+        f: Deconstructor[A] => Deconstructor[A]
+      ): Binding[BindingType.Record, A] =
+        fa match {
+          case Binding.Record(constructor, deconstructor, _, _) => Binding.Record(constructor, f(deconstructor))
+
+          case _ => ???
+        }
     }
 
   implicit val bindingHasMatchers: HasMatchers[Binding] =
     new HasMatchers[Binding] {
       def matchers[A](fa: Binding[BindingType.Variant, A]): Matchers[A] = fa match {
-        case Binding.Variant(_, matchers) => matchers
-        case _                            => ???
+        case Binding.Variant(_, matchers, _, _) => matchers
+        case _                                  => ???
       }
+
+      def updateMatchers[A](
+        fa: Binding[BindingType.Variant, A],
+        f: Matchers[A] => Matchers[A]
+      ): Binding[BindingType.Variant, A] =
+        fa match {
+          case Binding.Variant(discriminator, matchers, _, _) => Binding.Variant(discriminator, f(matchers))
+          case _                                              => ???
+        }
     }
 
   implicit val bindingHasSeqConstructor: HasSeqConstructor[Binding] =
     new HasSeqConstructor[Binding] {
-      def constructor[C[_], A](fa: Binding[BindingType.Seq[C], A]): SeqConstructor[C] = fa match {
-        case Binding.Seq(constructor, _) => constructor
-        case _                           => ???
+      def constructor[C[_], A](fa: Binding[BindingType.Seq[C], C[A]]): SeqConstructor[C] = fa match {
+        case Binding.Seq(constructor, _, _, _) => constructor
+        case _                                 => ???
       }
+
+      def updateConstructor[C[_], A](
+        fa: Binding[BindingType.Seq[C], C[A]],
+        f: SeqConstructor[C] => SeqConstructor[C]
+      ): Binding[BindingType.Seq[C], C[A]] =
+        fa match {
+          case Binding.Seq(constructor, deconstructor, _, _) => Binding.Seq(f(constructor), deconstructor)
+          case _                                             => ???
+        }
     }
 
   implicit val bindingHasSeqDeconstructor: HasSeqDeconstructor[Binding] =
     new HasSeqDeconstructor[Binding] {
-      def deconstructor[C[_], A](fa: Binding[BindingType.Seq[C], A]): SeqDeconstructor[C] = fa match {
-        case Binding.Seq(_, deconstructor) => deconstructor
-        case _                             => ???
+      def deconstructor[C[_], A](fa: Binding[BindingType.Seq[C], C[A]]): SeqDeconstructor[C] = fa match {
+        case Binding.Seq(_, deconstructor, _, _) => deconstructor
+        case _                                   => ???
       }
+
+      def updateDeconstructor[C[_], A](
+        fa: Binding[BindingType.Seq[C], C[A]],
+        f: SeqDeconstructor[C] => SeqDeconstructor[C]
+      ): Binding[BindingType.Seq[C], C[A]] =
+        fa match {
+          case Binding.Seq(constructor, deconstructor, _, _) => Binding.Seq(constructor, f(deconstructor))
+          case _                                             => ???
+        }
     }
 
   implicit val bindingHasMapConstructor: HasMapConstructor[Binding] =
     new HasMapConstructor[Binding] {
-      def constructor[M[_, _], A](fa: Binding[BindingType.Map[M], A]): MapConstructor[M] = fa match {
-        case Binding.Map(constructor, _) => constructor
+      def constructor[M[_, _], K, V](fa: Binding[BindingType.Map[M], M[K, V]]): MapConstructor[M] = fa match {
+        case Binding.Map(constructor, _, _, _) => constructor
 
         case _ => ???
       }
+
+      def updateConstructor[M[_, _], K, V](
+        fa: Binding[BindingType.Map[M], M[K, V]],
+        f: MapConstructor[M] => MapConstructor[M]
+      ): Binding[BindingType.Map[M], M[K, V]] =
+        fa match {
+          case Binding.Map(constructor, deconstructor, _, _) => Binding.Map(f(constructor), deconstructor)
+
+          case _ => ???
+        }
     }
 
   implicit val bindingHasMapDeconstructor: HasMapDeconstructor[Binding] =
     new HasMapDeconstructor[Binding] {
-      def deconstructor[M[_, _], A](fa: Binding[BindingType.Map[M], A]): MapDeconstructor[M] = fa match {
-        case Binding.Map(_, deconstructor) => deconstructor
+      def deconstructor[M[_, _], K, V](fa: Binding[BindingType.Map[M], M[K, V]]): MapDeconstructor[M] = fa match {
+        case Binding.Map(_, deconstructor, _, _) => deconstructor
 
         case _ => ???
       }
+
+      def updateDeconstructor[M[_, _], K, V](
+        fa: Binding[BindingType.Map[M], M[K, V]],
+        f: MapDeconstructor[M] => MapDeconstructor[M]
+      ): Binding[BindingType.Map[M], M[K, V]] =
+        fa match {
+          case Binding.Map(constructor, deconstructor, _, _) => Binding.Map(constructor, f(deconstructor))
+
+          case _ => ???
+        }
     }
 
   implicit val bindingIsBinding: IsBinding[Binding] =

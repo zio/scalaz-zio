@@ -20,12 +20,12 @@ object PrimitiveValue {
   final case class Boolean(value: scala.Boolean) extends Val {
     final type Type = scala.Boolean
 
-    def primitiveType: PrimitiveType[scala.Boolean] = PrimitiveType.Boolean
+    def primitiveType: PrimitiveType[scala.Boolean] = PrimitiveType.Boolean()
   }
   final case class Byte(value: scala.Byte) extends Val {
     final type Type = scala.Byte
 
-    def primitiveType: PrimitiveType[scala.Byte] = PrimitiveType.Byte
+    def primitiveType: PrimitiveType[scala.Byte] = PrimitiveType.Byte()
   }
   final case class Short(value: scala.Short) extends Val {
     final type Type = scala.Short
