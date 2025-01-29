@@ -319,6 +319,9 @@ object Ref extends Serializable {
       }
     }
   }
+
+  @deprecated("Kept for binary compatibility only. Do not use", "2.1.15")
+  private[zio] object Atomic {}
   private[zio] final class Atomic[A](initial: A) extends Ref[A] { self =>
     override def get(implicit trace: Trace): UIO[A] =
       ZIO.succeed(unsafe.get(Unsafe))
@@ -435,5 +438,8 @@ object Ref extends Serializable {
             .asInstanceOf[AtomicReference[A]]
             .updateAndGet((current: A) => pf.applyOrElse(current, (_: Any) => current))
       }
+
+    @deprecated("Kept for binary compatibility only. Do not use", "2.1.15")
+    private[zio] def value: AtomicReference[A] = unsafe.asInstanceOf[AtomicReference[A]]
   }
 }
