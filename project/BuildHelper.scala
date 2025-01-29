@@ -268,11 +268,13 @@ object BuildHelper {
       else cfg.withGC(GC.boehm) // See https://github.com/scala-native/scala-native/issues/4032
     },
     scalacOptions += "-P:scalanative:genStaticForwardersForNonTopLevelObjects",
-    Test / fork := crossProjectPlatform.value == JVMPlatform // set fork to `true` on JVM to improve log readability, JS and Native need `false`
+    Test / fork := false,
+    bspEnabled  := false
   )
 
   def jsSettings: List[Def.Setting[_]] = List(
-    Test / fork := crossProjectPlatform.value == JVMPlatform // set fork to `true` on JVM to improve log readability, JS and Native need `false`
+    Test / fork := false,
+    bspEnabled  := false
   )
 
   def welcomeMessage = onLoadMessage := {
