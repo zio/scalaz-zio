@@ -16,7 +16,7 @@ println(s"""```""")
 
 ## Example
 
-Your main function can extend [`ZIOAppDefault`](../../core/zioapp.md) as follows.
+Your main function can extend [`ZIOAppDefault`](../../reference/core/zioapp.md) as follows.
 
 This example uses [scala-js-dom](https://github.com/scala-js/scala-js-dom) to access the DOM; to run the example you
 will need to add that library as a dependency to your `build.sbt`.

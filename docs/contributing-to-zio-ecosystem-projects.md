@@ -96,7 +96,7 @@ Inside the `index.md` file, the `sidebar_title` field is used to set the name of
 
 Also, we can use `@‎PROJECT_BADGES@` placeholder to add badges to the documentation. The `@‎PROJECT_BADGES@` placeholder will be replaced with the badges of the library. Also, the `@‎VERSION@` placeholder will be replaced with the latest version of the library.
 
-The `index.md` file is the primary source for generating the `README.md` file of the library. Further details on this process will be discussed in the [Generating README File](#generating-readme-file) section.
+The `index.md` file is the primary source for generating the `README.md` file of the library. Further details on this process will be discussed in the [ZIO SBT Website Plugin](#zio-sbt-website-plugin) section.
 
 ### The `sidebars.js` File
 
