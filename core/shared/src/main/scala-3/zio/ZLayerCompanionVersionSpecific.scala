@@ -13,7 +13,7 @@ final class WireSomePartiallyApplied[R0, R](val dummy: Boolean = true) extends A
     ${ LayerMacros.constructLayer[R0, R, E]('layer) }
 }
 
-transparent trait ZLayerCompanionVersionSpecific {
+private[zio] transparent trait ZLayerCompanionVersionSpecific {
 
   /**
    * Automatically assembles a layer for the provided type.

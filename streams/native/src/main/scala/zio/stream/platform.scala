@@ -350,7 +350,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
   ): ZStream[R, Throwable, A] =
     ZStream.fromZIO(stream).flatMap(ZStream.fromJavaStream(_, chunkSize))
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
 
     /**
      * Constructs a `ZStream[Any, Throwable, A]` from a

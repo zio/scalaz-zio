@@ -3,7 +3,7 @@ package zio.test
 import scala.quoted._
 import zio.internal.TerminalRendering
 
-trait ZIOSpecAbstractVersionSpecific {
+private[test] trait ZIOSpecAbstractVersionSpecific {
 
   /**
    * This implicit conversion macro will ensure that the provided ZIO effect
@@ -17,12 +17,12 @@ trait ZIOSpecAbstractVersionSpecific {
 
 }
 
-object ZIOSpecAbstractSpecificMacros {
+private[test] object ZIOSpecAbstractSpecificMacros {
   def validate[Provided: Type, Required: Type, E: Type](spec: Expr[Spec[Required, E]])(using ctx: Quotes) =
     new ZIOSpecAbstractSpecificMacros(ctx).validate[Provided, Required, E](spec)
 }
 
-class ZIOSpecAbstractSpecificMacros(val ctx: Quotes) {
+private[test] class ZIOSpecAbstractSpecificMacros(val ctx: Quotes) {
   given Quotes = ctx
   import ctx.reflect._
 

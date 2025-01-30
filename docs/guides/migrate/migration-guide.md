@@ -1259,6 +1259,8 @@ def log(line: String): URIO[Logging, Unit] = ZIO.serviceWithZIO(_.log(line))
 import zio._
 ```
 
+Note that [accessor methods](../../reference/service-pattern/accessor-methods.md) are no longer recommended.
+
 ### Accessing Multiple Services in the Environment
 
 In ZIO 1.x, we could access multiple services using higher arity service accessors like `ZIO.services`.
@@ -1272,7 +1274,7 @@ for {
 } yield ()
 ```
 
-They were _deprecated_ as we can achieve the same functionality using `ZIO.service` with for-comprehension syntax, which is more idiomatic and scalable way of accessing multiple services in the environment:
+These accessor methods are now _deprecated_ as we can achieve the same functionality using `ZIO.service` with for-comprehension syntax, which is more idiomatic and scalable way of accessing multiple services in the environment:
 
 ```scala mdoc:invisible
 trait FooService {
@@ -1833,12 +1835,6 @@ trait Baz {
   def baz(input: String): UIO[Unit]
 }
 
-// Accessor Methods Inside the Companion Object
-object Baz {
-  def baz(input: String): URIO[Baz, Unit] =
-    ZIO.serviceWithZIO(_.baz(input))
-}
-
 // Implementation of the Service Interface
 case class BazLive(fooSrv: Foo, barSrv: Bar) extends Baz {
   override def baz(input: String): UIO[Unit] =
@@ -1886,7 +1882,7 @@ As we see, we have the following changes:
 
 4. **Accessor Methods** — The new pattern reduced one level of indirection on writing accessor methods. So instead of accessing the environment (`ZIO.access/ZIO.accessM`) and then retrieving the service from the environment (`Has#get`) and then calling the service method, _Service Pattern 2.0_ introduced `ZIO.serviceWith` that is a more concise way of writing accessor methods. For example, instead of `ZIO.accessM(_.get.baz(input))` we write `ZIO.serviceWithZIO(_.baz(input))`.
 
-_Service Pattern 1.0_ was somewhat complicated and had some boilerplate. _Service Pattern 2.0_ is much more familiar for people coming from an object-oriented world. It is simpler and easier to learn for newcomers.
+_Service Pattern 1.0_ was somewhat complicated and had some boilerplate. [_Service Pattern 2.0_](../../reference/service-pattern/service-pattern.md) is much more familiar for people coming from an object-oriented world. It is simpler and easier to learn for newcomers.
 
 ### Other Changes
 
