@@ -510,12 +510,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
    *
    * '''NOTE''': This method must be invoked by the fiber itself.
    */
-  private def generateStackTrace(): StackTrace = {
+  private[zio] def generateStackTrace(): StackTrace = {
     val builder = stackTraceBuilderPool.get()
 
     val stack = _stack
     val size  = _stackSize // racy
 
+    builder += _lastTrace
     try {
       if (stack ne null) {
         var i = (if (stack.length < size) stack.length else size) - 1
@@ -778,17 +779,21 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     overrideLogLevel: Option[LogLevel],
     trace: Trace
   ): Unit = {
-    val logLevel =
-      if (overrideLogLevel.isDefined) overrideLogLevel.get
-      else getFiberRef(FiberRef.currentLogLevel)
+    val contextMap = getFiberRefs(false)
+    val loggers    = contextMap.getOrDefault(FiberRef.currentLoggers)
 
-    val spans       = getFiberRef(FiberRef.currentLogSpan)
-    val annotations = getFiberRef(FiberRef.currentLogAnnotations)
-    val loggers     = getLoggers()
-    val contextMap  = getFiberRefs()
+    if (!loggers.isEmpty) {
+      val logLevel =
+        if (overrideLogLevel.isDefined) overrideLogLevel.get
+        else contextMap.getOrDefault(FiberRef.currentLogLevel)
 
-    loggers.foreach { logger =>
-      logger(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      val spans       = contextMap.getOrDefault(FiberRef.currentLogSpan)
+      val annotations = contextMap.getOrDefault(FiberRef.currentLogAnnotations)
+
+      val it = loggers.iterator
+      while (it.hasNext) {
+        it.next()(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      }
     }
   }
 
@@ -1221,13 +1226,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 return failure
               }
 
-            case gen0: GenerateStackTrace =>
-              updateLastTrace(gen0.trace)
-              cur = Exit.succeed(generateStackTrace())
-
             case updateRuntimeFlags: UpdateRuntimeFlags =>
               updateLastTrace(updateRuntimeFlags.trace)
               cur = patchRuntimeFlags(updateRuntimeFlags.update, null, Exit.unit)
+
+            case gen0: GenerateStackTrace =>
+              updateLastTrace(gen0.trace)
+              cur = Exit.succeed(generateStackTrace())
 
             // Should be unreachable, but we keep it to be backwards compatible
             case update0: UpdateRuntimeFlagsWithin[Any, Any, Any] =>
