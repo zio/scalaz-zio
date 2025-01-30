@@ -1,0 +1,27 @@
+name: Scala Steward
+
+# This workflow will launch every day at 00:00
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scala-steward:
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    name: Scala Steward
+    steps:
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+      - name: Scala Steward
+        uses: scala-steward-org/scala-steward-action@v2
+        with:
+          github-app-id: ${{ secrets.SCALA_STEWARD_GITHUB_APP_ID }}
+          github-app-installation-id: ${{ secrets.SCALA_STEWARD_GITHUB_APP_INSTALLATION_ID }}
+          github-app-key: ${{ secrets.SCALA_STEWARD_GITHUB_APP_PRIVATE_KEY }}
+          github-app-auth-only: true
