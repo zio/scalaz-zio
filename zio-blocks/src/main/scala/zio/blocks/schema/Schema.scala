@@ -10,42 +10,52 @@ import zio.blocks.schema.binding.Binding
 final case class Schema[A](reflect: Reflect.Bound[A]) {
   def toDynamicValue(value: A): DynamicValue = ??? // TODO
 
-  def fromDynamicValue(value: DynamicValue): Either[String, A] = ??? // TODO
+  def fromDynamicValue(value: DynamicValue): Either[codec.CodecError, A] = ??? // TODO
 
   def defaultValue[B](optic: Optic.Bound[A, B], value: => B): Schema[A] = ??? // TODO
 
   def defaultValue(value: => A): Schema[A] = ??? // TODO
 
+  def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = ??? // TODO
+
+  def examples: List[A] = ??? // TODO
+
   def examples(value: A, values: A*): Schema[A] = ??? // TODO
 
-  def examples[B](optic: Optic.Bound[A, B], value: B, values: B*): Schema[A] = ??? // TODO
+  def examples[B](optic: Optic.Bound[A, B]): List[B] = ??? // TODO
+
+  def examples[B](optic: Optic.Bound[A, B])(value: B, values: B*): Schema[A] = ??? // TODO
+
+  def doc: Doc = ??? // TODO
 
   def doc(value: String): Schema[A] = ??? // TODO
 
-  def doc[B](optic: Optic.Bound[A, B], value: String): Schema[A] = ??? // TODO
+  def doc[B](optic: Optic.Bound[A, B]): Doc = ???
+
+  def doc[B](optic: Optic.Bound[A, B])(value: String): Schema[A] = ??? // TODO
 }
 object Schema {
   import Reflect._
 
   def apply[A](implicit schema: Schema[A]): Schema[A] = schema
 
-  implicit val byte: Schema[Byte] = Schema(Reflect.byte)
+  implicit val byte: Schema[Byte] = Schema(Reflect.byte[Binding])
 
-  implicit val short: Schema[Short] = Schema(Reflect.short)
+  implicit val short: Schema[Short] = Schema(Reflect.short[Binding])
 
-  implicit val int: Schema[Int] = Schema(Reflect.int)
+  implicit val int: Schema[Int] = Schema(Reflect.int[Binding])
 
-  implicit val long: Schema[Long] = Schema(Reflect.long)
+  implicit val long: Schema[Long] = Schema(Reflect.long[Binding])
 
-  implicit val float: Schema[Float] = Schema(Reflect.float)
+  implicit val float: Schema[Float] = Schema(Reflect.float[Binding])
 
-  implicit val double: Schema[Double] = Schema(Reflect.double)
+  implicit val double: Schema[Double] = Schema(Reflect.double[Binding])
 
-  implicit val char: Schema[Char] = Schema(Reflect.char)
+  implicit val char: Schema[Char] = Schema(Reflect.char[Binding])
 
-  implicit val string: Schema[String] = Schema(Reflect.string)
+  implicit val string: Schema[String] = Schema(Reflect.string[Binding])
 
-  implicit val unit: Schema[Unit] = Schema(Reflect.unit)
+  implicit val unit: Schema[Unit] = Schema(Reflect.unit[Binding])
 
   implicit def set[A](implicit element: Schema[A]): Schema[Set[A]] = Schema(Reflect.set(element.reflect))
 

@@ -12,11 +12,21 @@ object Modifier {
 
   sealed trait Dynamic extends Modifier
 
+  sealed trait Seq extends Modifier
+
+  sealed trait Map extends Modifier
+
   /**
    * A configuration key-value pair, which can be attached to any type of
    * reflective value. The convention for keys is `<format>.<property>`. For
    * example, `protobuf.field-id` is a key that specifies the field id for a
    * protobuf format.
    */
-  final case class config(key: String, value: String) extends Term with Record with Variant with Dynamic
+  final case class config(key: String, value: String)
+      extends Term
+      with Record
+      with Variant
+      with Dynamic
+      with Seq
+      with Map
 }

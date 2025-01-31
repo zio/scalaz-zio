@@ -2,6 +2,7 @@ package zio.blocks.schema
 
 import zio.blocks.schema.binding._
 
+// FIXME: All composition optics need a custom hashCode/equality that is associative!!! For root ones, the defaults are fine.
 sealed trait Optic[F[_, _], S, A] { self =>
   def target: Reflect[F, A]
 
@@ -21,7 +22,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
   def noBinding: Optic[NoBinding, S, A]
 
-  final def list[B](implicit ev: A <:< List[B], F: IsBinding[F]): Traversal[F, S, B] = {
+  final def list[B](implicit ev: A <:< List[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.List
 
     val list = self.asInstanceOf[Optic[F, S, List[B]]]
@@ -33,7 +34,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def vector[B](implicit ev: A <:< Vector[B], F: IsBinding[F]): Traversal[F, S, B] = {
+  final def vector[B](implicit ev: A <:< Vector[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Vector
 
     val vector = self.asInstanceOf[Optic[F, S, Vector[B]]]
@@ -45,7 +46,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def set[B](implicit ev: A <:< Set[B], F: IsBinding[F]): Traversal[F, S, B] = {
+  final def set[B](implicit ev: A <:< Set[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Set
 
     val set = self.asInstanceOf[Optic[F, S, Set[B]]]
@@ -57,7 +58,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def array[B](implicit ev: A <:< Array[B], F: IsBinding[F]): Traversal[F, S, B] = {
+  final def array[B](implicit ev: A <:< Array[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Array
 
     val array = self.asInstanceOf[Optic[F, S, Array[B]]]
@@ -74,10 +75,10 @@ object Optic {
 }
 
 sealed trait Lens[F[_, _], S, A] extends Optic[F, S, A] {
-  def get(s: S)(implicit d: HasDeconstructor[F]): A
+  def get(s: S)(implicit F: HasBinding[F]): A
 
   // FIXME: Introduce modify(s: S, f: A => A) for performance reasons, implement set in terms of that.
-  def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F]): S
+  def set(s: S, a: A)(implicit F: HasBinding[F]): S
 
   // Compose this lens with a lens:
   override def apply[B](that: Lens[F, A, B]): Lens[F, S, B] = Lens.LensLens(this, that)
@@ -106,22 +107,22 @@ object Lens {
     private val register: Register[A] =
       parent.registers(parent.fields.indexWhere(_.name == child.name)).asInstanceOf[Register[A]]
 
-    def get(s: S)(implicit d: HasDeconstructor[F]): A = {
+    def get(s: S)(implicit F: HasBinding[F]): A = {
       val registers = Registers()
 
-      d.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
+      F.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
 
       register.get(registers, RegisterOffset.Zero)
     }
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F]): S = {
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S = {
       val registers = Registers()
 
-      d.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
+      F.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
 
       register.set(registers, RegisterOffset.Zero, a)
 
-      c.constructor(parent.binding).construct(registers, RegisterOffset.Zero)
+      F.constructor(parent.binding).construct(registers, RegisterOffset.Zero)
     }
 
     override def refineBinding[G[_, _]](f: RefineBinding[F, G]): Root[G, S, A] =
@@ -132,9 +133,9 @@ object Lens {
   final case class LensLens[F[_, _], S, T, A](first: Lens[F, S, T], second: Lens[F, T, A]) extends Lens[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def get(s: S)(implicit d: HasDeconstructor[F]): A = second.get(first.get(s))
+    def get(s: S)(implicit F: HasBinding[F]): A = second.get(first.get(s))
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.set(first.get(s), a))
 
     override def refineBinding[G[_, _]](f: RefineBinding[F, G]): LensLens[G, S, T, A] =
@@ -145,7 +146,7 @@ object Lens {
 }
 
 sealed trait Prism[F[_, _], S, A] extends Optic[F, S, A] {
-  def getOption(s: S)(implicit m: HasMatchers[F]): Option[A]
+  def getOption(s: S)(implicit F: HasBinding[F]): Option[A]
 
   def reverseGet(a: A): S
 
@@ -175,17 +176,17 @@ object Prism {
       extends Prism[F, S, A] {
     private var matcher: Matcher[A] = null
 
-    private def init(m: HasMatchers[F]): Unit =
+    private def init(F: HasBinding[F]): Unit =
       if (matcher eq null) {
-        val matchers = m.matchers(parent.variantBinding)
+        val matchers = F.matchers(parent.variantBinding)
 
         matcher = matchers(parent.cases.indexWhere(_.name == child.name)).asInstanceOf[Matcher[A]]
       }
 
     def target: Reflect[F, A] = child.value
 
-    def getOption(s: S)(implicit m: HasMatchers[F]): Option[A] = {
-      init(m)
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = {
+      init(F)
 
       matcher.downcastOption(s)
     }
@@ -200,7 +201,7 @@ object Prism {
   final case class PrismPrism[F[_, _], S, T, A](first: Prism[F, S, T], second: Prism[F, T, A]) extends Prism[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit m: HasMatchers[F]): Option[A] = first.getOption(s).flatMap(second.getOption)
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = first.getOption(s).flatMap(second.getOption)
 
     def reverseGet(a: A): S = first.reverseGet(second.reverseGet(a))
 
@@ -212,9 +213,9 @@ object Prism {
 }
 
 sealed trait Optional[F[_, _], S, A] extends Optic[F, S, A] {
-  def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A]
+  def getOption(s: S)(implicit F: HasBinding[F]): Option[A]
 
-  def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S
+  def set(s: S, a: A)(implicit F: HasBinding[F]): S
 
   // Compose this optional with a lens:
   override def apply[B](that: Lens[F, A, B]): Optional[F, S, B] = Optional.OptionalLens(this, that)
@@ -238,9 +239,9 @@ object Optional {
   final case class LensPrism[F[_, _], S, T, A](first: Lens[F, S, T], second: Prism[F, T, A]) extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] = second.getOption(first.get(s))
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = second.getOption(first.get(s))
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.reverseGet(a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): LensPrism[G, S, T, A] =
@@ -252,9 +253,9 @@ object Optional {
       extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] = second.getOption(first.get(s))
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = second.getOption(first.get(s))
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.set(first.get(s), a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): LensOptional[G, S, T, A] =
@@ -265,10 +266,10 @@ object Optional {
   final case class PrismLens[F[_, _], S, T, A](first: Prism[F, S, T], second: Lens[F, T, A]) extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).map(second.get)
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.reverseGet(second.set(first.getOption(s).get, a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): PrismLens[G, S, T, A] =
@@ -282,10 +283,10 @@ object Optional {
   ) extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.reverseGet(second.set(first.getOption(s).get, a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): PrismOptional[G, S, T, A] =
@@ -297,10 +298,10 @@ object Optional {
       extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).map(second.get)
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.set(first.getOption(s).get, a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): OptionalLens[G, S, T, A] =
@@ -312,10 +313,10 @@ object Optional {
       extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.reverseGet(a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): OptionalPrism[G, S, T, A] =
@@ -327,10 +328,10 @@ object Optional {
       extends Optional[F, S, A] {
     def target: Reflect[F, A] = second.target
 
-    def getOption(s: S)(implicit d: HasDeconstructor[F], m: HasMatchers[F]): Option[A] =
+    def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
 
-    def set(s: S, a: A)(implicit d: HasDeconstructor[F], c: HasConstructor[F], m: HasMatchers[F]): S =
+    def set(s: S, a: A)(implicit F: HasBinding[F]): S =
       first.set(s, second.set(first.getOption(s).get, a))
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): OptionalOptional[G, S, T, A] =
@@ -344,21 +345,12 @@ sealed trait Traversal[F[_, _], S, A] extends Optic[F, S, A] { self =>
   def target: Reflect[F, A]
 
   def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-    d: HasDeconstructor[F],
-    m: HasMatchers[F],
-    sd: HasSeqDeconstructor[F],
-    md: HasMapDeconstructor[F]
+    F: HasBinding[F]
   ): Z
 
   // Core operation - modify all focuses
   def modify(s: S, f: A => A)(implicit
-    d: HasDeconstructor[F],
-    c: HasConstructor[F],
-    m: HasMatchers[F],
-    sd: HasSeqDeconstructor[F],
-    sc: HasSeqConstructor[F],
-    md: HasMapDeconstructor[F],
-    mc: HasMapConstructor[F]
+    F: HasBinding[F]
   ): S
 
   // Compose this traversal with a lens:
@@ -383,19 +375,19 @@ object Traversal {
 
   def apply[F[_, _], A, C[_]](parent: Reflect.Sequence[F, A, C]): Traversal[F, C[A], A] = Seq(parent)
 
-  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, List[A], A] = Traversal(
+  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, List[A], A] = Traversal(
     Reflect.list(reflect)
   )
 
-  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Set[A], A] = Traversal(
+  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Set[A], A] = Traversal(
     Reflect.set(reflect)
   )
 
-  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Vector[A], A] = Traversal(
+  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Vector[A], A] = Traversal(
     Reflect.vector(reflect)
   )
 
-  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: IsBinding[F]): Traversal[F, Array[A], A] = Traversal(
+  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Array[A], A] = Traversal(
     Reflect.array(reflect)
   )
 
@@ -405,8 +397,8 @@ object Traversal {
     def fold[Z](s: C[A])(
       zero: Z,
       f: (Z, A) => Z
-    )(implicit d: HasDeconstructor[F], m: HasMatchers[F], sd: HasSeqDeconstructor[F], md: HasMapDeconstructor[F]): Z = {
-      val deconstructor = sd.deconstructor(seq.binding)
+    )(implicit F: HasBinding[F]): Z = {
+      val deconstructor = F.seqDeconstructor(seq.binding)
 
       deconstructor match {
         case indexed: SeqDeconstructor.Indexed[c] =>
@@ -435,20 +427,14 @@ object Traversal {
     }
 
     def modify(s: C[A], f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): C[A] = {
-      val deconstructor = sd.deconstructor(seq.binding)
+      val deconstructor = F.seqDeconstructor(seq.binding)
 
       deconstructor match {
         case indexed: SeqDeconstructor.Indexed[c] =>
           val len         = indexed.length(s)
-          val constructor = sc.constructor(seq.binding)
+          val constructor = F.seqConstructor(seq.binding)
           val builder     = constructor.newObjectBuilder[A]() // TODO: Specialize
 
           var idx = 0
@@ -462,7 +448,7 @@ object Traversal {
           constructor.resultObject(builder)
 
         case _ =>
-          val constructor = sc.constructor(seq.binding)
+          val constructor = F.seqConstructor(seq.binding)
           val builder     = constructor.newObjectBuilder[A]() // TODO: Specialize
           val it          = deconstructor.deconstruct(s)
 
@@ -486,8 +472,8 @@ object Traversal {
     def fold[Z](s: M[Key, Value])(
       zero: Z,
       f: (Z, Key) => Z
-    )(implicit d: HasDeconstructor[F], m: HasMatchers[F], sd: HasSeqDeconstructor[F], md: HasMapDeconstructor[F]): Z = {
-      val deconstructor = md.deconstructor(map.binding)
+    )(implicit F: HasBinding[F]): Z = {
+      val deconstructor = F.mapDeconstructor(map.binding)
 
       var z  = zero
       val it = deconstructor.deconstruct(s)
@@ -501,16 +487,10 @@ object Traversal {
     }
 
     def modify(s: M[Key, Value], f: Key => Key)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): M[Key, Value] = {
-      val deconstructor = md.deconstructor(map.binding)
-      val constructor   = mc.constructor(map.binding)
+      val deconstructor = F.mapDeconstructor(map.binding)
+      val constructor   = F.mapConstructor(map.binding)
       val builder       = constructor.newObjectBuilder[Key, Value]()
 
       val it = deconstructor.deconstruct(s)
@@ -538,8 +518,8 @@ object Traversal {
     def fold[Z](s: M[Key, Value])(
       zero: Z,
       f: (Z, Value) => Z
-    )(implicit d: HasDeconstructor[F], m: HasMatchers[F], sd: HasSeqDeconstructor[F], md: HasMapDeconstructor[F]): Z = {
-      val deconstructor = md.deconstructor(map.binding)
+    )(implicit F: HasBinding[F]): Z = {
+      val deconstructor = F.mapDeconstructor(map.binding)
 
       var z  = zero
       val it = deconstructor.deconstruct(s)
@@ -553,16 +533,10 @@ object Traversal {
     }
 
     def modify(s: M[Key, Value], f: Value => Value)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): M[Key, Value] = {
-      val deconstructor = md.deconstructor(map.binding)
-      val constructor   = mc.constructor(map.binding)
+      val deconstructor = F.mapDeconstructor(map.binding)
+      val constructor   = F.mapConstructor(map.binding)
       val builder       = constructor.newObjectBuilder[Key, Value]()
 
       val it = deconstructor.deconstruct(s)
@@ -591,21 +565,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.fold[Z](s)(zero, (z, t) => second.fold(t)(z, f))
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.modify(s, t => second.modify(t, f))
 
@@ -622,21 +587,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.fold(s)(zero, (z, t) => f(z, second.get(t)))
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.modify(s, t => second.set(t, f(second.get(t))))
 
@@ -653,21 +609,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.fold[Z](s)(zero, (z, t) => second.getOption(t).map(a => f(z, a)).getOrElse(z))
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.modify(s, t => second.getOption(t).map(a => second.reverseGet(f(a))).getOrElse(t))
 
@@ -684,21 +631,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.fold[Z](s)(zero, (z, t) => second.getOption(t).map(a => f(z, a)).getOrElse(z))
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.modify(s, t => second.getOption(t).map(a => second.set(t, f(a))).getOrElse(t))
 
@@ -715,21 +653,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       second.fold(first.get(s))(zero, f)
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.set(s, second.modify(first.get(s), f))
 
@@ -746,21 +675,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.getOption(s).map(t => second.fold(t)(zero, f)).getOrElse(zero)
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.getOption(s).map(t => first.reverseGet(second.modify(t, f))).getOrElse(s)
 
@@ -777,21 +697,12 @@ object Traversal {
     def target: Reflect[F, A] = second.target
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
-      d: HasDeconstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      md: HasMapDeconstructor[F]
+      F: HasBinding[F]
     ): Z =
       first.getOption(s).map(t => second.fold(t)(zero, f)).getOrElse(zero)
 
     def modify(s: S, f: A => A)(implicit
-      d: HasDeconstructor[F],
-      c: HasConstructor[F],
-      m: HasMatchers[F],
-      sd: HasSeqDeconstructor[F],
-      sc: HasSeqConstructor[F],
-      md: HasMapDeconstructor[F],
-      mc: HasMapConstructor[F]
+      F: HasBinding[F]
     ): S =
       first.getOption(s).map(t => first.set(s, second.modify(t, f))).getOrElse(s)
 

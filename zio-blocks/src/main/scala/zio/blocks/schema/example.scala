@@ -48,10 +48,10 @@ object Main {
     val personRecord =
       Reflect.Record(
         List[Term[Binding, Person, ?]](
-          Term("name", Reflect.string, Doc.Empty, List.empty),
-          Term("age", Reflect.int, Doc.Empty, List.empty),
-          Term("address", Reflect.string, Doc.Empty, List.empty),
-          Term("childrenAges", Reflect.list[Binding, Int](Reflect.int), Doc.Empty, List.empty)
+          Term("name", Reflect.string[Binding], Doc.Empty, List.empty),
+          Term("age", Reflect.int[Binding], Doc.Empty, List.empty),
+          Term("address", Reflect.string[Binding], Doc.Empty, List.empty),
+          Term("childrenAges", Reflect.list[Binding, Int](Reflect.int[Binding]), Doc.Empty, List.empty)
         ),
         TypeName(Namespace(List("example"), List.empty), "Person"),
         Binding.Record(constructor, deconstructor),

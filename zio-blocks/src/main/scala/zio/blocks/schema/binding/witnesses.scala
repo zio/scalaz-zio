@@ -1,68 +1,114 @@
 package zio.blocks.schema.binding
 
-trait HasConstructor[F[_, _]] {
-  def constructor[A](fa: F[BindingType.Record, A]): Constructor[A]
+trait HasBinding[F[_, _]] {
+  def binding[T, A](fa: F[T, A]): Binding[T, A]
 
-  def updateConstructor[A](fa: F[BindingType.Record, A], f: Constructor[A] => Constructor[A]): F[BindingType.Record, A]
-}
+  def updateBinding[T, A](fa: F[T, A], f: Binding[T, A] => Binding[T, A]): F[T, A]
 
-trait HasDeconstructor[F[_, _]] {
-  def deconstructor[A](fa: F[BindingType.Record, A]): Deconstructor[A]
+  def fromBinding[T, A](binding: Binding[T, A]): F[T, A]
 
-  def updateDeconstructor[A](
+  final def record[A](fa: F[BindingType.Record, A]): Binding.Record[A] =
+    binding(fa) match {
+      case record @ Binding.Record(_, _, _, _) => record
+    }
+
+  final def variant[A](fa: F[BindingType.Variant, A]): Binding.Variant[A] =
+    binding(fa) match {
+      case variant @ Binding.Variant(_, _, _, _) => variant
+    }
+
+  final def constructor[A](fa: F[BindingType.Record, A]): Constructor[A] = record(fa).constructor
+
+  final def updateConstructor[A](
+    fa: F[BindingType.Record, A],
+    f: Constructor[A] => Constructor[A]
+  ): F[BindingType.Record, A] =
+    updateBinding(
+      fa,
+      { case record @ Binding.Record(_, _, _, _) =>
+        record.copy(constructor = f(record.constructor))
+      }
+    )
+
+  final def deconstructor[A](fa: F[BindingType.Record, A]): Deconstructor[A] = record(fa).deconstructor
+
+  final def updateDeconstructor[A](
     fa: F[BindingType.Record, A],
     f: Deconstructor[A] => Deconstructor[A]
-  ): F[BindingType.Record, A]
-}
+  ): F[BindingType.Record, A] =
+    updateBinding(
+      fa,
+      { case record @ Binding.Record(_, _, _, _) =>
+        record.copy(deconstructor = f(record.deconstructor))
+      }
+    )
 
-trait HasDiscriminator[F[_, _]] {
-  def discriminator[A](fa: F[BindingType.Variant, A]): Discriminator[A]
+  final def discriminator[A](fa: F[BindingType.Variant, A]): Discriminator[A] = variant(fa).discriminator
 
-  def updateDiscriminator[A](
+  final def updateDiscriminator[A](
     fa: F[BindingType.Variant, A],
     f: Discriminator[A] => Discriminator[A]
-  ): F[BindingType.Variant, A]
-}
+  ): F[BindingType.Variant, A] =
+    updateBinding(
+      fa,
+      { case variant @ Binding.Variant(_, _, _, _) =>
+        variant.copy(discriminator = f(variant.discriminator))
+      }
+    )
 
-trait HasMatchers[F[_, _]] {
-  def matchers[A](fa: F[BindingType.Variant, A]): Matchers[A]
+  final def matchers[A](fa: F[BindingType.Variant, A]): Matchers[A] = variant(fa).matchers
 
-  def updateMatchers[A](fa: F[BindingType.Variant, A], f: Matchers[A] => Matchers[A]): F[BindingType.Variant, A]
-}
+  final def updateMatchers[A](fa: F[BindingType.Variant, A], f: Matchers[A] => Matchers[A]): F[BindingType.Variant, A] =
+    updateBinding(
+      fa,
+      { case variant @ Binding.Variant(_, _, _, _) =>
+        variant.copy(matchers = f(variant.matchers))
+      }
+    )
 
-trait HasSeqConstructor[F[_, _]] {
-  def constructor[C[_], A](fa: F[BindingType.Seq[C], C[A]]): SeqConstructor[C]
+  final def mapConstructor[M[_, _], K, V](fa: F[BindingType.Map[M], M[K, V]]): MapConstructor[M] =
+    map(fa).constructor
 
-  def updateConstructor[C[_], A](
-    fa: F[BindingType.Seq[C], C[A]],
-    f: SeqConstructor[C] => SeqConstructor[C]
-  ): F[BindingType.Seq[C], C[A]]
-}
-trait HasSeqDeconstructor[F[_, _]] {
-  def deconstructor[C[_], A](fa: F[BindingType.Seq[C], C[A]]): SeqDeconstructor[C]
+  final def mapDeconstructor[M[_, _], K, V](fa: F[BindingType.Map[M], M[K, V]]): MapDeconstructor[M] =
+    map(fa).deconstructor
 
-  def updateDeconstructor[C[_], A](
-    fa: F[BindingType.Seq[C], C[A]],
-    f: SeqDeconstructor[C] => SeqDeconstructor[C]
-  ): F[BindingType.Seq[C], C[A]]
-}
+  final def seqConstructor[C[_], A](fa: F[BindingType.Seq[C], C[A]]): SeqConstructor[C] =
+    seq(fa).constructor
 
-trait HasMapConstructor[F[_, _]] {
-  def constructor[M[_, _], K, V](fa: F[BindingType.Map[M], M[K, V]]): MapConstructor[M]
+  final def seqDeconstructor[C[_], A](fa: F[BindingType.Seq[C], C[A]]): SeqDeconstructor[C] =
+    seq(fa).deconstructor
 
-  def updateConstructor[M[_, _], K, V](
+  final def map[M[_, _], K, V](fa: F[BindingType.Map[M], M[K, V]]): Binding.Map[M, K, V] =
+    binding(fa) match {
+      case map @ Binding.Map(_, _, _, _) => map
+    }
+
+  final def updateMap[M[_, _], K, V](
     fa: F[BindingType.Map[M], M[K, V]],
-    f: MapConstructor[M] => MapConstructor[M]
-  ): F[BindingType.Map[M], M[K, V]]
-}
+    f: Binding.Map[M, K, V] => Binding.Map[M, K, V]
+  ): F[BindingType.Map[M], M[K, V]] =
+    updateBinding(
+      fa,
+      { case map @ Binding.Map(_, _, _, _) =>
+        f(map)
+      }
+    )
 
-trait HasMapDeconstructor[F[_, _]] {
-  def deconstructor[M[_, _], K, V](fa: F[BindingType.Map[M], M[K, V]]): MapDeconstructor[M]
+  final def seq[C[_], A](fa: F[BindingType.Seq[C], C[A]]): Binding.Seq[C, A] =
+    binding(fa) match {
+      case seq @ Binding.Seq(_, _, _, _) => seq
+    }
 
-  def updateDeconstructor[M[_, _], K, V](
-    fa: F[BindingType.Map[M], M[K, V]],
-    f: MapDeconstructor[M] => MapDeconstructor[M]
-  ): F[BindingType.Map[M], M[K, V]]
+  final def updateSeq[C[_], A](
+    fa: F[BindingType.Seq[C], C[A]],
+    f: Binding.Seq[C, A] => Binding.Seq[C, A]
+  ): F[BindingType.Seq[C], C[A]] =
+    updateBinding(
+      fa,
+      { case seq @ Binding.Seq(_, _, _, _) =>
+        f(seq)
+      }
+    )
 }
 
 trait IsBinding[F[_, _]] {

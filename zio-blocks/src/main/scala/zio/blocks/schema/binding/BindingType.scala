@@ -6,4 +6,5 @@ object BindingType {
   type Variant <: BindingType
   type Seq[C[_]] <: BindingType
   type Map[M[_, _]] <: BindingType
+  type Primitive <: BindingType
 }
