@@ -26,11 +26,17 @@ object Reflect {
   final case class Record[F[_, _], A](
     fields: List[Term[F, A, ?]],
     typeName: TypeName[A],
-    binding: F[BindingType.Record, A],
+    recordBinding: F[BindingType.Record, A],
     doc: Doc,
     modifiers: List[Modifier.Record]
   ) extends Reflect[F, A] { self =>
     protected def inner: Any = (fields, typeName, doc, modifiers)
+
+    def binding(implicit F: HasBinding[F]): Binding[BindingType.Record, A] = F.binding(recordBinding)
+
+    def constructor(implicit F: HasBinding[F]): Constructor[A] = F.constructor(recordBinding)
+
+    def deconstructor(implicit F: HasBinding[F]): Deconstructor[A] = F.deconstructor(recordBinding)
 
     def fieldByName(name: String): Option[Term[F, A, ?]] = fields.find(_.name == name)
 
@@ -44,7 +50,7 @@ object Reflect {
       Some(fields.indexWhere(_.name == name)).filter(_ >= 0).map(registers)
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Record[G, A] =
-      Record(fields.map(_.refineBinding(f)), typeName, f(binding), doc, modifiers)
+      Record(fields.map(_.refineBinding(f)), typeName, f(recordBinding), doc, modifiers)
 
     val registers: IndexedSeq[Register[?]] =
       fields
@@ -126,7 +132,13 @@ object Reflect {
   ) extends Reflect[F, A] {
     protected def inner: Any = (cases, typeName, doc, modifiers)
 
+    def binding(implicit F: HasBinding[F]): Binding[BindingType.Variant, A] = F.binding(variantBinding)
+
     def caseByName(name: String): Option[Term[F, A, ? <: A]] = cases.find(_.name == name)
+
+    def discriminator(implicit F: HasBinding[F]): Discriminator[A] = F.discriminator(variantBinding)
+
+    def matchers(implicit F: HasBinding[F]): Matchers[A] = F.matchers(variantBinding)
 
     def prismByIndex(index: Int): Prism[F, A, ? <: A] = Prism(this, cases(index))
 
@@ -140,16 +152,22 @@ object Reflect {
   }
   final case class Sequence[F[_, _], A, C[_]](
     element: Reflect[F, A],
-    binding: F[BindingType.Seq[C], C[A]],
+    seqBinding: F[BindingType.Seq[C], C[A]],
     typeName: TypeName[C[A]],
     doc: Doc
   ) extends Reflect[F, C[A]] {
     protected def inner: Any = (element, typeName, doc)
 
+    def binding(implicit F: HasBinding[F]): Binding[BindingType.Seq[C], C[A]] = F.binding(seqBinding)
+
     def modifiers: List[Nothing] = List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Sequence[G, A, C] =
-      Sequence(element.refineBinding(f), f(binding), typeName, doc)
+      Sequence(element.refineBinding(f), f(seqBinding), typeName, doc)
+
+    def seqConstructor(implicit F: HasBinding[F]): SeqConstructor[C] = F.seqConstructor(seqBinding)
+
+    def seqDeconstructor(implicit F: HasBinding[F]): SeqDeconstructor[C] = F.seqDeconstructor(seqBinding)
 
     def traversal: Traversal[F, C[A], A] = Traversal(this)
   }
@@ -159,16 +177,22 @@ object Reflect {
   final case class Map[F[_, _], Key, Value, M[_, _]](
     key: Reflect[F, Key],
     value: Reflect[F, Value],
-    binding: F[BindingType.Map[M], M[Key, Value]],
+    mapBinding: F[BindingType.Map[M], M[Key, Value]],
     typeName: TypeName[M[Key, Value]],
     doc: Doc
   ) extends Reflect[F, M[Key, Value]] {
     protected def inner: Any = (key, value, typeName, doc)
 
+    def binding(implicit F: HasBinding[F]): Binding[BindingType.Map[M], M[Key, Value]] = F.binding(mapBinding)
+
+    def mapConstructor(implicit F: HasBinding[F]): MapConstructor[M] = F.mapConstructor(mapBinding)
+
+    def mapDeconstructor(implicit F: HasBinding[F]): MapDeconstructor[M] = F.mapDeconstructor(mapBinding)
+
     def modifiers: List[Nothing] = List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Map[G, Key, Value, M] =
-      Map(key.refineBinding(f), value.refineBinding(f), f(binding), typeName, doc)
+      Map(key.refineBinding(f), value.refineBinding(f), f(mapBinding), typeName, doc)
 
     def keys: Traversal[F, M[Key, Value], Key] = Traversal.MapKeys(this)
 
@@ -184,15 +208,21 @@ object Reflect {
   }
   final case class Primitive[F[_, _], A](
     primitiveType: PrimitiveType[A],
-    binding: F[BindingType.Primitive, A],
+    primitiveBinding: F[BindingType.Primitive, A],
     typeName: TypeName[A],
     doc: Doc
   ) extends Reflect[F, A] { self =>
     protected def inner: Any = (primitiveType, typeName, doc)
 
+    def binding(implicit F: HasBinding[F]): Binding.Primitive[A] = F.primitive(primitiveBinding)
+
+    def defaultValue(implicit F: HasBinding[F]): Option[() => A] = binding.defaultValue
+
+    def examples(implicit F: HasBinding[F]): List[A] = binding.examples
+
     def modifiers: List[Nothing] = List.empty
 
-    def refineBinding[G[_, _]](f: RefineBinding[F, G]): Primitive[G, A] = copy(binding = f(binding))
+    def refineBinding[G[_, _]](f: RefineBinding[F, G]): Primitive[G, A] = copy(primitiveBinding = f(primitiveBinding))
   }
   final case class Deferred[F[_, _], A](_value: () => Reflect[F, A]) extends Reflect[F, A] {
     protected def inner: Any = value.inner

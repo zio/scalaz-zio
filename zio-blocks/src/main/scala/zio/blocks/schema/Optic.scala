@@ -25,7 +25,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
   final def list[B](implicit ev: A <:< List[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.List
 
-    val list = self.asInstanceOf[Optic[F, S, List[B]]]
+    val list = self.asSub[List[B]]
 
     list.target match {
       case List(element) => list(Traversal.list(element))
@@ -37,7 +37,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
   final def vector[B](implicit ev: A <:< Vector[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Vector
 
-    val vector = self.asInstanceOf[Optic[F, S, Vector[B]]]
+    val vector = self.asSub[Vector[B]]
 
     vector.target match {
       case Vector(element) => vector(Traversal.vector(element))
@@ -49,7 +49,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
   final def set[B](implicit ev: A <:< Set[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Set
 
-    val set = self.asInstanceOf[Optic[F, S, Set[B]]]
+    val set = self.asSub[Set[B]]
 
     set.target match {
       case Set(element) => set(Traversal.set(element))
@@ -61,7 +61,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
   final def array[B](implicit ev: A <:< Array[B], F: HasBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Array
 
-    val array = self.asInstanceOf[Optic[F, S, Array[B]]]
+    val array = self.asSub[Array[B]]
 
     array.target match {
       case Array(element) => array(Traversal.array(element))
@@ -69,6 +69,9 @@ sealed trait Optic[F[_, _], S, A] { self =>
       case _ => sys.error("FIXME - Not an array")
     }
   }
+
+  final def asSub[B](implicit ev: A <:< B): Optic[F, S, B] = self.asInstanceOf[Optic[F, S, B]]
+
 }
 object Optic {
   type Bound[S, A] = Optic[Binding, S, A]
@@ -110,7 +113,7 @@ object Lens {
     def get(s: S)(implicit F: HasBinding[F]): A = {
       val registers = Registers()
 
-      F.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
+      F.deconstructor(parent.recordBinding).deconstruct(registers, RegisterOffset.Zero, s)
 
       register.get(registers, RegisterOffset.Zero)
     }
@@ -118,11 +121,11 @@ object Lens {
     def set(s: S, a: A)(implicit F: HasBinding[F]): S = {
       val registers = Registers()
 
-      F.deconstructor(parent.binding).deconstruct(registers, RegisterOffset.Zero, s)
+      F.deconstructor(parent.recordBinding).deconstruct(registers, RegisterOffset.Zero, s)
 
       register.set(registers, RegisterOffset.Zero, a)
 
-      F.constructor(parent.binding).construct(registers, RegisterOffset.Zero)
+      F.constructor(parent.recordBinding).construct(registers, RegisterOffset.Zero)
     }
 
     override def refineBinding[G[_, _]](f: RefineBinding[F, G]): Root[G, S, A] =
@@ -398,7 +401,7 @@ object Traversal {
       zero: Z,
       f: (Z, A) => Z
     )(implicit F: HasBinding[F]): Z = {
-      val deconstructor = F.seqDeconstructor(seq.binding)
+      val deconstructor = F.seqDeconstructor(seq.seqBinding)
 
       deconstructor match {
         case indexed: SeqDeconstructor.Indexed[c] =>
@@ -429,12 +432,12 @@ object Traversal {
     def modify(s: C[A], f: A => A)(implicit
       F: HasBinding[F]
     ): C[A] = {
-      val deconstructor = F.seqDeconstructor(seq.binding)
+      val deconstructor = F.seqDeconstructor(seq.seqBinding)
 
       deconstructor match {
         case indexed: SeqDeconstructor.Indexed[c] =>
           val len         = indexed.length(s)
-          val constructor = F.seqConstructor(seq.binding)
+          val constructor = F.seqConstructor(seq.seqBinding)
           val builder     = constructor.newObjectBuilder[A]() // TODO: Specialize
 
           var idx = 0
@@ -448,7 +451,7 @@ object Traversal {
           constructor.resultObject(builder)
 
         case _ =>
-          val constructor = F.seqConstructor(seq.binding)
+          val constructor = F.seqConstructor(seq.seqBinding)
           val builder     = constructor.newObjectBuilder[A]() // TODO: Specialize
           val it          = deconstructor.deconstruct(s)
 
@@ -473,7 +476,7 @@ object Traversal {
       zero: Z,
       f: (Z, Key) => Z
     )(implicit F: HasBinding[F]): Z = {
-      val deconstructor = F.mapDeconstructor(map.binding)
+      val deconstructor = map.mapDeconstructor
 
       var z  = zero
       val it = deconstructor.deconstruct(s)
@@ -489,8 +492,8 @@ object Traversal {
     def modify(s: M[Key, Value], f: Key => Key)(implicit
       F: HasBinding[F]
     ): M[Key, Value] = {
-      val deconstructor = F.mapDeconstructor(map.binding)
-      val constructor   = F.mapConstructor(map.binding)
+      val deconstructor = map.mapDeconstructor
+      val constructor   = map.mapConstructor
       val builder       = constructor.newObjectBuilder[Key, Value]()
 
       val it = deconstructor.deconstruct(s)
@@ -519,7 +522,7 @@ object Traversal {
       zero: Z,
       f: (Z, Value) => Z
     )(implicit F: HasBinding[F]): Z = {
-      val deconstructor = F.mapDeconstructor(map.binding)
+      val deconstructor = map.mapDeconstructor
 
       var z  = zero
       val it = deconstructor.deconstruct(s)
@@ -535,8 +538,8 @@ object Traversal {
     def modify(s: M[Key, Value], f: Value => Value)(implicit
       F: HasBinding[F]
     ): M[Key, Value] = {
-      val deconstructor = F.mapDeconstructor(map.binding)
-      val constructor   = F.mapConstructor(map.binding)
+      val deconstructor = map.mapDeconstructor
+      val constructor   = F.mapConstructor(map.mapBinding)
       val builder       = constructor.newObjectBuilder[Key, Value]()
 
       val it = deconstructor.deconstruct(s)

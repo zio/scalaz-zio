@@ -7,6 +7,20 @@ trait HasBinding[F[_, _]] {
 
   def fromBinding[T, A](binding: Binding[T, A]): F[T, A]
 
+  final def primitive[A](fa: F[BindingType.Primitive, A]): Binding.Primitive[A] =
+    binding(fa) match {
+      case primitive @ Binding.Primitive(_, _) => primitive
+    }
+
+  final def updatePrimitive[A](
+    fa: F[BindingType.Primitive, A],
+    f: Binding.Primitive[A] => Binding.Primitive[A]
+  ): F[BindingType.Primitive, A] =
+    updateBinding(
+      fa,
+      { case primitive @ Binding.Primitive(_, _) => f(primitive) }
+    )
+
   final def record[A](fa: F[BindingType.Record, A]): Binding.Record[A] =
     binding(fa) match {
       case record @ Binding.Record(_, _, _, _) => record
@@ -25,9 +39,7 @@ trait HasBinding[F[_, _]] {
   ): F[BindingType.Record, A] =
     updateBinding(
       fa,
-      { case record @ Binding.Record(_, _, _, _) =>
-        record.copy(constructor = f(record.constructor))
-      }
+      { case record @ Binding.Record(_, _, _, _) => record.copy(constructor = f(record.constructor)) }
     )
 
   final def deconstructor[A](fa: F[BindingType.Record, A]): Deconstructor[A] = record(fa).deconstructor
