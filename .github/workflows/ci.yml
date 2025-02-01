@@ -105,10 +105,11 @@ jobs:
           yarn build 
 
       - name: Cache Website's Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: website-artifact
           path: ./website/build
+          overwrite: true
 
       - name: Print All Generated Files
         run: find ./website/build -print
@@ -138,34 +139,39 @@ jobs:
       run: sbt -v ++${{ matrix.scala }} test${{ matrix.platform }}
     - name: Upload Test Results 2.12
       if: ${{ startsWith(matrix.scala, '2.12.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-output-2.12
         path: ./**/test-reports-zio/output.json
+        overwrite: true
     - name: Upload Test Results 3
       if: ${{ startsWith(matrix.scala, '3.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-output-3
         path: ./**/test-reports-zio/output.json
+        overwrite: true
     - name: Report Test Death 2.12
       if: ${{ failure() &&  startsWith(matrix.scala, '2.12.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-2.12
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
     - name: Report Test Death 2.13
       if: ${{ failure() &&  startsWith(matrix.scala, '2.13.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-2.13
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
     - name: Report Test Death 3.x
       if: ${{ failure() &&  startsWith(matrix.scala, '3.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-3.x
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
 
   testJvms:
     runs-on: ubuntu-20.04
@@ -192,10 +198,11 @@ jobs:
 
       - name: Report Test Death JVM 11
         if: ${{ failure() &&  startsWith(matrix.java, '11') }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zio-test-debug-JVM-11
           path: ./**/test-reports-zio/**_debug.txt
+          overwrite: true
 
   testPlatforms:
     runs-on: ubuntu-20.04
@@ -270,7 +277,7 @@ jobs:
         uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: website-artifact
           path: website-artifact
