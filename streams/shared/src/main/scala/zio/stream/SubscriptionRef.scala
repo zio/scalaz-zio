@@ -23,7 +23,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
  * A `SubscriptionRef[A]` is a `Ref` that can be subscribed to in order to
  * receive the current value as well as all changes to the value.
  */
-trait SubscriptionRef[A] extends Ref.Synchronized[A] {
+sealed trait SubscriptionRef[A] extends Ref.Synchronized[A] {
 
   /**
    * A stream containing the current value of the `Ref` as well as all changes

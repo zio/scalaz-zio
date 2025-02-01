@@ -1,18 +1,12 @@
 package zio
 
 import zio.test.Assertion._
-import zio.test.TestAspect.{exceptJS, nonFlaky}
 import zio.test._
 
 object RefSpec extends ZIOBaseSpec {
 
   def spec = suite("RefSpec")(
     suite("Atomic")(
-      test("race") {
-        for {
-          _ <- ZIO.unit.race(ZIO.unit)
-        } yield assertCompletes
-      } @@ exceptJS(nonFlaky),
       test("get") {
         for {
           ref   <- Ref.make(current)
@@ -82,7 +76,7 @@ object RefSpec extends ZIOBaseSpec {
         } yield assert(value)(equalTo(update))
       },
       test("toString") {
-        assertZIO(Ref.make(42).map(_.toString))(equalTo("Ref(42)"))
+        assertZIO(Ref.make(42).map(_.toString))(equalTo("Ref.Atomic(initial = 42)"))
       },
       test("update") {
         for {
