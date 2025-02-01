@@ -4,7 +4,9 @@ import zio.blocks.schema.binding._
 
 // FIXME: All composition optics need a custom hashCode/equality that is associative!!! For root ones, the defaults are fine.
 sealed trait Optic[F[_, _], S, A] { self =>
-  def target: Reflect[F, A]
+  def structure: Reflect[F, S]
+
+  def focus: Reflect[F, A]
 
   // Compose this optic with a lens:
   def apply[B](that: Lens[F, A, B]): Optic[F, S, B]
@@ -27,7 +29,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
     val list = self.asSub[List[B]]
 
-    list.target match {
+    list.focus match {
       case List(element) => list(Traversal.list(element))
 
       case _ => sys.error("FIXME - Not a list")
@@ -39,7 +41,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
     val vector = self.asSub[Vector[B]]
 
-    vector.target match {
+    vector.focus match {
       case Vector(element) => vector(Traversal.vector(element))
 
       case _ => sys.error("FIXME - Not a vector")
@@ -51,7 +53,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
     val set = self.asSub[Set[B]]
 
-    set.target match {
+    set.focus match {
       case Set(element) => set(Traversal.set(element))
 
       case _ => sys.error("FIXME - Not a set")
@@ -63,7 +65,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
     val array = self.asSub[Array[B]]
 
-    array.target match {
+    array.focus match {
       case Array(element) => array(Traversal.array(element))
 
       case _ => sys.error("FIXME - Not an array")
@@ -105,7 +107,9 @@ object Lens {
   def apply[F[_, _], S, A](parent: Reflect.Record[F, S], child: Term[F, S, A]): Lens[F, S, A] = Root(parent, child)
 
   final case class Root[F[_, _], S, A](parent: Reflect.Record[F, S], child: Term[F, S, A]) extends Lens[F, S, A] {
-    def target: Reflect[F, A] = child.value
+    def structure: Reflect[F, S] = parent
+
+    def focus: Reflect[F, A] = child.value
 
     private val register: Register[A] =
       parent.registers(parent.fields.indexWhere(_.name == child.name)).asInstanceOf[Register[A]]
@@ -134,7 +138,9 @@ object Lens {
     override def noBinding: Root[NoBinding, S, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class LensLens[F[_, _], S, T, A](first: Lens[F, S, T], second: Lens[F, T, A]) extends Lens[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def get(s: S)(implicit F: HasBinding[F]): A = second.get(first.get(s))
 
@@ -186,7 +192,9 @@ object Prism {
         matcher = matchers(parent.cases.indexWhere(_.name == child.name)).asInstanceOf[Matcher[A]]
       }
 
-    def target: Reflect[F, A] = child.value
+    def structure: Reflect[F, S] = parent
+
+    def focus: Reflect[F, A] = child.value
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = {
       init(F)
@@ -202,7 +210,9 @@ object Prism {
     override def noBinding: Root[NoBinding, S, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class PrismPrism[F[_, _], S, T, A](first: Prism[F, S, T], second: Prism[F, T, A]) extends Prism[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = first.getOption(s).flatMap(second.getOption)
 
@@ -240,7 +250,9 @@ object Optional {
   type Bound[S, A] = Optional[Binding, S, A]
 
   final case class LensPrism[F[_, _], S, T, A](first: Lens[F, S, T], second: Prism[F, T, A]) extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = second.getOption(first.get(s))
 
@@ -254,7 +266,9 @@ object Optional {
   }
   final case class LensOptional[F[_, _], S, T, A](first: Lens[F, S, T], second: Optional[F, T, A])
       extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] = second.getOption(first.get(s))
 
@@ -267,7 +281,9 @@ object Optional {
     override def noBinding: LensOptional[NoBinding, S, T, A] = refineBinding(RefineBinding.noBinding())
   }
   final case class PrismLens[F[_, _], S, T, A](first: Prism[F, S, T], second: Lens[F, T, A]) extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).map(second.get)
@@ -284,7 +300,9 @@ object Optional {
     first: Prism[F, S, T],
     second: Optional[F, T, A]
   ) extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
@@ -299,7 +317,9 @@ object Optional {
   }
   final case class OptionalLens[F[_, _], S, T, A](first: Optional[F, S, T], second: Lens[F, T, A])
       extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).map(second.get)
@@ -314,7 +334,9 @@ object Optional {
   }
   final case class OptionalPrism[F[_, _], S, T, A](first: Optional[F, S, T], second: Prism[F, T, A])
       extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
@@ -329,7 +351,9 @@ object Optional {
   }
   final case class OptionalOptional[F[_, _], S, T, A](first: Optional[F, S, T], second: Optional[F, T, A])
       extends Optional[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def getOption(s: S)(implicit F: HasBinding[F]): Option[A] =
       first.getOption(s).flatMap(second.getOption)
@@ -345,7 +369,7 @@ object Optional {
 }
 
 sealed trait Traversal[F[_, _], S, A] extends Optic[F, S, A] { self =>
-  def target: Reflect[F, A]
+  def focus: Reflect[F, A]
 
   def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
     F: HasBinding[F]
@@ -395,7 +419,9 @@ object Traversal {
   )
 
   final case class Seq[F[_, _], A, C[_]](seq: Reflect.Sequence[F, A, C]) extends Traversal[F, C[A], A] {
-    def target: Reflect[F, A] = seq.element
+    def structure: Reflect[F, C[A]] = seq
+
+    def focus: Reflect[F, A] = seq.element
 
     def fold[Z](s: C[A])(
       zero: Z,
@@ -470,7 +496,9 @@ object Traversal {
 
   final case class MapKeys[F[_, _], Key, Value, M[_, _]](map: Reflect.Map[F, Key, Value, M])
       extends Traversal[F, M[Key, Value], Key] {
-    def target: Reflect[F, Key] = map.key
+    def structure: Reflect[F, M[Key, Value]] = map
+
+    def focus: Reflect[F, Key] = map.key
 
     def fold[Z](s: M[Key, Value])(
       zero: Z,
@@ -516,7 +544,9 @@ object Traversal {
 
   final case class MapValues[F[_, _], Key, Value, M[_, _]](map: Reflect.Map[F, Key, Value, M])
       extends Traversal[F, M[Key, Value], Value] {
-    def target: Reflect[F, Value] = map.value
+    def structure: Reflect[F, M[Key, Value]] = map
+
+    def focus: Reflect[F, Value] = map.value
 
     def fold[Z](s: M[Key, Value])(
       zero: Z,
@@ -565,7 +595,9 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -587,7 +619,9 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Lens[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -609,7 +643,9 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Prism[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -631,7 +667,9 @@ object Traversal {
     first: Traversal[F, S, T],
     second: Optional[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -653,7 +691,9 @@ object Traversal {
     first: Lens[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -675,7 +715,9 @@ object Traversal {
     first: Prism[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
@@ -697,7 +739,9 @@ object Traversal {
     first: Optional[F, S, T],
     second: Traversal[F, T, A]
   ) extends Traversal[F, S, A] {
-    def target: Reflect[F, A] = second.target
+    def structure: Reflect[F, S] = first.structure
+
+    def focus: Reflect[F, A] = second.focus
 
     def fold[Z](s: S)(zero: Z, f: (Z, A) => Z)(implicit
       F: HasBinding[F]
