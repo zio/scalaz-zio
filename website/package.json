@@ -47,7 +47,7 @@
     "@zio.dev/zio-interop-scalaz": "2022.11.21-cb6220a025ab",
     "@zio.dev/zio-interop-twitter": "2022.11.21-9f1a594d033d",
     "@zio.dev/zio-jdbc": "0.1.2",
-    "@zio.dev/zio-json": "0.7.10",
+    "@zio.dev/zio-json": "0.7.12",
     "@zio.dev/zio-kafka": "2.10.0",
     "@zio.dev/zio-lambda": "1.0.5",
     "@zio.dev/zio-logging": "2.4.0",

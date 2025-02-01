@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference
  * concurrent access. If you do need to use a mutable value `Ref.Synchronized`
  * will guarantee that access to the value is properly synchronized.
  */
-abstract class Ref[A] extends Serializable {
+sealed abstract class Ref[A] extends Serializable {
 
   /**
    * Reads the value from the `Ref`.
@@ -189,8 +189,7 @@ object Ref extends Serializable {
     ZIO.succeed(unsafe.make(a)(Unsafe))
 
   object unsafe {
-    def make[A](a: A)(implicit unsafe: Unsafe): Ref.Atomic[A] =
-      Atomic(new AtomicReference(a))
+    def make[A](a: A)(implicit unsafe: Unsafe): Ref.Atomic[A] = new Atomic[A](a)
   }
 
   /**
@@ -321,10 +320,10 @@ object Ref extends Serializable {
     }
   }
 
-  private[zio] final case class Atomic[A](value: AtomicReference[A]) extends Ref[A] {
-    self =>
-
-    def get(implicit trace: Trace): UIO[A] =
+  @deprecated("Kept for binary compatibility only. Do not use", "2.1.15")
+  private[zio] object Atomic {}
+  private[zio] final class Atomic[A](initial: A) extends Ref[A] { self =>
+    override def get(implicit trace: Trace): UIO[A] =
       ZIO.succeed(unsafe.get(Unsafe))
 
     override def getAndSet(a: A)(implicit trace: Trace): UIO[A] =
@@ -336,16 +335,16 @@ object Ref extends Serializable {
     override def getAndUpdateSome(pf: PartialFunction[A, A])(implicit trace: Trace): UIO[A] =
       ZIO.succeed(unsafe.getAndUpdateSome(pf)(Unsafe))
 
-    def modify[B](f: A => (B, A))(implicit trace: Trace): UIO[B] =
+    override def modify[B](f: A => (B, A))(implicit trace: Trace): UIO[B] =
       ZIO.succeed(unsafe.modify(f)(Unsafe))
 
     override def modifySome[B](default: B)(pf: PartialFunction[A, (B, A)])(implicit trace: Trace): UIO[B] =
       ZIO.succeed(unsafe.modifySome(default)(pf)(Unsafe))
 
-    def set(a: A)(implicit trace: Trace): UIO[Unit] =
+    override def set(a: A)(implicit trace: Trace): UIO[Unit] =
       ZIO.succeed(unsafe.set(a)(Unsafe))
 
-    def setAsync(a: A)(implicit trace: Trace): UIO[Unit] =
+    override def setAsync(a: A)(implicit trace: Trace): UIO[Unit] =
       ZIO.succeed(unsafe.setAsync(a)(Unsafe))
 
     override def update(f: A => A)(implicit trace: Trace): UIO[Unit] =
@@ -360,8 +359,7 @@ object Ref extends Serializable {
     override def updateSomeAndGet(pf: PartialFunction[A, A])(implicit trace: Trace): UIO[A] =
       ZIO.succeed(unsafe.updateSomeAndGet(pf)(Unsafe))
 
-    override def toString: String =
-      s"Ref(${value.get})"
+    override def toString: String = s"Ref.Atomic(initial = $initial)"
 
     trait UnsafeAPI extends Serializable {
       def get(implicit unsafe: Unsafe): A
@@ -379,50 +377,29 @@ object Ref extends Serializable {
     }
 
     val unsafe: UnsafeAPI =
-      new UnsafeAPI {
+      new AtomicReference[A](initial) with UnsafeAPI { ref: AtomicReference[A] =>
         def get(implicit unsafe: Unsafe): A =
-          value.get
+          ref.asInstanceOf[AtomicReference[A]].get
 
-        def getAndSet(a: A)(implicit unsafe: Unsafe): A = {
-          var loop       = true
-          var current: A = null.asInstanceOf[A]
-          while (loop) {
-            current = value.get
-            loop = !value.compareAndSet(current, a)
-          }
-          current
-        }
+        def getAndSet(a: A)(implicit unsafe: Unsafe): A =
+          ref.asInstanceOf[AtomicReference[A]].getAndSet(a)
 
-        def getAndUpdate(f: A => A)(implicit unsafe: Unsafe): A = {
-          var loop       = true
-          var current: A = null.asInstanceOf[A]
-          while (loop) {
-            current = value.get
-            val next = f(current)
-            loop = !value.compareAndSet(current, next)
-          }
-          current
-        }
+        def getAndUpdate(f: A => A)(implicit unsafe: Unsafe): A =
+          ref.asInstanceOf[AtomicReference[A]].getAndUpdate(f.apply)
 
-        def getAndUpdateSome(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A = {
-          var loop       = true
-          var current: A = null.asInstanceOf[A]
-          while (loop) {
-            current = value.get
-            val next = pf.applyOrElse(current, (_: A) => current)
-            loop = !value.compareAndSet(current, next)
-          }
-          current
-        }
+        def getAndUpdateSome(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A =
+          ref
+            .asInstanceOf[AtomicReference[A]]
+            .getAndUpdate((current: A) => pf.applyOrElse(current, (_: Any) => current))
 
         def modify[B](f: A => (B, A))(implicit unsafe: Unsafe): B = {
           var loop = true
           var b: B = null.asInstanceOf[B]
           while (loop) {
-            val current = value.get
+            val current = ref.asInstanceOf[AtomicReference[A]].get
             val tuple   = f(current)
             b = tuple._1
-            loop = !value.compareAndSet(current, tuple._2)
+            loop = !ref.compareAndSet(current, tuple._2)
           }
           b
         }
@@ -431,63 +408,38 @@ object Ref extends Serializable {
           var loop = true
           var b: B = null.asInstanceOf[B]
           while (loop) {
-            val current = value.get
-            val tuple   = pf.applyOrElse(current, (_: A) => (default, current))
+            val current = ref.asInstanceOf[AtomicReference[A]].get
+            val tuple   = pf.applyOrElse(current, (_: Any) => (default, current))
             b = tuple._1
-            loop = !value.compareAndSet(current, tuple._2)
+            loop = !ref.compareAndSet(current, tuple._2)
           }
           b
         }
 
         def set(a: A)(implicit unsafe: Unsafe): Unit =
-          value.set(a)
+          ref.asInstanceOf[AtomicReference[A]].set(a)
 
         def setAsync(a: A)(implicit unsafe: Unsafe): Unit =
-          value.lazySet(a)
+          ref.lazySet(a)
 
-        def update(f: A => A)(implicit unsafe: Unsafe): Unit = {
-          var loop    = true
-          var next: A = null.asInstanceOf[A]
-          while (loop) {
-            val current = value.get
-            next = f(current)
-            loop = !value.compareAndSet(current, next)
-          }
-          ()
-        }
+        def update(f: A => A)(implicit unsafe: Unsafe): Unit =
+          ref.asInstanceOf[AtomicReference[A]].updateAndGet(f.apply)
 
-        def updateAndGet(f: A => A)(implicit unsafe: Unsafe): A = {
-          var loop    = true
-          var next: A = null.asInstanceOf[A]
-          while (loop) {
-            val current = value.get
-            next = f(current)
-            loop = !value.compareAndSet(current, next)
-          }
-          next
-        }
+        def updateAndGet(f: A => A)(implicit unsafe: Unsafe): A =
+          ref.asInstanceOf[AtomicReference[A]].updateAndGet(f.apply)
 
-        def updateSome(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): Unit = {
-          var loop    = true
-          var next: A = null.asInstanceOf[A]
-          while (loop) {
-            val current = value.get
-            next = pf.applyOrElse(current, (_: A) => current)
-            loop = !value.compareAndSet(current, next)
-          }
-          ()
-        }
+        def updateSome(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): Unit =
+          ref
+            .asInstanceOf[AtomicReference[A]]
+            .updateAndGet((current: A) => pf.applyOrElse(current, (_: Any) => current))
 
-        def updateSomeAndGet(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A = {
-          var loop    = true
-          var next: A = null.asInstanceOf[A]
-          while (loop) {
-            val current = value.get
-            next = pf.applyOrElse(current, (_: A) => current)
-            loop = !value.compareAndSet(current, next)
-          }
-          next
-        }
+        def updateSomeAndGet(pf: PartialFunction[A, A])(implicit unsafe: Unsafe): A =
+          ref
+            .asInstanceOf[AtomicReference[A]]
+            .updateAndGet((current: A) => pf.applyOrElse(current, (_: Any) => current))
       }
+
+    @deprecated("Kept for binary compatibility only. Do not use", "2.1.15")
+    private[zio] def value: AtomicReference[A] = unsafe.asInstanceOf[AtomicReference[A]]
   }
 }
