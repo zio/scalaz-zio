@@ -236,16 +236,16 @@ object Reflect {
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Reflect[G, A] = value.refineBinding(f)
   }
 
-  def unit[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Unit] =
+  def unit[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Unit] =
     Primitive(PrimitiveType.Unit, F.fromBinding(Binding.Primitive.unit), TypeName.unit, Doc.Empty)
 
-  def boolean[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Boolean] =
+  def boolean[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Boolean] =
     Primitive(PrimitiveType.Boolean, F.fromBinding(Binding.Primitive.boolean), TypeName.boolean, Doc.Empty)
 
-  def byte[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Byte] =
+  def byte[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Byte] =
     Primitive(PrimitiveType.Byte, F.fromBinding(Binding.Primitive.byte), TypeName.byte, Doc.Empty)
 
-  def short[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Short] =
+  def short[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Short] =
     Primitive(
       PrimitiveType.Short(Validation.None),
       F.fromBinding(Binding.Primitive.short),
@@ -253,7 +253,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def int[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Int] =
+  def int[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Int] =
     Primitive(
       PrimitiveType.Int(Validation.None),
       F.fromBinding(Binding.Primitive.int),
@@ -261,7 +261,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def long[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Long] =
+  def long[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Long] =
     Primitive(
       PrimitiveType.Long(Validation.None),
       F.fromBinding(Binding.Primitive.long),
@@ -269,7 +269,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def float[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Float] =
+  def float[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Float] =
     Primitive(
       PrimitiveType.Float(Validation.None),
       F.fromBinding(Binding.Primitive.float),
@@ -277,7 +277,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def double[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Double] =
+  def double[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Double] =
     Primitive(
       PrimitiveType.Double(Validation.None),
       F.fromBinding(Binding.Primitive.double),
@@ -285,7 +285,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def char[F[_, _]](implicit F: HasBinding[F]): Reflect[F, Char] =
+  def char[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Char] =
     Primitive(
       PrimitiveType.Char(Validation.None),
       F.fromBinding(Binding.Primitive.char),
@@ -293,7 +293,7 @@ object Reflect {
       Doc.Empty
     )
 
-  def string[F[_, _]](implicit F: HasBinding[F]): Reflect[F, String] =
+  def string[F[_, _]](implicit F: FromBinding[F]): Reflect[F, String] =
     Primitive(
       PrimitiveType.String(Validation.None),
       F.fromBinding(Binding.Primitive.string),
@@ -301,19 +301,19 @@ object Reflect {
       Doc.Empty
     )
 
-  def set[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Sequence[F, A, Set] =
+  def set[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, Set] =
     (Sequence(element, F.fromBinding(Binding.Seq.set), TypeName.set[A], Doc.Empty))
 
-  def list[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Sequence[F, A, List] =
+  def list[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, List] =
     (Sequence(element, F.fromBinding(Binding.Seq.list), TypeName.list[A], Doc.Empty))
 
-  def vector[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Sequence[F, A, Vector] =
+  def vector[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, Vector] =
     (Sequence(element, F.fromBinding(Binding.Seq.vector), TypeName.vector[A], Doc.Empty))
 
-  def array[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Sequence[F, A, Array] =
+  def array[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, Array] =
     (Sequence(element, F.fromBinding(Binding.Seq.array), TypeName.array[A], Doc.Empty))
 
-  def some[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Record[F, Some[A]] =
+  def some[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Record[F, Some[A]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.some[A],
@@ -322,7 +322,7 @@ object Reflect {
       List.empty
     )
 
-  def none[F[_, _]](implicit F: HasBinding[F]): Record[F, None.type] =
+  def none[F[_, _]](implicit F: FromBinding[F]): Record[F, None.type] =
     Record(
       List.empty,
       TypeName.none,
@@ -331,7 +331,7 @@ object Reflect {
       List.empty
     )
 
-  def option[F[_, _], A](element: Reflect[F, A])(implicit F: HasBinding[F]): Variant[F, Option[A]] = {
+  def option[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Variant[F, Option[A]] = {
     val noneTerm: Term[F, Option[A], None.type] = Term("None", none, Doc.Empty, List.empty)
 
     val someTerm: Term[F, Option[A], Some[A]] = Term("Some", some[F, A](element), Doc.Empty, List.empty)
@@ -345,7 +345,7 @@ object Reflect {
     )
   }
 
-  def left[F[_, _], A, B](element: Reflect[F, A])(implicit F: HasBinding[F]): Record[F, Left[A, B]] =
+  def left[F[_, _], A, B](element: Reflect[F, A])(implicit F: FromBinding[F]): Record[F, Left[A, B]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.left[A, B],
@@ -354,7 +354,7 @@ object Reflect {
       List.empty
     )
 
-  def right[F[_, _], A, B](element: Reflect[F, B])(implicit F: HasBinding[F]): Record[F, Right[A, B]] =
+  def right[F[_, _], A, B](element: Reflect[F, B])(implicit F: FromBinding[F]): Record[F, Right[A, B]] =
     Record(
       List(Term("value", element, Doc.Empty, List.empty)),
       TypeName.right[A, B],
@@ -363,7 +363,9 @@ object Reflect {
       List.empty
     )
 
-  def either[F[_, _], L, R](l: Reflect[F, L], r: Reflect[F, R])(implicit F: HasBinding[F]): Variant[F, Either[L, R]] = {
+  def either[F[_, _], L, R](l: Reflect[F, L], r: Reflect[F, R])(implicit
+    F: FromBinding[F]
+  ): Variant[F, Either[L, R]] = {
     val leftTerm: Term[F, Either[L, R], Left[L, R]] = Term("Left", left(l), Doc.Empty, List.empty)
 
     val rightTerm: Term[F, Either[L, R], Right[L, R]] = Term("Right", right(r), Doc.Empty, List.empty)
@@ -377,7 +379,7 @@ object Reflect {
     )
   }
 
-  def tuple2[F[_, _], A, B](_1: Reflect[F, A], _2: Reflect[F, B])(implicit F: HasBinding[F]): Record[F, (A, B)] =
+  def tuple2[F[_, _], A, B](_1: Reflect[F, A], _2: Reflect[F, B])(implicit F: FromBinding[F]): Record[F, (A, B)] =
     Record(
       List(Term("_1", _1, Doc.Empty, List.empty), Term("_2", _2, Doc.Empty, List.empty)),
       TypeName.tuple2[A, B],
@@ -387,7 +389,7 @@ object Reflect {
     )
 
   def tuple3[F[_, _], A, B, C](_1: Reflect[F, A], _2: Reflect[F, B], _3: Reflect[F, C])(implicit
-    F: HasBinding[F]
+    F: FromBinding[F]
   ): Record[F, (A, B, C)] =
     Record(
       List(
@@ -406,7 +408,7 @@ object Reflect {
     _2: Reflect[F, B],
     _3: Reflect[F, C],
     _4: Reflect[F, D]
-  )(implicit F: HasBinding[F]): Record[F, (A, B, C, D)] =
+  )(implicit F: FromBinding[F]): Record[F, (A, B, C, D)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),
@@ -426,7 +428,7 @@ object Reflect {
     _3: Reflect[F, C],
     _4: Reflect[F, D],
     _5: Reflect[F, E]
-  )(implicit F: HasBinding[F]): Record[F, (A, B, C, D, E)] =
+  )(implicit F: FromBinding[F]): Record[F, (A, B, C, D, E)] =
     Record(
       List(
         Term("_1", _1, Doc.Empty, List.empty),

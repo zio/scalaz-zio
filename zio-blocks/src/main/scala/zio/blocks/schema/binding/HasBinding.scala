@@ -5,8 +5,6 @@ trait HasBinding[F[_, _]] {
 
   def updateBinding[T, A](fa: F[T, A], f: Binding[T, A] => Binding[T, A]): F[T, A]
 
-  def fromBinding[T, A](binding: Binding[T, A]): F[T, A]
-
   final def primitive[A](fa: F[BindingType.Primitive, A]): Binding.Primitive[A] =
     binding(fa) match {
       case primitive @ Binding.Primitive(_, _) => primitive
@@ -121,10 +119,4 @@ trait HasBinding[F[_, _]] {
         f(seq)
       }
     )
-}
-
-trait IsBinding[F[_, _]] {
-  def apply[T, A](fa: F[T, A]): Binding[T, A]
-
-  def unapply[T, A](fa: Binding[T, A]): F[T, A]
 }

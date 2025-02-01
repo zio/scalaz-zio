@@ -192,7 +192,9 @@ object Binding {
     def binding[T, A](fa: Binding[T, A]): Binding[T, A] = fa
 
     def updateBinding[T, A](fa: Binding[T, A], f: Binding[T, A] => Binding[T, A]): Binding[T, A] = f(fa)
+  }
 
+  implicit val bindingFromBinding: FromBinding[Binding] = new FromBinding[Binding] {
     def fromBinding[T, A](binding: Binding[T, A]): Binding[T, A] = binding
   }
 }

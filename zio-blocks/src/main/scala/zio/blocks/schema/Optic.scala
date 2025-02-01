@@ -22,7 +22,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
 
   def noBinding: Optic[NoBinding, S, A]
 
-  final def list[B](implicit ev: A <:< List[B], F: HasBinding[F]): Traversal[F, S, B] = {
+  final def list[B](implicit ev: A <:< List[B], F1: HasBinding[F], F2: FromBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.List
 
     val list = self.asSub[List[B]]
@@ -34,7 +34,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def vector[B](implicit ev: A <:< Vector[B], F: HasBinding[F]): Traversal[F, S, B] = {
+  final def vector[B](implicit ev: A <:< Vector[B], F1: HasBinding[F], F2: FromBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Vector
 
     val vector = self.asSub[Vector[B]]
@@ -46,7 +46,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def set[B](implicit ev: A <:< Set[B], F: HasBinding[F]): Traversal[F, S, B] = {
+  final def set[B](implicit ev: A <:< Set[B], F1: HasBinding[F], F2: FromBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Set
 
     val set = self.asSub[Set[B]]
@@ -58,7 +58,7 @@ sealed trait Optic[F[_, _], S, A] { self =>
     }
   }
 
-  final def array[B](implicit ev: A <:< Array[B], F: HasBinding[F]): Traversal[F, S, B] = {
+  final def array[B](implicit ev: A <:< Array[B], F1: HasBinding[F], F2: FromBinding[F]): Traversal[F, S, B] = {
     import Reflect.Extractors.Array
 
     val array = self.asSub[Array[B]]
@@ -378,19 +378,19 @@ object Traversal {
 
   def apply[F[_, _], A, C[_]](parent: Reflect.Sequence[F, A, C]): Traversal[F, C[A], A] = Seq(parent)
 
-  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, List[A], A] = Traversal(
+  def list[F[_, _], A](reflect: Reflect[F, A])(implicit F: FromBinding[F]): Traversal[F, List[A], A] = Traversal(
     Reflect.list(reflect)
   )
 
-  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Set[A], A] = Traversal(
+  def set[F[_, _], A](reflect: Reflect[F, A])(implicit F: FromBinding[F]): Traversal[F, Set[A], A] = Traversal(
     Reflect.set(reflect)
   )
 
-  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Vector[A], A] = Traversal(
+  def vector[F[_, _], A](reflect: Reflect[F, A])(implicit F: FromBinding[F]): Traversal[F, Vector[A], A] = Traversal(
     Reflect.vector(reflect)
   )
 
-  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: HasBinding[F]): Traversal[F, Array[A], A] = Traversal(
+  def array[F[_, _], A](reflect: Reflect[F, A])(implicit F: FromBinding[F]): Traversal[F, Array[A], A] = Traversal(
     Reflect.array(reflect)
   )
 
