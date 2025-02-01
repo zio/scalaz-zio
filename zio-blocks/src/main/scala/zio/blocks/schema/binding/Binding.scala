@@ -12,18 +12,22 @@ package zio.blocks.schema.binding
  * the reflection type `Int` that has a record binding (and therefore, both a
  * constructor and a deconstructor).
  */
-sealed trait Binding[T, A] {
+sealed trait Binding[T, A] { self =>
 
   /**
    * An optional generator for a default value for the type `A`.
    */
   def defaultValue: Option[() => A]
 
+  def defaultValue(value: => A): Binding[T, A]
+
   /**
    * A user-defined list of example values for the type `A`, to be used for
    * testing and documentation.
    */
   def examples: List[A]
+
+  def examples(value: A, values: A*): Binding[T, A]
 }
 object Binding {
   type Unused[T, A] = Nothing
@@ -31,7 +35,11 @@ object Binding {
   final case class Primitive[A](
     defaultValue: Option[() => A] = None,
     examples: List[A] = Nil
-  ) extends Binding[BindingType.Primitive, A]
+  ) extends Binding[BindingType.Primitive, A] {
+    def defaultValue(value: => A): Primitive[A] = copy(defaultValue = Some(() => value))
+
+    def examples(value: A, values: A*): Primitive[A] = copy(examples = value :: values.toList)
+  }
   object Primitive {
     val string: Primitive[String] = Primitive[String]()
 
@@ -66,6 +74,10 @@ object Binding {
       defaultValue.map(thunk => () => f(thunk())),
       examples.map(f)
     )
+
+    def defaultValue(value: => A): Record[A] = copy(defaultValue = Some(() => value))
+
+    def examples(value: A, values: A*): Record[A] = copy(examples = value :: values.toList)
   }
   object Record {
     def apply[A](implicit r: Record[A]): Record[A] = r
@@ -151,7 +163,11 @@ object Binding {
     matchers: Matchers[A],
     defaultValue: Option[() => A] = None,
     examples: List[A] = Nil
-  ) extends Binding[BindingType.Variant, A]
+  ) extends Binding[BindingType.Variant, A] {
+    def defaultValue(value: => A): Variant[A] = copy(defaultValue = Some(() => value))
+
+    def examples(value: A, values: A*): Variant[A] = copy(examples = value :: values.toList)
+  }
   object Variant {
     def apply[A](implicit v: Variant[A]): Variant[A] = v
 
@@ -165,7 +181,11 @@ object Binding {
     deconstructor: SeqDeconstructor[C],
     defaultValue: Option[() => C[A]] = None,
     examples: List[C[A]] = Nil
-  ) extends Binding[BindingType.Seq[C], C[A]]
+  ) extends Binding[BindingType.Seq[C], C[A]] {
+    def defaultValue(value: => C[A]): Seq[C, A] = copy(defaultValue = Some(() => value))
+
+    def examples(value: C[A], values: C[A]*): Seq[C, A] = copy(examples = value :: values.toList)
+  }
   object Seq {
     def apply[C[_], A](implicit s: Seq[C, A]): Seq[C, A] = s
 
@@ -183,7 +203,11 @@ object Binding {
     deconstructor: MapDeconstructor[M],
     defaultValue: Option[() => M[K, V]] = None,
     examples: List[M[K, V]] = Nil
-  ) extends Binding[BindingType.Map[M], M[K, V]]
+  ) extends Binding[BindingType.Map[M], M[K, V]] {
+    def defaultValue(value: => M[K, V]): Map[M, K, V] = copy(defaultValue = Some(() => value))
+
+    def examples(value: M[K, V], values: M[K, V]*): Map[M, K, V] = copy(examples = value :: values.toList)
+  }
   object Map {
     def map[K, V]: Map[Predef.Map, K, V] = Map(MapConstructor.map, MapDeconstructor.map)
   }
