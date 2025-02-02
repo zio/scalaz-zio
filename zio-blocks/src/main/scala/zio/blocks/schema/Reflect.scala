@@ -55,7 +55,7 @@ object Reflect {
     val registers: IndexedSeq[Register[?]] =
       fields
         .foldLeft(scala.List.empty[Register[?]] -> RegisterOffset.Zero) {
-          case ((list, registerOffset), Term(_, Reflect.Primitive(primType, _, _, _), _, _)) =>
+          case ((list, registerOffset), Term(_, Reflect.Primitive(primType, _, _, _, _), _, _)) =>
             primType match {
               case PrimitiveType.Unit =>
                 (Register.None :: list, registerOffset)
@@ -154,16 +154,15 @@ object Reflect {
     element: Reflect[F, A],
     seqBinding: F[BindingType.Seq[C], C[A]],
     typeName: TypeName[C[A]],
-    doc: Doc
+    doc: Doc,
+    modifiers: List[Modifier.Seq]
   ) extends Reflect[F, C[A]] {
     protected def inner: Any = (element, typeName, doc)
 
     def binding(implicit F: HasBinding[F]): Binding[BindingType.Seq[C], C[A]] = F.binding(seqBinding)
 
-    def modifiers: scala.List[Nothing] = scala.List.empty
-
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Sequence[G, A, C] =
-      Sequence(element.refineBinding(f), f(seqBinding), typeName, doc)
+      Sequence(element.refineBinding(f), f(seqBinding), typeName, doc, modifiers)
 
     def seqConstructor(implicit F: HasBinding[F]): SeqConstructor[C] = F.seqConstructor(seqBinding)
 
@@ -179,7 +178,8 @@ object Reflect {
     value: Reflect[F, Value],
     mapBinding: F[BindingType.Map[M], M[Key, Value]],
     typeName: TypeName[M[Key, Value]],
-    doc: Doc
+    doc: Doc,
+    modifiers: List[Modifier.Map]
   ) extends Reflect[F, M[Key, Value]] {
     protected def inner: Any = (key, value, typeName, doc)
 
@@ -189,10 +189,8 @@ object Reflect {
 
     def mapDeconstructor(implicit F: HasBinding[F]): MapDeconstructor[M] = F.mapDeconstructor(mapBinding)
 
-    def modifiers: scala.List[Nothing] = scala.List.empty
-
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Map[G, Key, Value, M] =
-      Map(key.refineBinding(f), value.refineBinding(f), f(mapBinding), typeName, doc)
+      Map(key.refineBinding(f), value.refineBinding(f), f(mapBinding), typeName, doc, modifiers)
 
     def keys: Traversal[F, M[Key, Value], Key] = Traversal.MapKeys(this)
 
@@ -201,17 +199,22 @@ object Reflect {
   object Map {
     type Bound[K, V, M[_, _]] = Map[Binding, K, V, M]
   }
-  final case class Dynamic[F[_, _]](modifiers: scala.List[Modifier.Dynamic], doc: Doc)
-      extends Reflect[F, DynamicValue] {
+  final case class Dynamic[F[_, _]](
+    dynamicBinding: F[BindingType.Dynamic, DynamicValue],
+    modifiers: scala.List[Modifier.Dynamic],
+    doc: Doc
+  ) extends Reflect[F, DynamicValue] {
     protected def inner: Any = (modifiers, doc)
 
-    def refineBinding[G[_, _]](f: RefineBinding[F, G]): Reflect[G, DynamicValue] = Dynamic(modifiers, doc)
+    def refineBinding[G[_, _]](f: RefineBinding[F, G]): Reflect[G, DynamicValue] =
+      Dynamic(f(dynamicBinding), modifiers, doc)
   }
   final case class Primitive[F[_, _], A](
     primitiveType: PrimitiveType[A],
     primitiveBinding: F[BindingType.Primitive, A],
     typeName: TypeName[A],
-    doc: Doc
+    doc: Doc,
+    modifiers: scala.List[Modifier.Primitive]
   ) extends Reflect[F, A] { self =>
     protected def inner: Any = (primitiveType, typeName, doc)
 
@@ -220,8 +223,6 @@ object Reflect {
     def defaultValue(implicit F: HasBinding[F]): scala.Option[() => A] = binding.defaultValue
 
     def examples(implicit F: HasBinding[F]): scala.List[A] = binding.examples
-
-    def modifiers: scala.List[Nothing] = scala.List.empty
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Primitive[G, A] = copy(primitiveBinding = f(primitiveBinding))
   }
@@ -238,20 +239,21 @@ object Reflect {
   }
 
   def unit[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Unit] =
-    Primitive(PrimitiveType.Unit, F.fromBinding(Binding.Primitive.unit), TypeName.unit, Doc.Empty)
+    Primitive(PrimitiveType.Unit, F.fromBinding(Binding.Primitive.unit), TypeName.unit, Doc.Empty, Nil)
 
   def boolean[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Boolean] =
-    Primitive(PrimitiveType.Boolean, F.fromBinding(Binding.Primitive.boolean), TypeName.boolean, Doc.Empty)
+    Primitive(PrimitiveType.Boolean, F.fromBinding(Binding.Primitive.boolean), TypeName.boolean, Doc.Empty, Nil)
 
   def byte[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Byte] =
-    Primitive(PrimitiveType.Byte, F.fromBinding(Binding.Primitive.byte), TypeName.byte, Doc.Empty)
+    Primitive(PrimitiveType.Byte, F.fromBinding(Binding.Primitive.byte), TypeName.byte, Doc.Empty, Nil)
 
   def short[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Short] =
     Primitive(
       PrimitiveType.Short(Validation.None),
       F.fromBinding(Binding.Primitive.short),
       TypeName.short,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def int[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Int] =
@@ -259,7 +261,8 @@ object Reflect {
       PrimitiveType.Int(Validation.None),
       F.fromBinding(Binding.Primitive.int),
       TypeName.int,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def long[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Long] =
@@ -267,7 +270,8 @@ object Reflect {
       PrimitiveType.Long(Validation.None),
       F.fromBinding(Binding.Primitive.long),
       TypeName.long,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def float[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Float] =
@@ -275,7 +279,8 @@ object Reflect {
       PrimitiveType.Float(Validation.None),
       F.fromBinding(Binding.Primitive.float),
       TypeName.float,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def double[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Double] =
@@ -283,7 +288,8 @@ object Reflect {
       PrimitiveType.Double(Validation.None),
       F.fromBinding(Binding.Primitive.double),
       TypeName.double,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def char[F[_, _]](implicit F: FromBinding[F]): Reflect[F, Char] =
@@ -291,7 +297,8 @@ object Reflect {
       PrimitiveType.Char(Validation.None),
       F.fromBinding(Binding.Primitive.char),
       TypeName.char,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def string[F[_, _]](implicit F: FromBinding[F]): Reflect[F, String] =
@@ -299,20 +306,21 @@ object Reflect {
       PrimitiveType.String(Validation.None),
       F.fromBinding(Binding.Primitive.string),
       TypeName.string,
-      Doc.Empty
+      Doc.Empty,
+      Nil
     )
 
   def set[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, Predef.Set] =
-    (Sequence(element, F.fromBinding(Binding.Seq.set), TypeName.set[A], Doc.Empty))
+    (Sequence(element, F.fromBinding(Binding.Seq.set), TypeName.set[A], Doc.Empty, Nil))
 
   def list[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, scala.List] =
-    (Sequence(element, F.fromBinding(Binding.Seq.list), TypeName.list[A], Doc.Empty))
+    (Sequence(element, F.fromBinding(Binding.Seq.list), TypeName.list[A], Doc.Empty, Nil))
 
   def vector[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, scala.Vector] =
-    (Sequence(element, F.fromBinding(Binding.Seq.vector), TypeName.vector[A], Doc.Empty))
+    (Sequence(element, F.fromBinding(Binding.Seq.vector), TypeName.vector[A], Doc.Empty, Nil))
 
   def array[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Sequence[F, A, scala.Array] =
-    (Sequence(element, F.fromBinding(Binding.Seq.array), TypeName.array[A], Doc.Empty))
+    (Sequence(element, F.fromBinding(Binding.Seq.array), TypeName.array[A], Doc.Empty, Nil))
 
   def some[F[_, _], A](element: Reflect[F, A])(implicit F: FromBinding[F]): Record[F, Some[A]] =
     Record(
@@ -448,29 +456,29 @@ object Reflect {
     object List {
       def unapply[F[_, _], A](reflect: Reflect[F, scala.List[A]]): scala.Option[Reflect[F, A]] =
         reflect match {
-          case Sequence(element, _, tn, _) if tn == TypeName.list => Some(element)
-          case _                                                  => None
+          case Sequence(element, _, tn, _, _) if tn == TypeName.list => Some(element)
+          case _                                                     => None
         }
     }
     object Vector {
       def unapply[F[_, _], A](reflect: Reflect[F, scala.Vector[A]]): scala.Option[Reflect[F, A]] =
         reflect match {
-          case Sequence(element, _, tn, _) if tn == TypeName.vector => Some(element)
-          case _                                                    => None
+          case Sequence(element, _, tn, _, _) if tn == TypeName.vector => Some(element)
+          case _                                                       => None
         }
     }
     object Set {
       def unapply[F[_, _], A](reflect: Reflect[F, Predef.Set[A]]): scala.Option[Reflect[F, A]] =
         reflect match {
-          case Sequence(element, _, tn, _) if tn == TypeName.set => Some(element)
-          case _                                                 => None
+          case Sequence(element, _, tn, _, _) if tn == TypeName.set => Some(element)
+          case _                                                    => None
         }
     }
     object Array {
       def unapply[F[_, _], A](reflect: Reflect[F, scala.Array[A]]): scala.Option[Reflect[F, A]] =
         reflect match {
-          case Sequence(element, _, tn, _) if tn == TypeName.array => Some(element)
-          case _                                                   => None
+          case Sequence(element, _, tn, _, _) if tn == TypeName.array => Some(element)
+          case _                                                      => None
         }
     }
     object Option {

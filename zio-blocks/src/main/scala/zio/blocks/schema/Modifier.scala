@@ -16,6 +16,8 @@ object Modifier {
 
   sealed trait Map extends Modifier
 
+  sealed trait Primitive extends Modifier
+
   /**
    * A configuration key-value pair, which can be attached to any type of
    * reflective value. The convention for keys is `<format>.<property>`. For
