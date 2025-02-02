@@ -113,11 +113,11 @@ object Main extends ZIOAppDefault {
 }
 ```
 
-This style avoids any usage of the ZIO environment that is not a local capability except for possibly a single time within `ZIOAppDefault`. This way there is no need to implement [service accessors](../service-pattern/service-pattern.md#5-accessor-methods), except for potentially writing tests, and there is a certain conceptual regularity that everything is a service.
+This style avoids any usage of the ZIO environment that is not a local capability except for possibly a single time within `ZIOAppDefault`.
 
 ### Using ZIO Environment
 
-However, there can be a feeling that defining this final `ApplicationLevelService` is unnecessary and we would like to be able to write our business logic in terms of high level services directly without making it another service:
+There can be a feeling that defining this final `ApplicationLevelService` is unnecessary, and we would like to be able to write our business logic in terms of high level services directly without making it another service:
 
 ```scala
 import zio._
@@ -138,6 +138,6 @@ object Main extends ZIOAppDefault {
 }
 ```
 
-There has been some movement towards the "everything is a service" approach since it avoids the need to implement service accessors but it can be a matter of team style which of these approaches to use. Either way our program is the same except for whether in our business logic we call methods on services directly or use the environment for that.
+There has been some movement towards the "everything is a service" approach since it avoids the need to implement [service accessors](../service-pattern/accessor-methods.md) but it can be a matter of team style which of these approaches to use. Either way our program is the same except for whether in our business logic we call methods on services directly or use the environment for that.
 
 To learn more about this approach please see [how we can use dependency injection with the service pattern](../di/dependency-injection-in-zio.md#dependency-injection-and-service-pattern).

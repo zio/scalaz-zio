@@ -18,15 +18,17 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, static}
 import scala.util.NotGiven
 
 /**
  * Evidence type `A` is not equal to type `B`.
  */
 @implicitNotFound("${A} must not be ${B}")
-abstract class =!=[A, B] extends Serializable
+sealed abstract class =!=[A, B] extends Serializable
 
 object =!= {
-  implicit def neq[A, B](implicit ev: NotGiven[A =:= B]): A =!= B = new =!=[A, B] {}
+  @static private val instance: =!=[Any, Any] = new =!=[Any, Any] {}
+
+  given neq[A, B](using NotGiven[A =:= B]): =!=[A, B] = instance.asInstanceOf[=!=[A, B]]
 }

@@ -141,9 +141,9 @@ module.exports = {
       items: [
         "reference/service-pattern/service-pattern",
         "reference/service-pattern/defining-polymorphic-services-in-zio",
-        "reference/service-pattern/generating-accessor-methods-using-macros",
         "reference/service-pattern/the-three-laws-of-zio-environment",
-        "reference/service-pattern/reloadable-services"
+        "reference/service-pattern/reloadable-services",
+        "reference/service-pattern/accessor-methods"
       ]
     },
     {

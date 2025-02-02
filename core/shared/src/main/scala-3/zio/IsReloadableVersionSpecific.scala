@@ -19,7 +19,7 @@ package zio
 import scala.annotation.experimental
 import scala.quoted.*
 
-transparent trait IsReloadableVersionSpecific {
+private[zio] transparent trait IsReloadableVersionSpecific {
 
   /**
    * Generates a proxy instance of the specified service.
