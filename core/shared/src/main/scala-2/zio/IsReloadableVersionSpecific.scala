@@ -18,7 +18,7 @@ package zio
 
 import zio.internal.macros.IsReloadableMacros
 
-trait IsReloadableVersionSpecific {
+private[zio] trait IsReloadableVersionSpecific {
 
   /**
    * Generates a proxy instance of the specified service.

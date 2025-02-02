@@ -2,14 +2,14 @@ package zio.test
 
 import scala.quoted.*
 
-trait ZIOSpecVersionSpecific[R] { self: ZIOSpec[R] =>
+private[test] trait ZIOSpecVersionSpecific[R] { self: ZIOSpec[R] =>
 
   transparent inline def suiteAll(inline name: String)(inline spec: Any): Any =
     ${ ZIOSpecVersionSpecificMacros.suiteAllImpl('name, 'spec) }
 
 }
 
-object ZIOSpecVersionSpecificMacros {
+private[test] object ZIOSpecVersionSpecificMacros {
 
   def suiteAllImpl(name: Expr[String], spec: Expr[Any])(using ctx: Quotes) = {
     import ctx.reflect._

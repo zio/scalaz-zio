@@ -1,6 +1,6 @@
 package zio
 
-trait ZIOAppVersionSpecific {
+private[zio] trait ZIOAppVersionSpecific {
 
   /**
    * This implicit conversion macro will ensure that the provided ZIO effect
