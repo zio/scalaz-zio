@@ -4,12 +4,16 @@ import zio.blocks.schema.binding._
 
 import RegisterOffset.RegisterOffset
 
-sealed trait Reflect[+F[_, _], A] extends Reflectable[A] { self =>
+sealed trait Reflect[F[_, _], A] extends Reflectable[A] { self =>
   protected def inner: Any
+
+  type NodeBinding <: BindingType
 
   def refineBinding[G[_, _]](f: RefineBinding[F, G]): Reflect[G, A]
 
   def noBinding: Reflect[NoBinding, A] = refineBinding(RefineBinding.noBinding())
+
+  def binding(implicit F: HasBinding[F]): Binding[NodeBinding, A]
 
   def asTerm[S](name: String): Term[F, S, A] = Term(name, this, Doc.Empty, scala.List.empty)
 
@@ -31,6 +35,7 @@ object Reflect {
     modifiers: scala.List[Modifier.Record]
   ) extends Reflect[F, A] { self =>
     protected def inner: Any = (fields, typeName, doc, modifiers)
+    final type NodeBinding = BindingType.Record
 
     def binding(implicit F: HasBinding[F]): Binding[BindingType.Record, A] = F.binding(recordBinding)
 
@@ -132,6 +137,8 @@ object Reflect {
   ) extends Reflect[F, A] {
     protected def inner: Any = (cases, typeName, doc, modifiers)
 
+    final type NodeBinding = BindingType.Variant
+
     def binding(implicit F: HasBinding[F]): Binding[BindingType.Variant, A] = F.binding(variantBinding)
 
     def caseByName(name: String): scala.Option[Term[F, A, ? <: A]] = cases.find(_.name == name)
@@ -159,6 +166,8 @@ object Reflect {
   ) extends Reflect[F, C[A]] {
     protected def inner: Any = (element, typeName, doc)
 
+    final type NodeBinding = BindingType.Seq[C]
+
     def binding(implicit F: HasBinding[F]): Binding[BindingType.Seq[C], C[A]] = F.binding(seqBinding)
 
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Sequence[G, A, C] =
@@ -183,6 +192,8 @@ object Reflect {
   ) extends Reflect[F, M[Key, Value]] {
     protected def inner: Any = (key, value, typeName, doc)
 
+    final type NodeBinding = BindingType.Map[M]
+
     def binding(implicit F: HasBinding[F]): Binding[BindingType.Map[M], M[Key, Value]] = F.binding(mapBinding)
 
     def mapConstructor(implicit F: HasBinding[F]): MapConstructor[M] = F.mapConstructor(mapBinding)
@@ -206,6 +217,10 @@ object Reflect {
   ) extends Reflect[F, DynamicValue] {
     protected def inner: Any = (modifiers, doc)
 
+    final type NodeBinding = BindingType.Dynamic
+
+    def binding(implicit F: HasBinding[F]): Binding[BindingType.Dynamic, DynamicValue] = F.binding(dynamicBinding)
+
     def refineBinding[G[_, _]](f: RefineBinding[F, G]): Reflect[G, DynamicValue] =
       Dynamic(f(dynamicBinding), modifiers, doc)
   }
@@ -217,6 +232,8 @@ object Reflect {
     modifiers: scala.List[Modifier.Primitive]
   ) extends Reflect[F, A] { self =>
     protected def inner: Any = (primitiveType, typeName, doc)
+
+    final type NodeBinding = BindingType.Primitive
 
     def binding(implicit F: HasBinding[F]): Binding.Primitive[A] = F.primitive(primitiveBinding)
 
@@ -230,6 +247,10 @@ object Reflect {
     protected def inner: Any = value.inner
 
     lazy val value = _value()
+
+    final type NodeBinding = value.NodeBinding
+
+    def binding(implicit F: HasBinding[F]): Binding[NodeBinding, A] = value.binding
 
     def modifiers: scala.List[Modifier] = value.modifiers
 

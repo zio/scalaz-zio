@@ -1,5 +1,7 @@
 package zio.blocks.schema.binding
 
+import zio.blocks.schema.DynamicValue
+
 /**
  * A binding is used to attach non-serializable Scala functions, such as
  * constructors, deconstructors, and matchers, to a reflection type.
@@ -210,6 +212,15 @@ object Binding {
   }
   object Map {
     def map[K, V]: Map[Predef.Map, K, V] = Map(MapConstructor.map, MapDeconstructor.map)
+  }
+
+  final case class Dynamic(
+    defaultValue: Option[() => DynamicValue] = None,
+    examples: List[DynamicValue] = Nil
+  ) extends Binding[BindingType.Dynamic, DynamicValue] {
+    def defaultValue(value: => DynamicValue): Dynamic = copy(defaultValue = Some(() => value))
+
+    def examples(value: DynamicValue, values: DynamicValue*): Dynamic = copy(examples = value :: values.toList)
   }
 
   implicit val bindingHasBinding: HasBinding[Binding] = new HasBinding[Binding] {
