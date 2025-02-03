@@ -536,7 +536,7 @@ lazy val commonJunitTestSettings = Seq(
     "org.scala-lang.modules"   %% "scala-xml"                      % "2.3.0"  % Test,
     "org.apache.maven"          % "maven-embedder"                 % "3.9.9"  % Test,
     "org.apache.maven"          % "maven-compat"                   % "3.9.9"  % Test,
-    "com.google.inject"         % "guice"                          % "6.0.0"  % Test,
+    "com.google.inject"         % "guice"                          % "7.0.0"  % Test,
     "org.eclipse.sisu"          % "org.eclipse.sisu.inject"        % "0.3.5"  % Test,
     "org.apache.maven.resolver" % "maven-resolver-connector-basic" % "1.9.22" % Test,
     "org.apache.maven.resolver" % "maven-resolver-transport-http"  % "1.9.22" % Test,
