@@ -3708,13 +3708,23 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Lifts an `Either` into a `ZIO` value.
    */
   def fromEither[E, A](v: => Either[E, A])(implicit trace: Trace): IO[E, A] =
-    succeed(v).flatMap(_.fold(ZIO.failFn, ZIO.successFn))
+    ZIO.suspendSucceed {
+      v match {
+        case Right(s) => Exit.succeed(s)
+        case Left(e)  => ZIO.fail(e)
+      }
+    }
 
   /**
    * Lifts an `Either` into a `ZIO` value.
    */
   def fromEitherCause[E, A](v: => Either[Cause[E], A])(implicit trace: Trace): IO[E, A] =
-    succeed(v).flatMap(_.fold(Exit.failCause, ZIO.successFn))
+    ZIO.suspendSucceed {
+      v match {
+        case Right(s) => Exit.succeed(s)
+        case Left(c)  => ZIO.failCause(c)
+      }
+    }
 
   /**
    * Creates a `ZIO` value that represents the exit value of the specified
