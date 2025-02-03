@@ -16,7 +16,9 @@ private[zio] object LayerMacroUtils {
   )(using Trace): ZLayer[R1, E, O2] =
     lhs >>> rhs
 
-  def constructLayer[R0: Type, R: Type, E: Type](using Quotes)(
+  def constructLayer[R0: Type, R: Type, E: Type](using
+    Quotes
+  )(
     layers: Seq[LayerExpr[E]],
     provideMethod: ProvideMethod
   ): Expr[ZLayer[R0, E, R]] = {

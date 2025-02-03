@@ -1492,9 +1492,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
                          (ref.update(_.updated(k, idx)) *>
                            out.offer(
                              Exit.succeed(
-                               k -> ZStream.mapDequeue(q)(exit =>
-                                 Take(exit.mapExit { case (_, value) => Chunk.single(value) })
-                               )
+                               k -> ZStream
+                                 .mapDequeue(q)(exit => Take(exit.mapExit { case (_, value) => Chunk.single(value) }))
                              )
                            )).as(_ == idx)
                        }

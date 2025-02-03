@@ -378,8 +378,9 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
    * Returns a new channel which connects the given [[AsyncInputProducer]] as
    * this channel's input
    */
-  private[zio] final def embedInput[InErr2, InElem2, InDone2](input: AsyncInputProducer[InErr2, InElem2, InDone2])(
-    implicit
+  private[zio] final def embedInput[InErr2, InElem2, InDone2](
+    input: AsyncInputProducer[InErr2, InElem2, InDone2]
+  )(implicit
     noInputErrors: Any <:< InErr,
     noInputElements: Any <:< InElem,
     noInputDone: Any <:< InDone,

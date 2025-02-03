@@ -32,14 +32,12 @@ object MainApp extends ZIOAppDefault {
         }
       )
 
-  def run = {
+  def run =
     (Server
       .install(
         GreetingRoutes() ++ DownloadRoutes() ++ CounterRoutes() ++ UserRoutes()
       )
-      .flatMap(port =>
-        Console.printLine(s"Started server on port: $port")
-      ) *> ZIO.never)
+      .flatMap(port => Console.printLine(s"Started server on port: $port")) *> ZIO.never)
       .provide(
         serverConfig,
         nettyConfig,
@@ -51,5 +49,4 @@ object MainApp extends ZIOAppDefault {
         // To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
         InmemoryUserRepo.layer
       )
-  }
 }

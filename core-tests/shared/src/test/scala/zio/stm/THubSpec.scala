@@ -19,13 +19,12 @@ object THubSpec extends ZIOBaseSpec {
               promise1 <- Promise.make[Nothing, Unit]
               promise2 <- Promise.make[Nothing, Unit]
               hub      <- THub.bounded[Int](n).commit
-              subscriber <- ZIO.scoped {
-                              hub.subscribeScoped.flatMap { subscription =>
-                                promise1.succeed(()) *> promise2.await *> ZIO.foreach(as.take(n))(_ =>
-                                  subscription.take.commit
-                                )
-                              }
-                            }.fork
+              subscriber <-
+                ZIO.scoped {
+                  hub.subscribeScoped.flatMap { subscription =>
+                    promise1.succeed(()) *> promise2.await *> ZIO.foreach(as.take(n))(_ => subscription.take.commit)
+                  }
+                }.fork
               _      <- promise1.await
               _      <- ZIO.foreach(as.take(n))(a => hub.publish(a).commit)
               _      <- promise2.succeed(())

@@ -815,7 +815,7 @@ sealed trait ZSTM[-R, +E, +A] extends Serializable { self =>
               val oldEnv = env
               env = provide.f(oldEnv)
 
-              val cleanup = ZSTM.succeed({ env = oldEnv })
+              val cleanup = ZSTM.succeed { env = oldEnv }
 
               curr = provide.effect.ensuring(cleanup)
 
@@ -1166,8 +1166,7 @@ object ZSTM {
       val builder  = bf.newBuilder(in)
 
       def loop: ZSTM[R, E, Collection[B]] =
-        if (iterator.hasNext) f(iterator.next()).flatMap { b => builder += b; loop }
-        else ZSTM.succeed(builder.result())
+        if (iterator.hasNext) f(iterator.next()).flatMap { b => builder += b; loop } else ZSTM.succeed(builder.result())
 
       loop
     }

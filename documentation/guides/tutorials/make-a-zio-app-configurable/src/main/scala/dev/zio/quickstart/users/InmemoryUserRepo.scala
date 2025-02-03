@@ -4,8 +4,7 @@ import zio._
 
 import scala.collection.mutable
 
-case class InmemoryUserRepo(map: Ref[mutable.Map[String, User]])
-    extends UserRepo {
+case class InmemoryUserRepo(map: Ref[mutable.Map[String, User]]) extends UserRepo {
   def register(user: User): UIO[String] =
     for {
       id <- Random.nextUUID.map(_.toString)

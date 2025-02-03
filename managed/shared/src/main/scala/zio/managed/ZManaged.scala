@@ -546,15 +546,14 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
           exitEA <- ZManaged.currentReleaseMap.locally(innerReleaseMap)(
                       restore(zio).exit.map(_.mapExit((t: (ZManaged.Finalizer, A)) => t._2))
                     )
-          releaseMapEntry <- outerReleaseMap.add { e =>
-                               cleanup(exitEA)
-                                 .provideEnvironment(r1)
-                                 .exit
-                                 .zipWith(innerReleaseMap.releaseAll(e, ExecutionStrategy.Sequential).exit)((l, r) =>
-                                   l *> r
-                                 )
-                                 .flatten
-                             }
+          releaseMapEntry <-
+            outerReleaseMap.add { e =>
+              cleanup(exitEA)
+                .provideEnvironment(r1)
+                .exit
+                .zipWith(innerReleaseMap.releaseAll(e, ExecutionStrategy.Sequential).exit)((l, r) => l *> r)
+                .flatten
+            }
           a <- exitEA
         } yield (releaseMapEntry, a)
       }

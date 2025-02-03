@@ -27,7 +27,7 @@ object utils {
   }
 
   def fileExtension(path: String): String = {
-    val javaPath      = java.nio.file.Paths.get(path)
+    val javaPath = java.nio.file.Paths.get(path)
     val fileExtension =
       javaPath.getFileName.toString
         .split('.')
@@ -40,7 +40,7 @@ object utils {
     path: String,
     lines: Seq[(Int, Int)] = Seq.empty,
     comment: Boolean = true,
-    showLineNumbers: Boolean = false,
+    showLineNumbers: Boolean = false
   ) = {
     val title     = if (comment) s"""title="$path"""" else ""
     val showLines = if (showLineNumbers) "showLineNumbers" else ""

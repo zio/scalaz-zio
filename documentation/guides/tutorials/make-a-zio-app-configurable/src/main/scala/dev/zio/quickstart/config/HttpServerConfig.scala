@@ -15,9 +15,8 @@ object HttpServerConfig {
   val config_manual: Config[HttpServerConfig] =
     (Config.int.nested("port") ++
       Config.string.nested("host") ++
-      Config.int.nested("nThreads"))
-      .map { case (port, host, nThreads) =>
-        HttpServerConfig(host, port, nThreads)
-      }
+      Config.int.nested("nThreads")).map { case (port, host, nThreads) =>
+      HttpServerConfig(host, port, nThreads)
+    }
       .nested("HttpServerConfig")
 }

@@ -5,10 +5,11 @@ import zio.http._
 import zio.stream.ZStream
 import zio.schema.codec.JsonCodec.zioJsonBinaryCodec
 
-/** Collection of routes that:
-  *   - Accept a `Request` and returns a `Response`
-  *   - Do not require any environment
-  */
+/**
+ * Collection of routes that:
+ *   - Accept a `Request` and returns a `Response`
+ *   - Do not require any environment
+ */
 object DownloadRoutes {
   def apply(): Routes[Any, Nothing] =
     Routes(
