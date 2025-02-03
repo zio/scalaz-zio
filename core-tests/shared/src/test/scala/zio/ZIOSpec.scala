@@ -1308,6 +1308,22 @@ object ZIOSpec extends ZIOBaseSpec {
         assertCompletes
       }
     ),
+    suite("fromEither") {
+      test("produces a stack trace on failure") {
+        ZIO
+          .fromEither(Left("foo"))
+          .catchAllCause(cause => ZIO.succeed(cause.trace.stackTrace))
+          .map(t => assertTrue(t.nonEmpty))
+      }
+    },
+    suite("fromEitherCause") {
+      test("produces a stack trace on failure") {
+        ZIO
+          .fromEitherCause(Left(Cause.fail("foo")))
+          .catchAllCause(cause => ZIO.succeed(cause.trace.stackTrace))
+          .map(t => assertTrue(t.nonEmpty))
+      }
+    },
     suite("fromFutureInterrupt")(
       test("running Future can be interrupted") {
         import java.util.concurrent.atomic.AtomicInteger
