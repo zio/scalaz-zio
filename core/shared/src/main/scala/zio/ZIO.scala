@@ -2698,8 +2698,6 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           Some(parentFiber),
           childFiber
         )
-
-        childFiber.addObserver(exit => supervisor.onEnd(exit, childFiber))
       }
 
       val parentScope =

@@ -396,9 +396,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     if (supervisor ne Supervisor.none) supervisor.onResume(self)(Unsafe)
     if (_stack eq null) _stack = new Array[Continuation](FiberRuntime.InitialStackSize)
 
+    var finalExit = null.asInstanceOf[Exit[E, A]]
+
     try {
-      var effect    = effect0
-      var finalExit = null.asInstanceOf[Exit[E, A]]
+      var effect = effect0
 
       while (effect ne null) {
         try {
@@ -411,14 +412,11 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           val exit =
             runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
-          if (null eq exit) {
+          if (exit eq null) {
             // Terminate this evaluation, async resumption will continue evaluation:
             _forksSinceYield = 0
             effect = null
           } else {
-
-            if (supervisor ne Supervisor.none) supervisor.onEnd(exit, self)(Unsafe)
-
             self._runtimeFlags = RuntimeFlags.enable(_runtimeFlags)(RuntimeFlag.WindDown)
 
             val interruption = interruptAllChildren()
@@ -457,7 +455,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       val supervisor = getSupervisor()
 
-      if (supervisor ne Supervisor.none) supervisor.onSuspend(self)(Unsafe)
+      if (supervisor ne Supervisor.none) {
+        if (finalExit ne null) supervisor.onEnd(finalExit, self)(Unsafe)
+        supervisor.onSuspend(self)(Unsafe)
+      }
     }
   }
 
