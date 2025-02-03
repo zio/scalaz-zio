@@ -3710,8 +3710,8 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def fromEither[E, A](v: => Either[E, A])(implicit trace: Trace): IO[E, A] =
     ZIO.suspendSucceed {
       v match {
-        case Right(v) => Exit.succeed(v)
-        case Left(c)  => ZIO.fail(c)
+        case Right(s) => Exit.succeed(s)
+        case Left(e)  => ZIO.fail(e)
       }
     }
 
@@ -3721,7 +3721,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   def fromEitherCause[E, A](v: => Either[Cause[E], A])(implicit trace: Trace): IO[E, A] =
     ZIO.suspendSucceed {
       v match {
-        case Right(v) => Exit.succeed(v)
+        case Right(s) => Exit.succeed(s)
         case Left(c)  => ZIO.failCause(c)
       }
     }
