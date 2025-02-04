@@ -425,6 +425,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               if (inbox.isEmpty) {
                 finalExit = exit
 
+                supervisor.onEnd(finalExit, self)(Unsafe)
                 // No more messages to process, so we will allow the fiber to end life:
                 self.setExitValue(exit)
               } else {
@@ -455,10 +456,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       val supervisor = getSupervisor()
 
-      if (supervisor ne Supervisor.none) {
-        if (finalExit ne null) supervisor.onEnd(finalExit, self)(Unsafe)
-        supervisor.onSuspend(self)(Unsafe)
-      }
+      if (supervisor ne Supervisor.none) supervisor.onSuspend(self)(Unsafe)
     }
   }
 
