@@ -596,6 +596,19 @@ lazy val testJunitEngineTests = project.module
         .value
   )
 
+lazy val zioBlocks = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+  .crossType(CrossType.Pure)
+  .in(file("zio-blocks"))
+  .dependsOn(testRunner % Test)
+  .settings(stdSettings("zio-blocks"))
+  .settings(crossProjectSettings)
+  .settings(buildInfoSettings("zio.blocks"))
+  .enablePlugins(BuildInfoPlugin)
+  .jvmSettings(mimaSettings(failOnProblem = false))
+  .jsSettings(jsSettings)
+  .nativeSettings(nativeSettings)
+  .settings(scalacOptions += "-Wconf:msg=[@nowarn annotation does not suppress any warnings]:silent")
+
 lazy val concurrent = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .crossType(CrossType.Pure)
   .in(file("concurrent"))
