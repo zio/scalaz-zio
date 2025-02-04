@@ -197,7 +197,7 @@ private[zio] final class ConcurrentWeakHashSet[V <: AnyRef](
     if (element eq null) false
     else {
       val reference = getReference(element)
-      (null ne reference) && (null ne reference.get())
+      (reference ne null) && (reference.get() ne null)
     }
 
   /**
