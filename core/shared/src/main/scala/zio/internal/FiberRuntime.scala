@@ -411,14 +411,11 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           val exit =
             runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
-          if (null eq exit) {
+          if (exit eq null) {
             // Terminate this evaluation, async resumption will continue evaluation:
             _forksSinceYield = 0
             effect = null
           } else {
-
-            if (supervisor ne Supervisor.none) supervisor.onEnd(exit, self)(Unsafe)
-
             self._runtimeFlags = RuntimeFlags.enable(_runtimeFlags)(RuntimeFlag.WindDown)
 
             val interruption = interruptAllChildren()
@@ -426,6 +423,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             if (interruption eq null) {
               if (inbox.isEmpty) {
                 finalExit = exit
+
+                if (supervisor ne Supervisor.none) supervisor.onEnd(finalExit, self)(Unsafe)
 
                 // No more messages to process, so we will allow the fiber to end life:
                 self.setExitValue(exit)
