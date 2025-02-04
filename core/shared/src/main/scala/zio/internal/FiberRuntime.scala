@@ -396,10 +396,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     if (supervisor ne Supervisor.none) supervisor.onResume(self)(Unsafe)
     if (_stack eq null) _stack = new Array[Continuation](FiberRuntime.InitialStackSize)
 
-    var finalExit = null.asInstanceOf[Exit[E, A]]
-
     try {
-      var effect = effect0
+      var effect    = effect0
+      var finalExit = null.asInstanceOf[Exit[E, A]]
 
       while (effect ne null) {
         try {
@@ -426,6 +425,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 finalExit = exit
 
                 supervisor.onEnd(finalExit, self)(Unsafe)
+
                 // No more messages to process, so we will allow the fiber to end life:
                 self.setExitValue(exit)
               } else {
