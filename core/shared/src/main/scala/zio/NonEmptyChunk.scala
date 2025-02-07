@@ -28,7 +28,9 @@ import scala.language.implicitConversions
  * `NonEmptyChunk`. Operations on `NonEmptyChunk` which could potentially return
  * an empty chunk will return a `Chunk` instead.
  */
-final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Serializable { self =>
+final class NonEmptyChunk[+A] private (private val chunk: Chunk[A])
+    extends NonEmptySeq[A, NonEmptyChunk, Chunk]
+    with Serializable { self =>
 
   /**
    * A symbolic alias for `prepended`.
@@ -57,7 +59,7 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
   /**
    * Appends a single element to the end of this `NonEmptyChunk`.
    */
-  def appended[A1 >: A](a: A1): NonEmptyChunk[A1] =
+  override def appended[A1 >: A](a: A1): NonEmptyChunk[A1] =
     nonEmpty(chunk :+ a)
 
   /**
@@ -78,6 +80,15 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
   def asBits(implicit ev: A <:< Byte): NonEmptyChunk[Boolean] =
     nonEmpty(chunk.asBitsByte)
 
+  override def collect[B](pf: PartialFunction[A, B]): Chunk[B] =
+    chunk.collect(pf)
+
+  override def collectFirst[B](pf: PartialFunction[A, B]): Option[B] =
+    chunk.collectFirst(pf)
+
+  override def distinct: NonEmptyChunk[A] =
+    nonEmpty(chunk.distinct)
+
   /**
    * Returns whether this `NonEmptyChunk` and the specified `NonEmptyChunk` are
    * equal to each other.
@@ -87,6 +98,22 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
       case that: NonEmptyChunk[_] => self.chunk == that.chunk
       case _                      => false
     }
+
+  /**
+   * Determines whether a predicate is satisfied for at least one element of
+   * this `NonEmptyChunk`.
+   */
+  override def exists(p: A => Boolean): Boolean =
+    chunk.exists(p)
+
+  override def filter(p: A => Boolean): Chunk[A] =
+    chunk.filter(p)
+
+  override def filterNot(p: A => Boolean): Chunk[A] =
+    chunk.filterNot(p)
+
+  override def find(p: A => Boolean): Option[A] =
+    chunk.find(p)
 
   /**
    * Maps each element of this `NonEmptyChunk` to a new `NonEmptyChunk` and then
@@ -101,6 +128,15 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
    */
   def flatten[B](implicit ev: A <:< NonEmptyChunk[B]): NonEmptyChunk[B] =
     flatMap(ev)
+
+  override def foldLeft[B](z: B)(op: (B, A) => B): B =
+    chunk.foldLeft(z)(op)
+
+  override def forall(p: A => Boolean): Boolean =
+    chunk.forall(p)
+
+  override def grouped(size: Int): Iterator[NonEmptyChunk[A]] =
+    chunk.grouped(size).map(nonEmpty)
 
   /**
    * Groups the values in this `NonEmptyChunk` using the specified function.
@@ -131,6 +167,18 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
    */
   override def hashCode: Int =
     chunk.hashCode
+
+  override def head: A =
+    chunk.head
+
+  override def init: Chunk[A] =
+    chunk.init
+
+  override def iterator: Iterator[A] =
+    chunk.iterator
+
+  override def last: A =
+    chunk.last
 
   /**
    * Transforms the elements of this `NonEmptyChunk` with the specified
@@ -186,6 +234,9 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
   def prepended[A1 >: A](a: A1): NonEmptyChunk[A1] =
     nonEmpty(a +: chunk)
 
+  override def reduce[B >: A](op: (B, B) => B): B =
+    chunk.reduce(op)
+
   /**
    * Reduces the elements of this `NonEmptyChunk` from left to right using the
    * function `map` to transform the first value to the type `B` and then the
@@ -215,6 +266,18 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
     }
     b
   }
+
+  override def reverse: NonEmptyChunk[A] =
+    nonEmpty(chunk.reverse)
+
+  override def sortBy[B](f: A => B)(implicit ord: Ordering[B]): NonEmptyChunk[A] =
+    nonEmpty(chunk.sortBy(f))
+
+  override def sorted[B >: A](implicit ord: Ordering[B]): NonEmptyChunk[B] =
+    nonEmpty(chunk.sorted[B])
+
+  override def tail: Chunk[A] =
+    chunk.tail
 
   /**
    * Converts this `NonEmptyChunk` to a `Chunk`, discarding information about it
@@ -278,6 +341,7 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
    */
   final def zipWithIndexFrom(indexOffset: Int): NonEmptyChunk[(A, Int)] =
     nonEmpty(chunk.zipWithIndexFrom(indexOffset))
+
 }
 
 object NonEmptyChunk {
