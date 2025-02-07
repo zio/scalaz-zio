@@ -358,7 +358,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     maximumLag: => Int
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, Chunk[Dequeue[Take[E, A]]]] =
     for {
-      hub    <- ZIO.acquireRelease(Hub.bounded[Take[E, A]](maximumLag))(_.shutdown)
+      hub    <- Hub.bounded[Take[E, A]](maximumLag)
       queues <- ZIO.collectAll(Chunk.fill(n)(hub.subscribe))
       _      <- self.runIntoHubScoped(hub).forkScoped
     } yield queues
