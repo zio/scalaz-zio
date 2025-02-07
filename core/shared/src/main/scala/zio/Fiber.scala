@@ -742,7 +742,7 @@ object Fiber extends FiberPlatformSpecific {
   }
 
   sealed trait Status { self =>
-    def isDone: Boolean = self.isInstanceOf[Status.Done.type]
+    def isDone: Boolean = self eq Status.Done
 
     def isRunning: Boolean = self.isInstanceOf[Status.Running]
 
@@ -763,7 +763,7 @@ object Fiber extends FiberPlatformSpecific {
     final case class Running(runtimeFlags: RuntimeFlags, trace: Trace) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace eq Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Running(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation})"
@@ -776,7 +776,7 @@ object Fiber extends FiberPlatformSpecific {
     ) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace eq Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Suspended(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation}, ${blockingOn})"
