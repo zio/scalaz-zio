@@ -848,7 +848,7 @@ sealed trait ZIO[-R, +E, +A]
    * Returns a successful effect with the head of the list if the list is
    * non-empty or fails with the error `None` if the list is empty.
    */
-  final def head[B](implicit ev: A IsSubtypeOfOutput List[B], trace: Trace): ZIO[R, Option[E], B] =
+  final def head[B](implicit ev: A IsSubtypeOfOutput Seq[B], trace: Trace): ZIO[R, Option[E], B] =
     self.foldZIO(
       e => Exit.fail(Some(e)),
       a => ev(a).headOption.fold[ZIO[R, Option[E], B]](Exit.failNone)(ZIO.successFn)
@@ -2698,8 +2698,6 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           Some(parentFiber),
           childFiber
         )
-
-        childFiber.addObserver(exit => supervisor.onEnd(exit, childFiber))
       }
 
       val parentScope =
@@ -3708,13 +3706,23 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
    * Lifts an `Either` into a `ZIO` value.
    */
   def fromEither[E, A](v: => Either[E, A])(implicit trace: Trace): IO[E, A] =
-    succeed(v).flatMap(_.fold(ZIO.failFn, ZIO.successFn))
+    ZIO.suspendSucceed {
+      v match {
+        case Right(s) => Exit.succeed(s)
+        case Left(e)  => ZIO.fail(e)
+      }
+    }
 
   /**
    * Lifts an `Either` into a `ZIO` value.
    */
   def fromEitherCause[E, A](v: => Either[Cause[E], A])(implicit trace: Trace): IO[E, A] =
-    succeed(v).flatMap(_.fold(Exit.failCause, ZIO.successFn))
+    ZIO.suspendSucceed {
+      v match {
+        case Right(s) => Exit.succeed(s)
+        case Left(c)  => ZIO.failCause(c)
+      }
+    }
 
   /**
    * Creates a `ZIO` value that represents the exit value of the specified
@@ -5494,15 +5502,12 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
   @implicitNotFound(
     "Pattern guards are only supported when the error type is a supertype of NoSuchElementException. However, your effect has ${E} for the error type."
   )
-  abstract class CanFilter[+E] {
+  sealed abstract class CanFilter[+E] {
     def apply(t: NoSuchElementException): E
   }
-
   object CanFilter {
-    implicit def canFilter[E >: NoSuchElementException]: CanFilter[E] =
-      new CanFilter[E] {
-        def apply(t: NoSuchElementException): E = t
-      }
+    private val instance: CanFilter[Any]                              = new CanFilter[Any] { def apply(t: NoSuchElementException): Any = t }
+    implicit def canFilter[E >: NoSuchElementException]: CanFilter[E] = instance.asInstanceOf[CanFilter[E]]
   }
 
   final class Grafter(private val scope: FiberScope) extends AnyVal { self =>
