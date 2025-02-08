@@ -12,6 +12,8 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def fromDynamicValue(value: DynamicValue): Either[codec.CodecError, A] = ??? // TODO
 
+  def encode[I](value: A, input: I)(implicit codec: zio.blocks.schema.codec.Codec[I, A]): I = ??? // TODO
+
   def defaultValue[B](optic: Optic.Bound[A, B], value: => B): Schema[A] = ??? // TODO
 
   def defaultValue(value: => A): Schema[A] = ??? // TODO

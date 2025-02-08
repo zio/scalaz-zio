@@ -16,7 +16,7 @@ object Main {
     // val age           = field[Person](_.age)
     // val address       = field[Person](_.address)
     // val childrenAges  = field[Person](_.childrenAges)
-    // val childrenAges2 = elements[Person](_.childrenAges) // Traversal
+    // val childrenAges2 = field[Person](_.childrenAges).list // Traversal
     // val left = caseOf[Either[String, Int], Left[String, Int]]
 
     val constructor: Constructor[Person] =

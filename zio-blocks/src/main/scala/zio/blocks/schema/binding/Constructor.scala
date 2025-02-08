@@ -187,4 +187,27 @@ object Constructor {
         (a, b, c, d, e)
       }
     }
+
+  def tuple6[A, B, C, D, E, F](
+    _1: Constructor[A],
+    _2: Constructor[B],
+    _3: Constructor[C],
+    _4: Constructor[D],
+    _5: Constructor[E],
+    _6: Constructor[F]
+  ): Constructor[(A, B, C, D, E, F)] =
+    new Constructor[(A, B, C, D, E, F)] {
+      def size: RegisterOffset = _1.size + _2.size + _3.size + _4.size + _5.size + _6.size
+
+      def construct(in: Registers, baseOffset: RegisterOffset): (A, B, C, D, E, F) = {
+        val a: A = _1.construct(in, baseOffset)
+        val b: B = _2.construct(in, baseOffset + _1.size)
+        val c: C = _3.construct(in, baseOffset + _1.size + _2.size)
+        val d: D = _4.construct(in, baseOffset + _1.size + _2.size + _3.size)
+        val e: E = _5.construct(in, baseOffset + _1.size + _2.size + _3.size + _4.size)
+        val f: F = _6.construct(in, baseOffset + _1.size + _2.size + _3.size + _4.size + _5.size)
+
+        (a, b, c, d, e, f)
+      }
+    }
 }

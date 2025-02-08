@@ -180,4 +180,25 @@ object Deconstructor {
         _5.deconstruct(out, baseOffset + _1.size + _2.size + _3.size + _4.size, in._5)
       }
     }
+
+  def tuple6[A, B, C, D, E, F](
+    _1: Deconstructor[A],
+    _2: Deconstructor[B],
+    _3: Deconstructor[C],
+    _4: Deconstructor[D],
+    _5: Deconstructor[E],
+    _6: Deconstructor[F]
+  ): Deconstructor[(A, B, C, D, E, F)] =
+    new Deconstructor[(A, B, C, D, E, F)] {
+      def size: RegisterOffset = _1.size + _2.size + _3.size + _4.size + _5.size + _6.size
+
+      def deconstruct(out: Registers, baseOffset: RegisterOffset, in: (A, B, C, D, E, F)): Unit = {
+        _1.deconstruct(out, baseOffset, in._1)
+        _2.deconstruct(out, baseOffset + _1.size, in._2)
+        _3.deconstruct(out, baseOffset + _1.size + _2.size, in._3)
+        _4.deconstruct(out, baseOffset + _1.size + _2.size + _3.size, in._4)
+        _5.deconstruct(out, baseOffset + _1.size + _2.size + _3.size + _4.size, in._5)
+        _6.deconstruct(out, baseOffset + _1.size + _2.size + _3.size + _4.size + _5.size, in._6)
+      }
+    }
 }

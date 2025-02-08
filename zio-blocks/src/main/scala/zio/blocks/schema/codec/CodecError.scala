@@ -11,16 +11,23 @@ sealed trait CodecError extends Exception with NoStackTrace {
 }
 object CodecError {
   // FIXME: Flesh these out
-  final case class ValidationError[A](
-    validation: Validation[A],
-    value: A,
-    primitiveType: PrimitiveType[A],
+  final case class ValidationError[F[_, _], A](
+    structure: Reflect[F, ?],
+    focus: Reflect[F, A],
+    expected: Validation[A],
+    actual: A,
     message: String
   ) extends CodecError
-  final case class MissingField(message: String) extends CodecError
-  final case class UnknownField(message: String) extends CodecError
-  final case class InvalidType(message: String)  extends CodecError
-  final case class InvalidCase(message: String)  extends CodecError
+  final case class MissingField[F[_, _], S, A](structure: Reflect.Record[F, S], field: Term[F, S, A], message: String)
+      extends CodecError
+  final case class UnknownField[F[_, _], S, A](structure: Reflect.Record[F, S], field: Term[F, S, A], message: String)
+      extends CodecError
+  final case class InvalidType[F[_, _], A](structure: Reflect[F, ?], focus: Reflect[F, A], message: String)
+      extends CodecError
+  final case class MissingCase[F[_, _], S, A](structure: Reflect.Variant[F, S], case0: Term[F, S, A], message: String)
+      extends CodecError
+  final case class UnknownCase[F[_, _], S, A](structure: Reflect.Variant[F, S], case0: Term[F, S, A], message: String)
+      extends CodecError
   final case class MultipleErrors(errors: ::[CodecError]) extends CodecError {
     def message: String = errors.map(_.message).mkString("\n")
   }

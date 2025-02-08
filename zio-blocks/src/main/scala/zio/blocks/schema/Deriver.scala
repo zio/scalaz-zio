@@ -1,9 +1,9 @@
 package zio.blocks.schema
 
-import zio.blocks.schema.binding.{BindingType, HasBinding}
+import zio.blocks.schema.binding.{Binding, BindingType, HasBinding}
 
-final case class Derivation[TC[_], A](derivation: TC[A], summoned: Option[TC[A]]) {
-  def preferSummoned: Derivation[TC, A] = copy(derivation = summoned.getOrElse(derivation))
+final case class Derivation[TC[_], A](derivation: () => TC[A], summoned: Option[TC[A]]) {
+  def preferSummoned: Derivation[TC, A] = copy(derivation = () => summoned.getOrElse(derivation()))
 }
 object Derivation {}
 
@@ -13,6 +13,10 @@ trait HasDerivation[F[_, _], TC[_]] {
 
 trait Deriver[TC[_]] { self =>
   type HasDerivation[F[_, _]] = zio.blocks.schema.HasDerivation[F, TC]
+
+  final def binding[F[_, _], T, A](fa: F[T, A])(implicit F: HasBinding[F]): Binding[T, A] = F.binding(fa)
+
+  final def derivation[F[_, _], A](fa: F[_, A])(implicit D: HasDerivation[F]): Derivation[TC, A] = D.derivation(fa)
 
   def derivePrimitive[F[_, _], A](prim: Reflect.Primitive[F, A]): TC[A]
 

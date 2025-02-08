@@ -104,6 +104,8 @@ object Binding {
 
     def tuple5[A, B, C, D, E]: Record[(A, B, C, D, E)] = _tuple5.asInstanceOf[Record[(A, B, C, D, E)]]
 
+    def tuple6[A, B, C, D, E, F]: Record[(A, B, C, D, E, F)] = _tuple6.asInstanceOf[Record[(A, B, C, D, E, F)]]
+
     private val _of = new Record[AnyRef](Constructor.of[AnyRef], Deconstructor.of[AnyRef])
 
     private val _left = new Record[Left[AnyRef, AnyRef]](
@@ -152,6 +154,25 @@ object Binding {
         Constructor.of[AnyRef]
       ),
       Deconstructor.tuple5[AnyRef, AnyRef, AnyRef, AnyRef, AnyRef](
+        Deconstructor.of[AnyRef],
+        Deconstructor.of[AnyRef],
+        Deconstructor.of[AnyRef],
+        Deconstructor.of[AnyRef],
+        Deconstructor.of[AnyRef]
+      )
+    )
+
+    private val _tuple6 = new Record[(AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef)](
+      Constructor.tuple6[AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef](
+        Constructor.of[AnyRef],
+        Constructor.of[AnyRef],
+        Constructor.of[AnyRef],
+        Constructor.of[AnyRef],
+        Constructor.of[AnyRef],
+        Constructor.of[AnyRef]
+      ),
+      Deconstructor.tuple6[AnyRef, AnyRef, AnyRef, AnyRef, AnyRef, AnyRef](
+        Deconstructor.of[AnyRef],
         Deconstructor.of[AnyRef],
         Deconstructor.of[AnyRef],
         Deconstructor.of[AnyRef],
