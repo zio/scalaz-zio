@@ -24,7 +24,7 @@
     "@mdx-js/react": "^3.0.1",
     "@zio.dev/izumi-reflect": "2024.11.11-da5b828d4d6e",
     "@zio.dev/zio-amqp": "1.0.0-alpha.3",
-    "@zio.dev/zio-aws": "2025.2.9-b21c83b3708b",
+    "@zio.dev/zio-aws": "2025.2.9-b3c92258585e",
     "@zio.dev/zio-bson": "1.0.7",
     "@zio.dev/zio-cache": "0.2.3",
     "@zio.dev/zio-cli": "0.7.0",
