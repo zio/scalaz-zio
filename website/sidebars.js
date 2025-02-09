@@ -557,7 +557,6 @@ module.exports = {
         "ecosystem/community/zio-amqp",
         "ecosystem/community/zio-apache-parquet",
         "ecosystem/community/zio-arrow",
-        "ecosystem/community/zio-aws-s3",
         "ecosystem/community/zio-grpc",
         "ecosystem/community/zio-k8s",
         "ecosystem/community/zio-kinesis",
