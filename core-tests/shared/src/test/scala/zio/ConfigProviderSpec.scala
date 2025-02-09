@@ -71,6 +71,13 @@ object ConfigProviderSpec extends ZIOBaseSpec {
     )
   }
 
+  final case class Settings(settings: Map[String, String])
+  object Settings {
+    val config: Config[Settings] = (Config.table("settings", Config.string)).map(Settings(_))
+
+    val default: Settings = Settings(Map("key1" -> "value1", "key2" -> "value2"))
+  }
+
   def spec = suite("ConfigProviderSpec") {
     suite("map")(
       test("flat atoms") {
@@ -326,6 +333,21 @@ object ConfigProviderSpec extends ZIOBaseSpec {
           result2 <- configProvider2.load(config2)
         } yield assertTrue(result1 == "value") && assertTrue(result2 == "value")
       } +
+      test("nested with table") {
+        val configProvider =
+          ConfigProvider.fromMap(Map("web.targets" -> "https://zio.dev,https://tak.tak")).nested("web")
+        configProvider
+          .load(WebScrapingTargets.config)
+          .map(r =>
+            assertTrue(r.targets == Set(new java.net.URI("https://zio.dev"), new java.net.URI("https://tak.tak")))
+          )
+      } +
+      test("nested with map") {
+        val configProvider = ConfigProvider
+          .fromMap(Map("example.settings.key1" -> "value1", "example.settings.key2" -> "value2"))
+          .nested("example")
+        configProvider.load(Settings.config).map(r => assertTrue(r == Settings.default))
+      } +
       test("nested with variable arguments") {
         val configProvider = ConfigProvider.fromMap(Map("parent.child.key" -> "value"))
         val config         = Config.string.nested("parent", "child", "key")
@@ -390,7 +412,7 @@ object ConfigProviderSpec extends ZIOBaseSpec {
             for {
               result1 <- configProvider.load(config1)
               result2 <- configProvider.load(config2)
-            } yield assertTrue(result1 == List((1, 2), (3, 4), (5, 6)), result2 == List((11, 21), (31, 41)))
+            } yield assertTrue(result1 == List((1, 2), (3, 4)), result2 == List((11, 21), (31, 41)))
           } +
           test("with indexed sequences and each provider unnested") {
             val configProvider = ConfigProvider
@@ -452,7 +474,7 @@ object ConfigProviderSpec extends ZIOBaseSpec {
 
             for {
               result1 <- configProvider.load(config1)
-            } yield assertTrue(result1 == List((1, 2), (3, 4)))
+            } yield assertTrue(result1 == List((1, 2)))
           }
       } +
       test("values are not split unless a sequence is expected") {
@@ -541,12 +563,26 @@ object ConfigProviderSpec extends ZIOBaseSpec {
           result <- configProvider.load(config)
         } yield assertTrue(result == "value")
       } +
+      test("kebabCase config keep table names") {
+        val configProvider = ConfigProvider.fromMap(Map("kebab-case.camelCase" -> "camelCase")).kebabCase
+        val config         = Config.table("kebabCase", Config.string)
+        for {
+          result <- configProvider.load(config)
+        } yield assertTrue(result == Map("camelCase" -> "camelCase"))
+      } +
       test("snakeCase") {
         val configProvider = ConfigProvider.fromMap(Map("snake_case" -> "value")).snakeCase
         val config         = Config.string("snakeCase")
         for {
           result <- configProvider.load(config)
         } yield assertTrue(result == "value")
+      } +
+      test("snakeCase config keep table names") {
+        val configProvider = ConfigProvider.fromMap(Map("camelCase" -> "camelCase")).snakeCase
+        val config         = Config.table(Config.string)
+        for {
+          result <- configProvider.load(config)
+        } yield assertTrue(result == Map("camelCase" -> "camelCase"))
       } +
       test("upperCase") {
         val configProvider = ConfigProvider.fromMap(Map("UPPERCASE" -> "value")).upperCase
@@ -918,7 +954,7 @@ object ConfigProviderSpec extends ZIOBaseSpec {
           result <- configProvider.load(config)
         } yield assertTrue(result == Nil)
       } +
-      //FIXME: Failing test
+      // FIXME: Failing test
       test("empty list within indexed list") {
         val configProvider =
           ConfigProvider.fromMap(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ private[zio] final class LinkedQueue[A] extends MutableConcurrentQueue[A] with S
   override final val capacity = Int.MaxValue
 
   private[this] val jucConcurrentQueue = new ConcurrentLinkedQueue[A]()
-
   /*
    * Using increment on AtomicLongs to provide metrics '''will''' have
    * performance implications. Having a better solution would be

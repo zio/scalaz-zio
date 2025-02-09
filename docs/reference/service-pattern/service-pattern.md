@@ -1,6 +1,6 @@
 ---
 id: service-pattern
-title: "The Five Elements of Service Pattern"
+title: "The Four Elements of Service Pattern"
 sidebar_label: Service Pattern
 ---
 
@@ -15,12 +15,12 @@ Traits are how we define services. A service could be all the stuff that is rela
 ```scala mdoc:silent
 import zio._
 
-case class Doc(
-    title: String,
-    description: String,
-    language: String,
-    format: String,
-    content: Array[Byte]
+final case class Doc(
+  title: String,
+  description: String,
+  language: String,
+  format: String,
+  content: Array[Byte]
 )
 
 trait DocRepo {
@@ -39,7 +39,7 @@ trait DocRepo {
 It is the same as what we did in an object-oriented fashion. We implement the service with the Scala class:
 
 ```scala mdoc:compile-only
-case class DocRepoImpl() extends DocRepo {
+final class DocRepoLive() extends DocRepo {
   override def get(id: String): ZIO[Any, Throwable, Doc] = ???
 
   override def save(document: Doc): ZIO[Any, Throwable, String] = ???
@@ -57,11 +57,11 @@ We might need `MetadataRepo` and `BlobStorage` services to implement the `DocRep
 First, we need to define the interfaces for `MetadataRepo` and `BlobStorage` services:
 
 ```scala mdoc:silent
-case class Metadata(
-    title: String,
-    description: String,
-    language: String,
-    format: String
+final case class Metadata(
+  title: String,
+  description: String,
+  language: String,
+  format: String
 )
 
 trait MetadataRepo {
@@ -86,102 +86,88 @@ trait BlobStorage {
 Now, we can implement the `DocRepo` service:
 
 ```scala mdoc:silent
-case class DocRepoImpl(
-    metadataRepo: MetadataRepo,
-    blobStorage: BlobStorage
+final class DocRepoLive(
+  metadataRepo: MetadataRepo,
+  blobStorage: BlobStorage
 ) extends DocRepo {
   override def get(id: String): ZIO[Any, Throwable, Doc] =
-    for {
-      metadata <- metadataRepo.get(id)
-      content <- blobStorage.get(id)
-    } yield Doc(
-      metadata.title,
-      metadata.description,
-      metadata.language,
-      metadata.format,
-      content
-    )
-
+    (metadataRepo.get(id) <&> blobStorage.get(id)).map {
+      case (metadata, content) =>
+        Doc(
+          title = metadata.title,
+          description = metadata.description,
+          language = metadata.language,
+          format = metadata.format,
+          content = content
+        )
+    }
+    
   override def save(document: Doc): ZIO[Any, Throwable, String] =
     for {
-      id <- blobStorage.put(document.content)
-      _ <- metadataRepo.put(
-        id,
-        Metadata(
-          document.title,
-          document.description,
-          document.language,
-          document.format
-        )
+      id       <- blobStorage.put(document.content)
+      metadata = Metadata(
+        title = document.title,
+        description = document.description,
+        language = document.language,
+        format = document.format
       )
+      _        <- metadataRepo.put(id, metadata)
     } yield id
 
-  override def delete(id: String): ZIO[Any, Throwable, Unit] =
-    for {
-      _ <- blobStorage.delete(id)
-      _ <- metadataRepo.delete(id)
-    } yield ()
+  override def delete(id: String): ZIO[Any, Throwable, Unit] = blobStorage.delete(id) &> metadataRepo.delete(id).unit
 
   override def findByTitle(title: String): ZIO[Any, Throwable, List[Doc]] =
     for {
-      map <- metadataRepo.findByTitle(title)
-      content <- ZIO.foreach(map)((id, metadata) =>
-        for {
-          content <- blobStorage.get(id)
-        } yield id -> Doc(
-          metadata.title,
-          metadata.description,
-          metadata.language,
-          metadata.format,
-          content
-        )
-      )
+      metadatas <- metadataRepo.findByTitle(title)
+      content   <- ZIO.foreachPar(metadatas) { (id, metadata) =>
+                     blobStorage
+                       .get(id)
+                       .map { content =>
+                         val doc = Doc(
+                           title = metadata.title,
+                           description = metadata.description,
+                           language = metadata.language,
+                           format = metadata.format,
+                           content = content
+                         )
+                    
+                         id -> doc
+                       }
+                   }
     } yield content.values.toList
 }
 ```
 
 ## 4. ZLayer (Constructor)
 
-Now, we create a companion object for `DocRepoImpl` data type and lift the service implementation into the `ZLayer`:
+Now, we create a companion object for `DocRepoLive` data type and lift the service implementation into the `ZLayer`:
 
 ```scala mdoc:silent
-object DocRepoImpl {
-  val layer: ZLayer[BlobStorage with MetadataRepo, Nothing, DocRepo] =
+object DocRepo {
+  /**
+   * The "live" implementation of the `DocRepo` service.
+   */
+  val live: ZLayer[BlobStorage & MetadataRepo, Nothing, DocRepo] =
     ZLayer {
       for {
         metadataRepo <- ZIO.service[MetadataRepo]
         blobStorage  <- ZIO.service[BlobStorage]
-      } yield DocRepoImpl(metadataRepo, blobStorage)
+      } yield new DocRepoLive(metadataRepo, blobStorage)
     }
 }
 ```
 
-## 5. Accessor Methods
+And voila! We have implemented the `DocRepo` service using the _Service Pattern_.
 
-Finally, to create the API more ergonomic, it's better to write accessor methods for all of our service methods using `ZIO.serviceWithZIO` constructor inside the companion object:
-
-```scala mdoc:silent
-object DocRepo {
-  def get(id: String): ZIO[DocRepo, Throwable, Doc] =
-    ZIO.serviceWithZIO[DocRepo](_.get(id))
-
-  def save(document: Doc): ZIO[DocRepo, Throwable, String] =
-    ZIO.serviceWithZIO[DocRepo](_.save(document))
-
-  def delete(id: String): ZIO[DocRepo, Throwable, Unit] =
-    ZIO.serviceWithZIO[DocRepo](_.delete(id))
-
-  def findByTitle(title: String): ZIO[DocRepo, Throwable, List[Doc]] =
-    ZIO.serviceWithZIO[DocRepo](_.findByTitle(title))
-}
-```
-
-Accessor methods allow us to utilize all the features inside the service through the ZIO Environment. That means, if we call `DocRepo.get`, we don't need to pull out the `get` function from the ZIO Environment. The `ZIO.serviceWithZIO` constructor helps us to access the environment and reduce the redundant operations, every time.
+## Assembling the application
 
 Similarly, we need to implement the `BlobStorage` and `MetadataRepo` services:
 
 ```scala mdoc:silent
 object InmemoryBlobStorage {
+  /**
+   * An in-memory implementation of the `BlobStorage` service.
+   */
   val layer = 
     ZLayer {
       ???
@@ -189,6 +175,9 @@ object InmemoryBlobStorage {
 }
 
 object InmemoryMetadataRepo {
+  /**
+   * An in-memory implementation of the `MetadataRepo` service.
+   */
   val layer = 
     ZLayer {
       ???
@@ -205,33 +194,33 @@ import java.io.IOException
 object MainApp extends ZIOAppDefault {
   val app =
     for {
-      id <-
-        DocRepo.save(
-          Doc(
-            "title",
-            "description",
-            "en",
-            "text/plain",
-            "content".getBytes()
-          )
-        )
-      doc <- DocRepo.get(id)
-      _ <- Console.printLine(
-        s"""
-          |Downloaded the document with $id id:
-          |  title: ${doc.title}
-          |  description: ${doc.description}
-          |  language: ${doc.language}
-          |  format: ${doc.format}
-          |""".stripMargin
-      )
-      _ <- DocRepo.delete(id)
-      _ <- Console.printLine(s"Deleted the document with $id id")
+      docRepo <- ZIO.service[DocRepo]
+      id      <- docRepo.save(
+                    Doc(
+                      "title",
+                      "description",
+                      "en",
+                      "text/plain",
+                      "content".getBytes()
+                    )
+                 )
+      doc     <- docRepo.get(id)
+      _       <- Console.printLine(
+                   s"""
+                     |Downloaded the document with $id id:
+                     |  title: ${doc.title}
+                     |  description: ${doc.description}
+                     |  language: ${doc.language}
+                     |  format: ${doc.format}
+                     |""".stripMargin
+                 )  
+      _       <- docRepo.delete(id)
+      _       <- Console.printLine(s"Deleted the document with $id id")
     } yield ()
 
   def run =
     app.provide(
-      DocRepoImpl.layer,
+      DocRepo.live,
       InmemoryBlobStorage.layer,
       InmemoryMetadataRepo.layer
     )

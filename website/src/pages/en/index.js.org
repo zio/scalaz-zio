@@ -15,7 +15,7 @@ const GridBlock = CompLibrary.GridBlock;
 
 const features = [{
         name: 'High-Performance',
-        description: 'Build scalable applications with 100x the performance of Scala’s Future'
+        description: 'Build scalable applications with minimal runtime overhead'
     },
     {
         name: '',
@@ -106,14 +106,6 @@ class Index extends React.Component {
                 },
                 {
                   title: '',
-                  image: `${baseUrl}img/scalac.svg`,
-                  imageAlt: 'Scalac',
-                  imageLink: 'https://scalac.io/',
-                  imageAlign: 'top',
-                  content: 'Scale fast with Scala'
-                },
-                {
-                  title: '',
                   image: `${baseUrl}img/septimal_mind.svg`,
                   imageAlt: 'Septimal Mind',
                   imageLink: 'https://7mind.io/',
@@ -138,7 +130,7 @@ class Index extends React.Component {
       <Block layout="fourColumn">
         {[
           {
-            content: 'Build scalable applications with 100x the performance of Scala’s Future',
+            content: 'Build scalable applications with minimal runtime overhead',
             title: 'High-performance',
           },
           {

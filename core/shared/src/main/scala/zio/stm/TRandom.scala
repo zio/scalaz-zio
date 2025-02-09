@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,8 +77,8 @@ object TRandom extends Serializable {
     ZSTM.serviceWithSTM(_.nextBytes(length))
 
   /**
-   * Generates a pseudo-random, uniformly distributed double between 0.0 and
-   * 1.0 inside a transaction.
+   * Generates a pseudo-random, uniformly distributed double between 0.0 and 1.0
+   * inside a transaction.
    */
   val nextDouble: URSTM[TRandom, Double] =
     ZSTM.serviceWithSTM(_.nextDouble)
@@ -91,8 +91,8 @@ object TRandom extends Serializable {
     ZSTM.serviceWithSTM(_.nextDoubleBetween(minInclusive, maxExclusive))
 
   /**
-   * Generates a pseudo-random, uniformly distributed float between 0.0 and
-   * 1.0 inside a transaction.
+   * Generates a pseudo-random, uniformly distributed float between 0.0 and 1.0
+   * inside a transaction.
    */
   val nextFloat: URSTM[TRandom, Float] =
     ZSTM.serviceWithSTM(_.nextFloat)

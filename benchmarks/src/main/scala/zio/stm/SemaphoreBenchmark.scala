@@ -1,6 +1,5 @@
 package zio.stm
 
-import cats.effect.{IO => CIO}
 import org.openjdk.jmh.annotations.{Scope => JScope, _}
 import zio.BenchmarkUtil._
 import zio._
@@ -10,37 +9,44 @@ import java.util.concurrent.TimeUnit
 @State(JScope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 10)
-@Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 10)
-@Fork(1)
+@Warmup(iterations = 5, timeUnit = TimeUnit.SECONDS, time = 1)
+@Measurement(iterations = 4, timeUnit = TimeUnit.SECONDS, time = 1)
+@Fork(4)
 class SemaphoreBenchmark {
-  @Param(Array("10"))
+
+  @Param(Array("1", "10"))
+  var nSTM: Int = _
+
+  @Param(Array("2", "10"))
   var fibers: Int = _
 
-  @Param(Array("1000"))
-  var ops: Int = _
+  val ops: Int = 1000
 
   @Benchmark
   def semaphoreContention(): Unit =
-    unsafeRun(for {
-      sem   <- Semaphore.make(fibers / 2L)
-      fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeedNow(1)))))
-      _     <- fiber.join
-    } yield ())
+    unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
+      for {
+        sem   <- Semaphore.make(math.max(1, fibers / 2L))
+        fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeed(1)))))
+        _     <- fiber.join
+      } yield ()
+    })
 
   @Benchmark
   def tsemaphoreContention(): Unit =
-    unsafeRun(for {
-      sem   <- TSemaphore.make(fibers / 2L).commit
-      fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeed(1)))))
-      _     <- fiber.join
-    } yield ())
+    unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
+      for {
+        sem   <- TSemaphore.make(math.max(1, fibers / 2L)).commit
+        fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeed(1)))))
+        _     <- fiber.join
+      } yield ()
+    })
 
   @Benchmark
-  def semaphoreCatsContention(): Unit = {
-    import cats.effect.Concurrent
-    import cats.effect.unsafe.implicits.global
+  def catsSemaphoreContention(): Unit = {
     import cats.effect.std.Semaphore
+    import cats.effect.unsafe.implicits.global
+    import cats.effect.{Concurrent, IO => CIO}
 
     (for {
       sem   <- Semaphore(fibers / 2L)(Concurrent[CIO])

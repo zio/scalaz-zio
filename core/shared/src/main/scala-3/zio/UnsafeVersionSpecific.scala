@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2021-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package zio 
+package zio
 
-private[zio] trait UnsafeVersionSpecific { self =>
+private[zio] transparent trait UnsafeVersionSpecific {
 
   def unsafely[A](f: Unsafe ?=> A): A =
-    f(using Unsafe.unsafe)
+    f(using Unsafe)
 
   implicit def implicitFunctionIsFunction[A](f: Unsafe ?=> A): Unsafe => A =
-    unsafe => {
-      given Unsafe = unsafe
-      
-      f
-    }
+    _ => f(using Unsafe)
 }

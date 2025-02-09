@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2021-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ package zio
  */
 sealed trait Unsafe extends Serializable
 
-object Unsafe extends UnsafeVersionSpecific {
-  private[zio] val unsafe: Unsafe = new Unsafe {}
+object Unsafe extends Unsafe with UnsafeVersionSpecific { self =>
+  private[zio] val unsafe: Unsafe = self
 
   def unsafe[A](f: Unsafe => A): A =
-    f(unsafe)
+    f(self)
 
   @deprecated("use unsafe", "2.0.1")
   def unsafeCompat[A](f: Unsafe => A): A =
-    f(unsafe)
+    f(self)
 }

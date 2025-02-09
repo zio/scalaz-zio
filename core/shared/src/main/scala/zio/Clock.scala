@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 
 package zio
 
-import zio.Clock.ClockLive
-import zio.internal.stacktracer.Tracer
-import zio.Scheduler
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import zio.Schedule.Decision._
 
 import java.lang.{System => JSystem}
 import java.time.temporal.ChronoUnit
@@ -47,7 +43,7 @@ trait Clock extends Serializable { self =>
 
   def sleep(duration: => Duration)(implicit trace: Trace): UIO[Unit]
 
-  trait UnsafeAPI {
+  trait UnsafeAPI extends Serializable {
     def currentTime(unit: TimeUnit)(implicit unsafe: Unsafe): Long
     def currentTime(unit: ChronoUnit)(implicit unsafe: Unsafe): Long
     def currentDateTime()(implicit unsafe: Unsafe): OffsetDateTime
@@ -84,6 +80,8 @@ object Clock extends ClockPlatformSpecific with Serializable {
 
   val tag: Tag[Clock] = Tag[Clock]
 
+  private[this] val rightExitUnit = Right(Exit.unit)
+
   /**
    * An implementation of the `Clock` service backed by a `java.time.Clock`.
    */
@@ -103,14 +101,11 @@ object Clock extends ClockPlatformSpecific with Serializable {
     def nanoTime(implicit trace: Trace): UIO[Long] =
       ZIO.succeed(unsafe.nanoTime()(Unsafe.unsafe))
     def sleep(duration: => Duration)(implicit trace: Trace): UIO[Unit] =
-      ZIO.asyncInterrupt { cb =>
-        val canceler = globalScheduler.schedule(() => cb(ZIO.unit), duration)(Unsafe.unsafe)
-        Left(ZIO.succeed(canceler()))
-      }
+      ClockLive.sleep(duration)
     def scheduler(implicit trace: Trace): UIO[Scheduler] =
-      ZIO.succeed(globalScheduler)
+      ClockLive.scheduler
 
-    @transient override val unsafe: UnsafeAPI =
+    override val unsafe: UnsafeAPI =
       new UnsafeAPI {
         override def currentTime(unit: TimeUnit)(implicit unsafe: Unsafe): Long = {
           val inst = instant()
@@ -153,8 +148,14 @@ object Clock extends ClockPlatformSpecific with Serializable {
 
     def sleep(duration: => Duration)(implicit trace: Trace): UIO[Unit] =
       ZIO.asyncInterrupt { cb =>
-        val canceler = globalScheduler.schedule(() => cb(ZIO.unit), duration)(Unsafe.unsafe)
-        Left(ZIO.succeed(canceler()))
+        val d = duration
+        if (d.isZero || d.isNegative) {
+          // No need to sleep, resume synchronously
+          rightExitUnit
+        } else {
+          val canceler = globalScheduler.schedule(() => cb(ZIO.unit), d)(Unsafe.unsafe)
+          Left(ZIO.succeed(canceler()))
+        }
       }
 
     def currentDateTime(implicit trace: Trace): UIO[OffsetDateTime] =
@@ -183,7 +184,7 @@ object Clock extends ClockPlatformSpecific with Serializable {
       ZIO.succeed(JavaClock(ZoneId.systemDefault))
     }
 
-    @transient override val unsafe: UnsafeAPI =
+    override val unsafe: UnsafeAPI =
       new UnsafeAPI {
         override def currentTime(unit: TimeUnit)(implicit unsafe: Unsafe): Long = {
           val inst = instant()

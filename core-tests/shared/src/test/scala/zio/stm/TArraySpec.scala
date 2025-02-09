@@ -1,8 +1,11 @@
 package zio.stm
 
 import zio.test.Assertion._
+import zio.test.TestAspect.{exceptJS, nonFlaky}
 import zio.test._
-import zio.{Chunk, ZIOBaseSpec}
+import zio.{Chunk, ZIO, ZIOBaseSpec}
+
+import java.util.concurrent.atomic.AtomicInteger
 
 object TArraySpec extends ZIOBaseSpec {
 
@@ -735,6 +738,24 @@ object TArraySpec extends ZIOBaseSpec {
           tArray <- makeTArray(1)(42).commit
           result <- tArray.update(-1, identity).commit.exit
         } yield assert(result)(dies(isArrayIndexOutOfBoundsException))
+      },
+      test("modifying different keys doesn't retry the transaction") {
+        val n    = 100
+        val list = (1 to n).toList
+        for {
+          arr         <- TArray.fromIterable(list).commit
+          transactions = new AtomicInteger(0)
+          _ <- ZIO
+                 .foreachParDiscard(0 until n) { i =>
+                   (for {
+                     _ <- arr.update(i, _ + 1)
+                     _  = transactions.incrementAndGet()
+                   } yield ()).commit
+                 }
+                 .withParallelism(10)
+          res     <- arr.toList.commit
+          expected = list.map(_ + 1)
+        } yield assertTrue(res == expected && transactions.get() == n)
       }
     ),
     suite("updateSTM")(
@@ -867,7 +888,7 @@ object TArraySpec extends ZIOBaseSpec {
         }
       }
     }
-  )
+  ) @@ exceptJS(nonFlaky(20))
 
   val N    = 1000
   val n    = 10

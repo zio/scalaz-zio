@@ -27,7 +27,7 @@ object Thread {
       allThreads <- ZIO.attempt(threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds, 0))
       initial     = java.lang.Thread.State.values().map(_ -> 0L).toMap
       result = allThreads.foldLeft(initial) { (result, thread) =>
-                 if (thread != null) {
+                 if (thread ne null) {
                    result.updated(thread.getThreadState, result(thread.getThreadState) + 1)
                  } else result
                }

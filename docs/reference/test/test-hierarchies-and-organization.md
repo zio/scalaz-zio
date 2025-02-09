@@ -105,3 +105,32 @@ object ExampleSpec extends ZIOSpecDefault {
 
 }
 ```
+
+## Sharing the result of an effectful value between tests
+
+As we saw in the previous section, the `suiteAll` method allows tests to work with common values. But what if the value is a result of some effect and we want to use it in several tests, without running the effect every time? Suites in `zio-test` can be effectual, so we can use this feature to share effectual values:
+
+```scala mdoc:compile-only
+import zio._
+import zio.test._
+
+object ExampleSpec extends ZIOSpecDefault {
+  val spec =
+    suite("some suite") {
+      for {
+        stuff <- ZIO.succeed("hello")
+        stuff2 = 5
+      } yield Chunk(
+
+        test("test 1") {
+          assertTrue(stuff.startsWith("h"))
+        },
+
+        test("test 2") {
+          assertTrue(stuff.length == stuff2)
+        }
+
+      )
+    }
+}
+```

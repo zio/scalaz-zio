@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,6 +103,11 @@ object TestClock extends Serializable {
     suspendedWarningState: Ref.Synchronized[TestClock.SuspendedWarningData]
   ) extends TestClock
       with TestClockPlatformSpecific {
+
+    /**
+     * See https://github.com/zio/zio/issues/9385
+     */
+    private[this] val freezeLock = Semaphore.unsafe.make(1)(Unsafe)
 
     /**
      * Increments the current clock time by the specified duration. Any effects
@@ -294,12 +299,14 @@ object TestClock extends Serializable {
      * snapshot may not be fully consistent.
      */
     private def freeze(implicit trace: Trace): IO[Unit, Map[FiberId, Fiber.Status]] =
-      supervisedFibers.flatMap { fibers =>
-        ZIO.foldLeft(fibers)(Map.empty[FiberId, Fiber.Status]) { (map, fiber) =>
-          fiber.status.flatMap {
-            case done @ Fiber.Status.Done                    => ZIO.succeed(map.updated(fiber.id, done))
-            case suspended @ Fiber.Status.Suspended(_, _, _) => ZIO.succeed(map.updated(fiber.id, suspended))
-            case _                                           => ZIO.fail(())
+      freezeLock.withPermit {
+        supervisedFibers.flatMap { fibers =>
+          ZIO.foldLeft(fibers)(Map.empty[FiberId, Fiber.Status]) { (map, fiber) =>
+            fiber.status.flatMap {
+              case done @ Fiber.Status.Done                    => ZIO.succeed(map.updated(fiber.id, done))
+              case suspended @ Fiber.Status.Suspended(_, _, _) => ZIO.succeed(map.updated(fiber.id, suspended))
+              case _                                           => ZIO.fail(())
+            }
           }
         }
       }
@@ -308,14 +315,14 @@ object TestClock extends Serializable {
      * Returns a set of all fibers in this test.
      */
     def supervisedFibers(implicit trace: Trace): UIO[SortedSet[Fiber.Runtime[Any, Any]]] =
-      ZIO.descriptorWith { descriptor =>
+      ZIO.fiberIdWith { fiberId =>
         annotations.get(TestAnnotation.fibers).flatMap {
           case Left(_) => ZIO.succeed(SortedSet.empty[Fiber.Runtime[Any, Any]])
           case Right(refs) =>
             ZIO
               .foreach(refs)(ref => ZIO.succeed(ref.get))
               .map(_.foldLeft(SortedSet.empty[Fiber.Runtime[Any, Any]])(_ ++ _))
-              .map(_.filter(_.id != descriptor.id))
+              .map(_.filter(_.id != fiberId))
         }
       }
 

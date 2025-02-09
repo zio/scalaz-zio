@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,26 @@ private[zio] object MutableConcurrentQueue {
     if (capacity == 1) new OneElementConcurrentQueue()
     else RingBuffer[A](capacity)
 
-  def unbounded[A]: MutableConcurrentQueue[A] = new LinkedQueue[A]
+  def unbounded[A]: MutableConcurrentQueue[A] =
+    new LinkedQueue[A]
+
+  /**
+   * Rounds up to the nearest power of 2 and subtracts 1. e.g.,
+   *
+   * {{{
+   * roundToPow2MinusOne(3) // 3
+   * roundToPow2MinusOne(4) // 3
+   * roundToPow2MinusOne(5) // 7
+   * }}}
+   */
+  def roundToPow2MinusOne(n: Int): Int = {
+    var value = n - 1
+    value |= value >> 1
+    value |= value >> 2
+    value |= value >> 4
+    value |= value >> 8
+    value | value >> 16
+  }
 }
 
 /**
@@ -106,7 +125,7 @@ private[zio] abstract class MutableConcurrentQueue[A] {
     while (i > 0) {
       val a = poll(default)
       if (a == default) i = 0
-      else builder += a
+      else builder.addOne(a)
       i -= 1
     }
     builder.result()

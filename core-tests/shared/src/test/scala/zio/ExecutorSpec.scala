@@ -21,9 +21,9 @@ final class CheckPrintThrowable extends Throwable {
 }
 
 object TestExecutor {
-  val failing = new TestExecutor(false)
-  val y       = new TestExecutor(true)
-  val u       = new TestExecutor(true)
+  val failing = new TestExecutor(submitResult = false)
+  val y       = new TestExecutor(submitResult = true)
+  val u       = new TestExecutor(submitResult = true)
 
   val badEC: ExecutionContext = new ExecutionContext {
     override def execute(r: Runnable): Unit            = throw new RejectedExecutionException("Rejected: " + r.toString)

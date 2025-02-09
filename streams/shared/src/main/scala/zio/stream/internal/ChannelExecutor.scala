@@ -72,37 +72,37 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
   private[this] final def clearInProgressFinalizer(): Unit =
     inProgressFinalizer = null
 
-  def close(ex: Exit[Any, Any])(implicit trace: Trace): ZIO[Env, Nothing, Any] = {
-    def ifNotNull[R](zio: URIO[R, Any]): URIO[R, Any] =
-      if (zio ne null) zio else ZIO.unit
+  def close(ex: Exit[Any, Any])(implicit trace: Trace): ZIO[Env, Nothing, Any] = ZIO.uninterruptible {
+    val fs = Array.ofDim[URIO[Env, Any]](4)
 
-    val runInProgressFinalizers = {
+    // NOTE: Each finalizer might have altered the state of the vars, so we need to suspend them all
+    fs(0) = ZIO.suspendSucceed {
+      val close0 = closeLastSubstream
+      closeLastSubstream = null
+      if (close0 eq null) Exit.unit
+      else close0
+    }
+
+    fs(1) = ZIO.suspendSucceed {
       val finalizer = inProgressFinalizer
 
-      if (finalizer ne null)
-        finalizer.ensuring(ZIO.succeed(clearInProgressFinalizer()))
-      else null
+      if (finalizer eq null) Exit.unit
+      else finalizer.ensuring(ZIO.succeed(clearInProgressFinalizer()))
     }
 
-    val closeSubexecutors =
-      if (activeSubexecutor eq null) null
+    fs(2) = ZIO.suspendSucceed {
+      if (activeSubexecutor eq null) Exit.unit
       else activeSubexecutor.close(ex)
+    }
 
-    val closeSelf: URIO[Env, Any] = {
+    fs(3) = ZIO.suspendSucceed {
       val selfFinalizers = popAllFinalizers(ex)
 
-      if (selfFinalizers ne null)
-        selfFinalizers.ensuring(ZIO.succeed(clearInProgressFinalizer()))
-      else null
+      if (selfFinalizers eq null) Exit.unit
+      else selfFinalizers.ensuring(ZIO.succeed(clearInProgressFinalizer()))
     }
 
-    if ((closeSubexecutors eq null) && (runInProgressFinalizers eq null) && (closeSelf eq null)) null
-    else
-      (
-        ifNotNull(closeSubexecutors).exit <*>
-          ifNotNull(runInProgressFinalizers).exit <*>
-          ifNotNull(closeSelf).exit
-      ).map { case (a, b, c) => a *> b *> c }.uninterruptible.flatMap(ZIO.done(_))
+    ZIO.foreach(fs)(_.exit).flatMap(Exit.collectAllDiscard(_))
   }
 
   def getDone: Exit[OutErr, OutDone] = done.asInstanceOf[Exit[OutErr, OutDone]]
@@ -125,6 +125,148 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
           currentChannel match {
             case null =>
               result = ChannelState.Done
+
+            case ZChannel.Fold(value, k) =>
+              doneStack.push(k.asInstanceOf[ErasedContinuation[Env]])
+              currentChannel = value
+
+            case ZChannel.Emit(out) =>
+              emitted = out
+              currentChannel = if (activeSubexecutor ne null) null else ZChannel.unit
+              result = ChannelState.Emit
+
+            case ZChannel.SucceedNow(terminal) =>
+              result = doneSucceed(terminal)
+
+            case ZChannel.Succeed(effect) =>
+              result = doneSucceed(effect())
+
+            case ZChannel.Fail(error) =>
+              result = doneHalt(error())
+
+            case ZChannel.Suspend(effect) =>
+              currentChannel = effect()
+
+            case ZChannel.FromZIO(zio) =>
+              val pzio =
+                (if (providedEnv eq null) zio()
+                 else zio().provideEnvironment(providedEnv.asInstanceOf[ZEnvironment[Env]]))
+                  .asInstanceOf[ZIO[Env, OutErr, OutDone]]
+
+              result = ChannelState.Effect(
+                pzio
+                  .foldCauseZIO(
+                    cause =>
+                      doneHalt(cause) match {
+                        case ChannelState.Effect(zio) => zio
+                        case _                        => ZIO.unit
+                      },
+                    z =>
+                      doneSucceed(z) match {
+                        case ChannelState.Effect(zio) => zio
+                        case _                        => ZIO.unit
+                      }
+                  )
+              )
+
+            case ZChannel.PipeTo(left, right) =>
+              val previousInput = input
+
+              val leftExec: ErasedExecutor[Env] = new ChannelExecutor(left, providedEnv, executeCloseLastSubstream)
+              leftExec.input = previousInput
+              input = leftExec
+
+              addFinalizer { exit =>
+                val effect = restorePipe(exit, previousInput)
+
+                if (effect ne null) effect
+                else ZIO.unit
+              }
+
+              currentChannel = right().asInstanceOf[Channel[Env]]
+
+            case read @ ZChannel.Read(_, _) =>
+              result = ChannelState.Read(
+                input,
+                onEffect = identity[ZIO[Env, Nothing, Unit]],
+                onEmit = { (out: Any) =>
+                  try {
+                    currentChannel = read.more(out)
+                  } catch {
+                    case e: Throwable =>
+                      currentChannel = read.done.onExit(Exit.die(e))
+                  }
+                  null
+                },
+                onDone = { (exit: Exit[Any, Any]) =>
+                  val onExit: Exit[Any, Any] => Channel[Env] =
+                    (read.done.onExit _).asInstanceOf[Exit[Any, Any] => Channel[Env]]
+                  currentChannel = onExit(exit)
+                  null
+                }
+              )
+
+            case ensuring @ ZChannel.Ensuring(_, _) =>
+              runEnsuring(ensuring.asInstanceOf[ZChannel.Ensuring[Env, Any, Any, Any, Any, Any, Any]])
+
+            case ZChannel.ConcatAll(combineSubK, combineSubKAndInner, value, k) =>
+              val innerExecuteLastClose =
+                (f: URIO[Env, Any]) =>
+                  ZIO.succeed {
+                    val prevLastClose = if (closeLastSubstream eq null) ZIO.unit else closeLastSubstream
+                    closeLastSubstream = prevLastClose *> f
+                  }
+
+              val exec: ErasedExecutor[Env] = new ChannelExecutor(value, providedEnv, innerExecuteLastClose)
+              exec.input = input
+
+              activeSubexecutor = Subexecutor.PullFromUpstream(
+                exec,
+                k.asInstanceOf[Any => Channel[Env]],
+                lastDone = null,
+                combineSubK.asInstanceOf[(Any, Any) => Any],
+                combineSubKAndInner.asInstanceOf[(Any, Any) => Any]
+              )
+              closeLastSubstream = null
+              currentChannel = null
+
+            case bracketOut @ ZChannel.BracketOut(_, _) =>
+              result = runBracketOut(bracketOut.asInstanceOf[ZChannel.BracketOut[Env, Any, Any]])
+
+            case ZChannel.Provide(env, inner) =>
+              val previousEnv = providedEnv
+              providedEnv = env()
+              currentChannel = inner.asInstanceOf[Channel[Env]]
+
+              addFinalizer { _ =>
+                ZIO.succeed {
+                  providedEnv = previousEnv
+                }
+              }
+
+            case ZChannel.DeferedUpstream(mkChannel) =>
+              val inpAsChannel: ZChannel[Env, Any, Any, Any, Any, Any, Any] = execToPullingChannel(input)
+
+              // when input's provided env is null, we have to explicitly provide it with the 'outer' env
+              // otherwise any env provided by downstream will override the 'correct' env when the input channel executes effects.
+              val nextChannel: Channel[Env] =
+                if (null != input.providedEnv)
+                  mkChannel(inpAsChannel.asInstanceOf[ZChannel[Any, Any, Any, Any, Any, Any, Any]])
+                else
+                  ZChannel // todo: can we eliminate the effect evaluation here? i.e. by usingFiber.currentFiber()
+                    .environmentWithChannel[Env] { env =>
+                      mkChannel(inpAsChannel.provideEnvironment(env))
+                    }
+
+              val previousInput = input
+              input = null
+              addFinalizer { exit =>
+                val effect = restorePipe(exit, previousInput)
+
+                if (effect ne null) effect
+                else ZIO.unit
+              }
+              currentChannel = nextChannel
 
             case ZChannel.Bridge(bridgeInput, channel) =>
               // PipeTo(left, Bridge(queue, channel))
@@ -182,124 +324,6 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
                   }
                 )
               }
-
-            case ZChannel.PipeTo(left, right) =>
-              val previousInput = input
-
-              val leftExec: ErasedExecutor[Env] = new ChannelExecutor(left, providedEnv, executeCloseLastSubstream)
-              leftExec.input = previousInput
-              input = leftExec
-
-              addFinalizer { exit =>
-                val effect = restorePipe(exit, previousInput)
-
-                if (effect ne null) effect
-                else ZIO.unit
-              }
-
-              currentChannel = right().asInstanceOf[Channel[Env]]
-
-            case read @ ZChannel.Read(_, _) =>
-              result = ChannelState.Read(
-                input,
-                onEffect = identity[ZIO[Env, Nothing, Unit]],
-                onEmit = { (out: Any) =>
-                  try {
-                    currentChannel = read.more(out)
-                  } catch {
-                    case e: Throwable =>
-                      currentChannel = read.done.onExit(Exit.die(e))
-                  }
-                  null
-                },
-                onDone = { (exit: Exit[Any, Any]) =>
-                  val onExit: Exit[Any, Any] => Channel[Env] =
-                    (read.done.onExit _).asInstanceOf[Exit[Any, Any] => Channel[Env]]
-                  currentChannel = onExit(exit)
-                  null
-                }
-              )
-
-            case ZChannel.SucceedNow(terminal) =>
-              result = doneSucceed(terminal)
-
-            case ZChannel.Fail(error) =>
-              result = doneHalt(error())
-
-            case ZChannel.Succeed(effect) =>
-              result = doneSucceed(effect())
-
-            case ZChannel.Suspend(effect) =>
-              currentChannel = effect()
-
-            case ZChannel.FromZIO(zio) =>
-              val pzio =
-                (if (providedEnv eq null) zio()
-                 else zio().provideEnvironment(providedEnv.asInstanceOf[ZEnvironment[Env]]))
-                  .asInstanceOf[ZIO[Env, OutErr, OutDone]]
-
-              result = ChannelState.Effect(
-                pzio
-                  .foldCauseZIO(
-                    cause =>
-                      doneHalt(cause) match {
-                        case ChannelState.Effect(zio) => zio
-                        case _                        => ZIO.unit
-                      },
-                    z =>
-                      doneSucceed(z) match {
-                        case ChannelState.Effect(zio) => zio
-                        case _                        => ZIO.unit
-                      }
-                  )
-              )
-
-            case ZChannel.Emit(out) =>
-              emitted = out
-              currentChannel = if (activeSubexecutor ne null) null else ZChannel.unit
-              result = ChannelState.Emit
-
-            case ensuring @ ZChannel.Ensuring(_, _) =>
-              runEnsuring(ensuring.asInstanceOf[ZChannel.Ensuring[Env, Any, Any, Any, Any, Any, Any]])
-
-            case ZChannel.ConcatAll(combineSubK, combineSubKAndInner, value, k) =>
-              val innerExecuteLastClose =
-                (f: URIO[Env, Any]) =>
-                  ZIO.succeed {
-                    val prevLastClose = if (closeLastSubstream eq null) ZIO.unit else closeLastSubstream
-                    closeLastSubstream = prevLastClose *> f
-                  }
-
-              val exec: ErasedExecutor[Env] = new ChannelExecutor(value, providedEnv, innerExecuteLastClose)
-              exec.input = input
-
-              activeSubexecutor = Subexecutor.PullFromUpstream(
-                exec,
-                k.asInstanceOf[Any => Channel[Env]],
-                lastDone = null,
-                combineSubK.asInstanceOf[(Any, Any) => Any],
-                combineSubKAndInner.asInstanceOf[(Any, Any) => Any]
-              )
-              closeLastSubstream = null
-              currentChannel = null
-
-            case ZChannel.Fold(value, k) =>
-              doneStack.push(k.asInstanceOf[ErasedContinuation[Env]])
-              currentChannel = value
-
-            case bracketOut @ ZChannel.BracketOut(_, _) =>
-              result = runBracketOut(bracketOut.asInstanceOf[ZChannel.BracketOut[Env, Any, Any]])
-
-            case ZChannel.Provide(env, inner) =>
-              val previousEnv = providedEnv
-              providedEnv = env()
-              currentChannel = inner.asInstanceOf[Channel[Env]]
-
-              addFinalizer { _ =>
-                ZIO.succeed {
-                  providedEnv = previousEnv
-                }
-              }
           }
         } catch {
           case t: Throwable => currentChannel = ZChannel.failCause(Cause.die(t))
@@ -328,6 +352,7 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
 
   private[this] var cancelled: Exit[OutErr, OutDone] = _
 
+  @volatile
   private[this] var closeLastSubstream: URIO[Env, Any] = _
 
   private[this] def doneSucceed(z: Any)(implicit trace: Trace): ChannelState[Env, Any] =
@@ -446,7 +471,7 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
       ZIO
         .foreach(finalizers)(_.apply(ex).exit)
         .map(results => Exit.collectAll(results) getOrElse Exit.unit)
-        .flatMap(ZIO.done(_))
+        .unexit
 
   private[this] def runSubexecutor()(implicit trace: Trace): ChannelState[Env, Any] =
     activeSubexecutor match {
@@ -510,15 +535,20 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
     ChannelState.Read(
       self.upstreamExecutor,
       onEffect = (effect: ZIO[Env, Nothing, Unit]) => {
-        val closeLast =
-          if (closeLastSubstream eq null) ZIO.unit else closeLastSubstream
-        closeLastSubstream = null
+        val closeLast = ZIO.uninterruptible {
+          val close = this.closeLastSubstream
+          closeLastSubstream = null
+          if (close ne null) close else Exit.unit
+        }
         executeCloseLastSubstream(closeLast) *> effect
       },
       onEmit = { (emitted: Any) =>
         if (this.closeLastSubstream ne null) {
-          val closeLast = this.closeLastSubstream
-          closeLastSubstream = null
+          val closeLast = ZIO.uninterruptible {
+            val close = this.closeLastSubstream
+            closeLastSubstream = null
+            if (close ne null) close else Exit.unit
+          }
 
           executeCloseLastSubstream(closeLast).map { _ =>
             val childExecutor: ErasedExecutor[Env] =
@@ -576,7 +606,17 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
               parentSubexecutor.combineChildResults(parentSubexecutor.lastDone, doneValue)
             else doneValue
         )
-      closeLastSubstream = childExecutor.close(Exit.succeed(doneValue))
+
+      val thisClose = childExecutor.close(Exit.succeed(doneValue))
+      if (thisClose ne null) {
+        val lastClose = closeLastSubstream
+        if (lastClose ne null) {
+          closeLastSubstream = lastClose *> thisClose
+        } else {
+          closeLastSubstream = thisClose
+        }
+      }
+
       replaceSubexecutor(modifiedParent)
     }
 
@@ -591,7 +631,7 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
         exit match {
           case Exit.Failure(cause) =>
             handleSubexecFailure(cause).effectOrNullIgnored // NOTE: assuming finalizers cannot fail
-          case e @ Exit.Success(doneValue) =>
+          case Exit.Success(doneValue) =>
             finishWithDoneValue(doneValue)
             null
         }
@@ -673,7 +713,7 @@ private[zio] object ChannelExecutor {
         val fin2 = parentSubexecutor.close(ex)
 
         if ((fin1 eq null) && (fin2 eq null)) null
-        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).flatMap(ZIO.done(_))
+        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).unexit
         else if (fin1 ne null) fin1
         else fin2
       }
@@ -694,12 +734,13 @@ private[zio] object ChannelExecutor {
     onFailure: Cause[E] => ZIO[R, E2, A]
   )(implicit trace: Trace): ZIO[R, E2, A] = {
     val readStack = scala.collection.mutable.Stack
-      .apply[ChannelState.Read[Any, Any]](r.asInstanceOf[ChannelState.Read[Any, Any]])
+      .empty[ChannelState.Read[Any, Any]]
 
-    def read(): ZIO[R, E2, A] = {
-      val current = readStack.pop()
+    @tailrec def read(opsTillYield: Int, current: ChannelState.Read[Any, Any]): ZIO[R, E2, A] =
       if (current.upstream eq null) {
         ZIO.dieMessage("Unexpected end of input for channel execution")
+      } else if (0 == opsTillYield) {
+        ZIO.suspendSucceed(readAux(current))
       } else {
         current.upstream.run() match {
           case ChannelState.Emit =>
@@ -709,8 +750,9 @@ private[zio] object ChannelExecutor {
               else
                 emitEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => onSuccess())
             } else {
-              if (emitEffect eq null) read()
-              else (emitEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => read()))
+              val next = readStack.pop()
+              if (emitEffect eq null) read(opsTillYield - 1, next)
+              else (emitEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => readAux(next)))
             }
           case ChannelState.Done =>
             val doneEffect = current.onDone(current.upstream.getDone)
@@ -719,11 +761,11 @@ private[zio] object ChannelExecutor {
               else
                 doneEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => onSuccess())
             } else {
-              if (doneEffect eq null) read()
-              else (doneEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => read()))
+              val next = readStack.pop()
+              if (doneEffect eq null) read(opsTillYield - 1, next)
+              else (doneEffect.asInstanceOf[ZIO[R, Nothing, Unit]].foldCauseZIO(onFailure, _ => readAux(next)))
             }
           case ChannelState.Effect(zio) =>
-            readStack.push(current)
             current
               .onEffect(zio.asInstanceOf[ZIO[Any, Nothing, Unit]])
               .catchAllCause { cause =>
@@ -733,17 +775,122 @@ private[zio] object ChannelExecutor {
                   else doneEffect
                 }
               }
-              .foldCauseZIO(onFailure, _ => read())
+              .foldCauseZIO(onFailure, _ => readAux(current))
           case r2 @ ChannelState.Read(upstream2, onEffect2, onEmit2, onDone2) =>
             readStack.push(current.asInstanceOf[ChannelState.Read[Any, Any]])
-            readStack.push(r2.asInstanceOf[ChannelState.Read[Any, Any]])
-            ZIO.succeed(()) *> read()
+            read(opsTillYield - 1, r2.asInstanceOf[ChannelState.Read[Any, Any]])
         }
       }
-    }
 
-    read()
+    def readAux(current: ChannelState.Read[Any, Any]): ZIO[R, E2, A] =
+      ZIO.unit *> read(128, current)
+
+    readAux(r.asInstanceOf[ChannelState.Read[Any, Any]])
   }
+
+  private[zio] def execToPullingChannel[Env](
+    exec: ErasedExecutor[Env]
+  )(implicit trace: Trace): ZChannel[Env, Any, Any, Any, Any, Any, Any] = {
+    val MAX_STEPS = 128
+    def ch2(st: ChannelState[Env, Any]): ZChannel[Env, Any, Any, Any, Any, Any, Any] =
+      st match {
+        case ChannelState.Done =>
+          exec.getDone match {
+            case Exit.Success(res) =>
+              ZChannel.succeedNow(res)
+            case Exit.Failure(c) =>
+              ZChannel.refailCause(c)
+          }
+        case ChannelState.Emit =>
+          ZChannel.write(exec.getEmit) *>
+            ch2(exec.run())
+        case ChannelState.Effect(zio) =>
+          ZChannel.fromZIO(zio) *> ch2(exec.run())
+        case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
+          /*ZChannel.fromZIO {
+            ChannelExecutor.readUpstream[Env, Any, Any, Any](
+              r.asInstanceOf[ChannelState.Read[Env, Any]],
+              () => ZIO.unit,
+              ZIO.refailCause
+            )
+          } *> ch2(exec.run())*/
+          readChAux0(r.asInstanceOf[ChannelState.Read[Env, Any]], Stack.empty[ChannelState.Read[Env, Any]]) *>
+            ch2(exec.run())
+      }
+
+    def readChAux(
+      current: ChannelState.Read[Env, Any],
+      readStack: Stack[ChannelState.Read[Env, Any]]
+    ): ZChannel[Env, Any, Any, Any, Any, Any, Any] =
+      ZChannel.unwrap(ZIO.unit as readChAux0(current, readStack))
+
+    def readChAux0(
+      current: ChannelState.Read[Env, Any],
+      readStack: Stack[ChannelState.Read[Env, Any]]
+    ): ZChannel[Env, Any, Any, Any, Any, Any, Any] =
+      readCh(current, readStack, MAX_STEPS)
+
+    @tailrec def readCh(
+      current: ChannelState.Read[Env, Any],
+      readStack: Stack[ChannelState.Read[Env, Any]],
+      opsTillYield: Int
+    ): ZChannel[Env, Any, Any, Any, Any, Any, Any] =
+      if (0 == opsTillYield)
+        readChAux(current, readStack)
+      else {
+        current.upstream.run() match {
+          case ChannelState.Emit =>
+            val emitEffect = current.onEmit(current.upstream.getEmit)
+            if (readStack.isEmpty) {
+              if (emitEffect eq null) ZChannel.unit
+              else
+                ZChannel.fromZIO(emitEffect)
+            } else {
+              val next = readStack.pop()
+              if (emitEffect eq null)
+                readCh(next, readStack, opsTillYield - 1)
+              else {
+                ZChannel.fromZIO(emitEffect) *> readChAux0(next, readStack)
+              }
+            }
+          case ChannelState.Done =>
+            val doneEffect = current.onDone(current.upstream.getDone)
+            if (readStack.isEmpty) {
+              if (doneEffect eq null)
+                ZChannel.unit
+              else {
+                ZChannel.fromZIO(doneEffect)
+              }
+            } else {
+              val next = readStack.pop()
+              if (doneEffect eq null)
+                readCh(next, readStack, opsTillYield - 1)
+              else {
+                ZChannel.fromZIO(doneEffect) *> readChAux0(next, readStack)
+              }
+            }
+          case ChannelState.Effect(zio) =>
+            ZChannel.fromZIO {
+              current
+                .onEffect(zio.asInstanceOf[ZIO[Any, Nothing, Unit]])
+                .catchAllCause { cause =>
+                  ZIO.suspendSucceed {
+                    val doneEffect = current.onDone(Exit.failCause(cause))
+                    if (doneEffect eq null) ZIO.unit
+                    else doneEffect
+                  }
+                }
+            } *>
+              readChAux0(current, readStack)
+          case r2 @ ChannelState.Read(upstream2, onEffect2, onEmit2, onDone2) =>
+            readStack.push(current)
+            readCh(r2.asInstanceOf[ChannelState.Read[Env, Any]], readStack, opsTillYield - 1)
+        }
+      }
+
+    ZChannel.suspend(ch2(exec.run()))
+  }
+
 }
 
 /**
@@ -841,7 +988,7 @@ private[zio] class SingleProducerAsyncInput[Err, Elem, Done](
     takeWith(c => Exit.failCause(c.map(Left(_))), Exit.succeed(_), d => Exit.fail(Right(d)))
 
   def close(implicit trace: Trace): UIO[Any] =
-    ZIO.fiberId.flatMap(id => error(Cause.interrupt(id)))
+    ZIO.fiberIdWith(id => error(Cause.interrupt(id)))
 
   def awaitRead(implicit trace: Trace): UIO[Any] =
     ref.modify {
@@ -852,10 +999,16 @@ private[zio] class SingleProducerAsyncInput[Err, Elem, Done](
 
 private[zio] object SingleProducerAsyncInput {
   def make[Err, Elem, Done](implicit trace: Trace): UIO[SingleProducerAsyncInput[Err, Elem, Done]] =
-    Promise
-      .make[Nothing, Unit]
-      .flatMap(p => Ref.make[State[Err, Elem, Done]](State.Empty(p)))
-      .map(new SingleProducerAsyncInput(_))
+    ZIO.fiberIdWith(fiberId => ZIO.succeed(unsafe.make(fiberId)(Unsafe)))
+
+  object unsafe {
+    def make[Err, Elem, Done](fiberId: FiberId)(implicit unsafe: Unsafe): SingleProducerAsyncInput[Err, Elem, Done] = {
+      val promise: Promise[Nothing, Unit]      = Promise.unsafe.make[Nothing, Unit](fiberId)
+      val initialState: State[Err, Elem, Done] = State.Empty[Err, Elem, Done](promise)
+      val ref: Ref[State[Err, Elem, Done]]     = Ref.unsafe.make(initialState)
+      new SingleProducerAsyncInput[Err, Elem, Done](ref)
+    }
+  }
 
   sealed trait State[Err, Elem, Done]
   object State {

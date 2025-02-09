@@ -5,15 +5,15 @@ import scala.deriving._
 
 final class WirePartiallyApplied[R](val dummy: Boolean = true) extends AnyVal {
   inline def apply[E](inline layer: ZLayer[_, E, _]*): ZLayer[Any, E, R] =
-    ${LayerMacros.constructLayer[Any, R, E]('layer)}
+    ${ LayerMacros.constructLayer[Any, R, E]('layer) }
 }
 
 final class WireSomePartiallyApplied[R0, R](val dummy: Boolean = true) extends AnyVal {
   inline def apply[E](inline layer: ZLayer[_, E, _]*): ZLayer[R0, E, R] =
-    ${LayerMacros.constructLayer[R0, R, E]('layer)}
+    ${ LayerMacros.constructLayer[R0, R, E]('layer) }
 }
 
-trait ZLayerCompanionVersionSpecific {
+private[zio] transparent trait ZLayerCompanionVersionSpecific {
 
   /**
    * Automatically assembles a layer for the provided type.
@@ -26,8 +26,8 @@ trait ZLayerCompanionVersionSpecific {
     new WirePartiallyApplied[R]()
 
   /**
-   * Automatically assembles a layer for the provided type `R`,
-   * leaving a remainder `R0`.
+   * Automatically assembles a layer for the provided type `R`, leaving a
+   * remainder `R0`.
    *
    * {{{
    * val carLayer: ZLayer[Engine with Wheels, Nothing, Car] = ???
@@ -41,10 +41,10 @@ trait ZLayerCompanionVersionSpecific {
 
   /**
    * Automatically derives a simple layer for the provided type.
-   * 
+   *
    * {{{
    * class Car(wheels: Wheels, engine: Engine) { /* ... */ }
-   * 
+   *
    * val carLayer: URLayer[Wheels & Engine, Car] = ZLayer.derive[Car]
    * }}}
    */

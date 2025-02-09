@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,11 +32,11 @@ import java.io.{IOException, InputStream}
  */
 package object managed extends ZManagedCompatPlatformSpecific {
 
-  type Managed[+E, +A]   = ZManaged[Any, E, A]         //Manage an `A`, may fail with `E`        , no requirements
-  type TaskManaged[+A]   = ZManaged[Any, Throwable, A] //Manage an `A`, may fail with `Throwable`, no requirements
-  type RManaged[-R, +A]  = ZManaged[R, Throwable, A]   //Manage an `A`, may fail with `Throwable`, requires an `R`
-  type UManaged[+A]      = ZManaged[Any, Nothing, A]   //Manage an `A`, cannot fail              , no requirements
-  type URManaged[-R, +A] = ZManaged[R, Nothing, A]     //Manage an `A`, cannot fail              , requires an `R`
+  type Managed[+E, +A]   = ZManaged[Any, E, A]         // Manage an `A`, may fail with `E`        , no requirements
+  type TaskManaged[+A]   = ZManaged[Any, Throwable, A] // Manage an `A`, may fail with `Throwable`, no requirements
+  type RManaged[-R, +A]  = ZManaged[R, Throwable, A]   // Manage an `A`, may fail with `Throwable`, requires an `R`
+  type UManaged[+A]      = ZManaged[Any, Nothing, A]   // Manage an `A`, cannot fail              , no requirements
+  type URManaged[-R, +A] = ZManaged[R, Nothing, A]     // Manage an `A`, cannot fail              , requires an `R`
 
   implicit final class ZManagedPromiseCompanionSyntax(private val self: Promise.type) extends AnyVal {
     def makeManaged[E, A](implicit trace: Trace): ZManaged[Any, Nothing, Promise[E, A]] =

@@ -141,9 +141,9 @@ module.exports = {
       items: [
         "reference/service-pattern/service-pattern",
         "reference/service-pattern/defining-polymorphic-services-in-zio",
-        "reference/service-pattern/generating-accessor-methods-using-macros",
         "reference/service-pattern/the-three-laws-of-zio-environment",
-        "reference/service-pattern/reloadable-services"
+        "reference/service-pattern/reloadable-services",
+        "reference/service-pattern/accessor-methods"
       ]
     },
     {
@@ -309,6 +309,7 @@ module.exports = {
       items: [
         "reference/resource/scope",
         "reference/resource/zpool",
+        "reference/resource/zkeyedpool",
         "reference/resource/scopedref",
       ]
     },
@@ -411,18 +412,9 @@ module.exports = {
           label: "Assertions",
           link: { type: "doc", id: "reference/test/assertions/index" },
           items: [
+            "reference/test/assertions/classic-assertions",
             "reference/test/assertions/smart-assertions",
-            {
-              type: "category",
-              label: "Classic Assertions",
-              link: { type: "doc", id: "reference/test/assertions/classic-assertions" },
-              items: [
-                "reference/test/assertions/operations",
-                "reference/test/assertions/built-in-assertions",
-                "reference/test/assertions/examples",
-                "reference/test/assertions/how-it-works"
-              ]
-            },
+            "reference/test/assertions/built-in-assertions",
           ]
         },
         "reference/test/test-hierarchies-and-organization",
@@ -554,22 +546,21 @@ module.exports = {
       items: [
         "ecosystem/community/caliban",
         "ecosystem/community/distage",
+        "ecosystem/community/fhir-indexer",
         "ecosystem/community/logstage",
         "ecosystem/community/munit-zio",
-        "ecosystem/community/quill",
         "ecosystem/community/rezilience",
         "ecosystem/community/scala-k8s",
         "ecosystem/community/tamer",
         "ecosystem/community/tofu-zio2-logging",
         "ecosystem/community/tranzactio",
         "ecosystem/community/zio-amqp",
-        "ecosystem/community/zio-arrow",
-        "ecosystem/community/zio-aws-s3",
+        "ecosystem/community/zio-apache-parquet",
         "ecosystem/community/zio-grpc",
         "ecosystem/community/zio-k8s",
         "ecosystem/community/zio-kinesis",
+        "ecosystem/community/zio-nebula",
         "ecosystem/community/zio-pulsar",
-        "ecosystem/community/zio-saga",
         "ecosystem/community/zio-slick-interop",
         "ecosystem/community/zio-temporal",
         "ecosystem/community/zio-test-akka-http",

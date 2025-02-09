@@ -1,6 +1,6 @@
 package zio.test.sbt
 
-import sbt.testing.{EventHandler, Logger, Task, TaskDef}
+import sbt.testing.{EventHandler, Logger, Task, TaskDef, TestSelector}
 import zio.{CancelableFuture, Console, Scope, Trace, Unsafe, ZEnvironment, ZIO, ZIOAppArgs, ZLayer}
 import zio.test._
 
@@ -27,13 +27,17 @@ abstract class BaseTestTask[T](
 
   private[zio] def run(
     eventHandlerZ: ZTestEventHandler
-  )(implicit trace: Trace): ZIO[Any, Throwable, Unit] =
+  )(implicit trace: Trace): ZIO[Any, Throwable, Unit] = {
+    val fullArgs = searchTermsFromSelectors(taskDef(), spec.spec) match {
+      case Nil   => args
+      case terms => args.copy(testSearchTerms = args.testSearchTerms ++ terms)
+    }
     (for {
       summary <-
         spec.runSpecWithSharedRuntimeLayer(
           taskDef0.fullyQualifiedName(),
           spec.spec,
-          args,
+          fullArgs,
           runtime,
           eventHandlerZ,
           console
@@ -41,6 +45,32 @@ abstract class BaseTestTask[T](
       _ <- sendSummary.provideEnvironment(ZEnvironment(summary))
     } yield ())
       .provideLayer(sharedFilledTestLayer)
+  }
+
+  /**
+   * If this task def contains only `TestSelector`s, returns the search terms to
+   * add to the test arguments, so that only the test cases specified in the
+   * `TestSelector`s are executed. If this task def contains any other type of
+   * selector, no search terms are returned and the entire suite will be
+   * executed.
+   *
+   * @param td
+   *   The task def whose selectors to inspect.
+   * @param spec
+   *   The spec to filter.
+   * @return
+   *   The search term corresponding to the tests that are selected.
+   */
+  private def searchTermsFromSelectors(td: TaskDef, spec: Spec[_, _]): List[String] =
+    spec.caseValue match {
+      // Test events' names are prefixed with the top level label and a dash. We need to remove that prefix
+      // in order to create the appropriate search term.
+      case Spec.LabeledCase(label, _) if td.selectors().forall(_.isInstanceOf[TestSelector]) =>
+        val prefix = s"$label - "
+        val terms  = td.selectors().toList.collect { case ts: TestSelector => ts.testName().stripPrefix(prefix) }
+        terms
+      case _ => Nil
+    }
 
   override def execute(eventHandler: EventHandler, loggers: Array[Logger]): Array[Task] = {
     implicit val trace                    = Trace.empty

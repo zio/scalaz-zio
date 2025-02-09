@@ -10,24 +10,25 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
  * console during tests back into runnable code.
  */
 private[zio] object PrettyPrint extends PrettyPrintVersionSpecific {
+  private val maxListLength = 10
   def apply(any: Any): String =
     any match {
       case nonEmptyChunk: NonEmptyChunk[_] =>
-        nonEmptyChunk.map(PrettyPrint.apply).mkString("NonEmptyChunk(", ", ", ")")
+        prettyPrintIterator(nonEmptyChunk.iterator, nonEmptyChunk.size, "NonEmptyChunk")
       case chunk: Chunk[_] =>
-        chunk.map(PrettyPrint.apply).mkString("Chunk(", ", ", ")")
+        prettyPrintIterator(chunk.iterator, chunk.size, "Chunk")
       case array: Array[_] =>
-        array.map(PrettyPrint.apply).mkString("Array(", ", ", ")")
+        prettyPrintIterator(array.iterator, array.length, "Array")
 
       case Some(a) => s"Some(${PrettyPrint(a)})"
       case None    => s"None"
       case Nil     => "Nil"
 
       case set: Set[_] =>
-        set.map(PrettyPrint.apply).mkString(s"${className(set)}(", ", ", ")")
+        prettyPrintIterator(set.iterator, set.size, className(set))
 
       case iterable: Seq[_] =>
-        iterable.map(PrettyPrint.apply).mkString(s"${className(iterable)}(", ", ", ")")
+        prettyPrintIterator(iterable.iterator, iterable.size, className(iterable))
 
       case map: Map[_, _] =>
         val body = map.map { case (key, value) => s"${PrettyPrint(key)} -> ${PrettyPrint(value)}" }
@@ -61,6 +62,15 @@ ${indent(body.mkString(",\n"))}
 
       case other => other.toString
     }
+
+  private def prettyPrintIterator(iterator: Iterator[_], length: Int, className: String): String = {
+    val suffix = if (length > maxListLength) {
+      s" + ${length - maxListLength} more)"
+    } else {
+      ")"
+    }
+    iterator.take(maxListLength).map(PrettyPrint.apply).mkString(s"${className}(", ", ", suffix)
+  }
 
   private def indent(string: String, n: Int = 2): String =
     string.split("\n").map((" " * n) + _).mkString("\n")

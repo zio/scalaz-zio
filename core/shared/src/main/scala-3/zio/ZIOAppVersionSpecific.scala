@@ -3,7 +3,7 @@ package zio
 import scala.quoted._
 import zio.internal.TerminalRendering
 
-trait ZIOAppVersionSpecific {
+private[zio] transparent trait ZIOAppVersionSpecific {
 
   /**
    * This implicit conversion macro will ensure that the provided ZIO effect
@@ -17,12 +17,12 @@ trait ZIOAppVersionSpecific {
 
 }
 
-object ZIOAppVersionSpecificMacros {
+private[zio] object ZIOAppVersionSpecificMacros {
   def validate[Provided: Type, Required: Type, E: Type, A: Type](zio: Expr[ZIO[Required, E, A]])(using ctx: Quotes) =
     new ZIOAppVersionSpecificMacros(ctx).validate[Provided, Required, E, A](zio)
 }
 
-class ZIOAppVersionSpecificMacros(val ctx: Quotes) {
+private[zio] class ZIOAppVersionSpecificMacros(val ctx: Quotes) {
   given Quotes = ctx
   import ctx.reflect._
 
@@ -42,14 +42,12 @@ class ZIOAppVersionSpecificMacros(val ctx: Quotes) {
     zio.asInstanceOf[Expr[ZIO[Provided, E, A]]]
   }
 
-
-  def flattenAnd(typeRepr: TypeRepr): List[TypeRepr] = {
+  def flattenAnd(typeRepr: TypeRepr): List[TypeRepr] =
     typeRepr.dealias match {
       case AndType(left, right) =>
         flattenAnd(left) ++ flattenAnd(right)
       case _ =>
         List(typeRepr)
     }
-  }
 
 }

@@ -19,13 +19,19 @@ object SerializableSpec extends ZIOBaseSpec {
         returnCount <- returnSem.available
       } yield assert(returnCount)(equalTo(count))
     },
-    test("Clock is serializable") {
+    test("ClockLive is serializable") {
+      Live.live(ZIO.clock).flatMap(clockTest)
+    },
+    test("ClockJava is serializable") {
+      ZIO.succeed(Clock.ClockJava(java.time.Clock.systemUTC())).flatMap(clockTest)
+    },
+    test("System is serializable") {
       for {
-        clock       <- Live.live(ZIO.clock)
-        time1       <- Clock.nanoTime
-        returnClock <- serializeAndBack(clock)
-        time2       <- returnClock.nanoTime
-      } yield assert(time1)(isLessThanEqualTo(time2))
+        system    <- Live.live(ZIO.system)
+        props1    <- system.properties
+        returnSem <- serializeAndBack(system)
+        props2    <- returnSem.properties
+      } yield assert(props1)(equalTo(props2))
     },
     test("Queue is serializable") {
       for {
@@ -50,7 +56,7 @@ object SerializableSpec extends ZIOBaseSpec {
         v2                      <- returnQueue.take
       } yield assert(v1)(equalTo(10)) &&
         assert(v2)(equalTo(20))
-    } @@ exceptScala3,
+    },
     test("Ref is serializable") {
       val current = "This is some value"
       for {
@@ -68,10 +74,17 @@ object SerializableSpec extends ZIOBaseSpec {
       } yield assert(result)(equalTo(list))
     },
     test("ZIO is serializable") {
-      val v = ZIO.service[Int].map(_ + 1)
+      val v = ZIO.service[Int].map(_ + 1).provideEnvironment(ZEnvironment(9))
       for {
         returnZIO <- serializeAndBack(v)
-        computeV  <- returnZIO.provideEnvironment(ZEnvironment(9))
+        computeV  <- returnZIO
+      } yield assert(computeV)(equalTo(10))
+    } @@ exceptScala212,
+    test("ZEnvironment is serializable") {
+      val env = ZEnvironment(10)
+      for {
+        returnedEnv <- serializeAndBack(env)
+        computeV     = returnedEnv.get[Int]
       } yield assert(computeV)(equalTo(10))
     } @@ exceptScala212,
     test("FiberStatus is serializable") {
@@ -94,19 +107,19 @@ object SerializableSpec extends ZIOBaseSpec {
     testSync("Cause.die is serializable") {
       val cause = Cause.die(TestException("test"))
       assert(serializeAndDeserialize(cause))(equalTo(cause))
-    } @@ exceptScala3,
+    },
     testSync("Cause.fail is serializable") {
       val cause = Cause.fail("test")
       assert(serializeAndDeserialize(cause))(equalTo(cause))
-    } @@ exceptScala3,
+    },
     testSync("Cause.&& is serializable") {
       val cause = Cause.fail("test") && Cause.fail("Another test")
       assert(serializeAndDeserialize(cause))(equalTo(cause))
-    } @@ exceptScala3,
+    },
     testSync("Cause.++ is serializable") {
       val cause = Cause.fail("test") ++ Cause.fail("Another test")
       assert(serializeAndDeserialize(cause))(equalTo(cause))
-    } @@ exceptScala3,
+    },
     testSync("Exit.succeed is serializable") {
       val exit = Exit.succeed("test")
       assert(serializeAndDeserialize(exit))(equalTo(exit))
@@ -114,15 +127,15 @@ object SerializableSpec extends ZIOBaseSpec {
     testSync("Exit.fail is serializable") {
       val exit = Exit.fail("test")
       assert(serializeAndDeserialize(exit))(equalTo(exit))
-    } @@ exceptScala3,
+    },
     testSync("Exit.die is serializable") {
       val exit = Exit.die(TestException("test"))
       assert(serializeAndDeserialize(exit))(equalTo(exit))
-    } @@ exceptScala3,
+    },
     testSync("FiberFailure is serializable") {
       val failure = FiberFailure(Cause.fail("Uh oh"))
       assert(serializeAndDeserialize(failure))(equalTo(failure))
-    } @@ exceptScala3,
+    },
     testSync("InterruptStatus.interruptible is serializable") {
       val interruptStatus = InterruptStatus.interruptible
       assert(serializeAndDeserialize(interruptStatus))(equalTo(interruptStatus))
@@ -138,6 +151,7 @@ object SerializableSpec extends ZIOBaseSpec {
         value             <- promise.await
         deserialized      <- serializeAndBack(promise)
         deserializedValue <- deserialized.await
+        _                 <- deserialized.poll
       } yield assert(deserializedValue)(equalTo(value))
     },
     test("Schedule is serializable") {
@@ -146,7 +160,7 @@ object SerializableSpec extends ZIOBaseSpec {
         out1 <- ZIO.unit.repeat(schedule)
         out2 <- ZIO.unit.repeat(serializeAndDeserialize(schedule))
       } yield assert(out2)(equalTo(out1))
-    } @@ scala2Only,
+    },
     test("Chunk.single is serializable") {
       val chunk = Chunk.single(1)
       for {
@@ -176,7 +190,7 @@ object SerializableSpec extends ZIOBaseSpec {
       for {
         deserialized <- serializeAndBack(chunk)
       } yield assert(deserialized)(equalTo(chunk))
-    } @@ scala2Only,
+    },
     test("Chunk.fromIterable is serializable") {
       val chunk = Chunk.fromIterable(Vector(1, 2, 3))
       for {
@@ -209,6 +223,13 @@ object SerializableSpec extends ZIOBaseSpec {
       } yield assertTrue(nonEmptyChunk == result)
     }
   )
+
+  def clockTest(clock: Clock) =
+    for {
+      time1       <- clock.nanoTime
+      returnClock <- serializeAndBack(clock)
+      time2       <- returnClock.nanoTime
+    } yield assert(time1)(isLessThanEqualTo(time2))
 }
 
 object SerializableSpecHelpers {

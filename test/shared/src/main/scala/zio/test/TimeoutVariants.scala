@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ trait TimeoutVariants {
     duration: Duration
   )(implicit trace: Trace): ZTest[R, E] =
     test.raceWith(Live.withLive(showWarning(labels, duration))(_.delay(duration)))(
-      (result, fiber) => fiber.interrupt *> ZIO.done(result),
+      (result, fiber) => fiber.interrupt *> result,
       (_, fiber) => fiber.join
     )
 

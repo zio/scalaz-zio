@@ -7,7 +7,7 @@ ZIO provides a consistent interface across platforms to the maximum extent possi
 
 ## JVM
 
-ZIO supports Java versions 8 and above and Scala versions 2.12, 2.13, and 3.x.
+ZIO supports Java versions 11 and above and Scala versions 2.12, 2.13, and 3.x.
 
 On the JVM, effects may be executed on a blocking thread pool using methods like `ZIO.blocking` and `ZIO.attemptBlocking`. See the documentation on [Creating Effects](creating-effects.md) for further discussion on blocking operations.
 

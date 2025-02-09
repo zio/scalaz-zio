@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,20 @@ package zio
 import scala.annotation.experimental
 import scala.quoted.*
 
-trait IsReloadableVersionSpecific {
+private[zio] transparent trait IsReloadableVersionSpecific {
 
-  /** 
+  /**
    * Generates a proxy instance of the specified service.
    *
-   * @tparam A The type of the service.
-   * @param service The [[zio.ScopedRef]] containing the service for which a proxy is to be generated.
-   * @return A proxy instance of the service that forwards ZIO method calls to the underlying service
-   *         and allows the service to change its behavior at runtime.
+   * @tparam A
+   *   The type of the service.
+   * @param service
+   *   The [[zio.ScopedRef]] containing the service for which a proxy is to be
+   *   generated.
+   * @return
+   *   A proxy instance of the service that forwards ZIO method calls to the
+   *   underlying service and allows the service to change its behavior at
+   *   runtime.
    */
   @experimental
   inline given derived[A]: IsReloadable[A] = ${ IsReloadableMacros.derive[A] }
@@ -52,8 +57,8 @@ private object IsReloadableMacros {
     def nameAndReturnType(t: Tree): Option[(String, TypeTree)] =
       t match {
         case DefDef(name, _, tpt, _) => Some((name, tpt))
-        case ValDef(name, tpt, _) => Some((name, tpt))
-        case _ => None
+        case ValDef(name, tpt, _)    => Some((name, tpt))
+        case _                       => None
       }
 
     val tpe = TypeRepr.of[A]
@@ -84,7 +89,7 @@ private object IsReloadableMacros {
           unsupported("Primary constructor with non-empty parameters detected")
         }
 
-      case other => 
+      case other =>
         defect(s"Unexpected primary constructor tree: $other")
     }
 
@@ -116,14 +121,14 @@ private object IsReloadableMacros {
         }
       }.toList
 
-    val parents = 
+    val parents =
       if (tpe.typeSymbol.flags.is(Flags.Trait))
         TypeTree.of[Object] :: TypeTree.of[A] :: Nil
       else
         TypeTree.of[A] :: Nil
 
     val cls = Symbol.newClass(
-      parent = Symbol.spliceOwner ,  
+      parent = Symbol.spliceOwner,
       name = s"_ZIOProxy_${tpe.typeSymbol.name}",
       parents = parents.map(_.tpe),
       decls = forwarders,
@@ -137,14 +142,14 @@ private object IsReloadableMacros {
           Some((d.returnTpt, d.leadingTypeParams, d.termParamss))
         case v: ValDef =>
           Some((v.tpt, Nil, Nil))
-        case _ => 
+        case _ =>
           None
       }
 
     val trace = '{ summon[Trace] }.asTerm
     val body = cls.declarations.flatMap { member =>
       typeAndParams(member).flatMap { (tpt, typeParams, termParamss) =>
-        val body = 
+        val body =
           service.asTerm
             .select(TypeRepr.of[ScopedRef[_]].typeSymbol.methodMember("get").head)
             .appliedTo(trace)
@@ -154,9 +159,10 @@ private object IsReloadableMacros {
               Lambda(
                 owner = member,
                 tpe = MethodType("_$1" :: Nil)(_ => tpe :: Nil, _ => tpt.tpe),
-                rhsFn = { 
+                rhsFn = {
                   case (_, _$1 :: Nil) =>
-                    _$1.asInstanceOf[Term]
+                    _$1
+                      .asInstanceOf[Term]
                       .select(member)
                       .appliedToTypes(typeParams.map(_.symbol.typeRef))
                       .appliedToArgss(termParamss.map(_.params.map(p => Ident(p.symbol.termRef))))
@@ -178,7 +184,7 @@ private object IsReloadableMacros {
     }
 
     val clsDef = ClassDef(cls, parents, body = body)
-    val newCls = 
+    val newCls =
       Typed(
         New(TypeIdent(cls))
           .select(cls.primaryConstructor)

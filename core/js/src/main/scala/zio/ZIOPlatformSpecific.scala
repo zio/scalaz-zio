@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,4 +69,17 @@ private[zio] trait ZIOCompanionPlatformSpecific { self: ZIO.type =>
       }
       promise.`then`[Unit](onFulfilled, js.defined(onRejected))
     }
+
+  def writeFile(file: => String, content: => String)(implicit trace: Trace): ZIO[Any, Throwable, Unit] = {
+    import scalajs.js.Dynamic.{global => g}
+    val fs = g.require("fs")
+    ZIO.attemptBlocking(fs.writeFileSync(file, content))
+  }
+
+  def readFile(file: => String)(implicit trace: Trace): ZIO[Any, Throwable, String] = {
+    import scalajs.js.Dynamic.{global => g}
+    val fs = g.require("fs")
+    ZIO.attemptBlocking(fs.readFileSync(file).toString)
+  }
+
 }

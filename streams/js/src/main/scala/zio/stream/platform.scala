@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package zio.stream
 import zio._
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import scala.scalajs.js.typedarray._
 import scala.concurrent.Future
+import scala.scalajs.js
 
 private[stream] trait ZStreamPlatformSpecificConstructors {
   self: ZStream.type =>
@@ -72,7 +74,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] =
             ZChannel.unwrap(
               output.take
-                .flatMap(_.done)
+                .flatMap(_.exit)
                 .fold(
                   maybeError =>
                     ZChannel.fromZIO(output.shutdown) *>
@@ -113,7 +115,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
                  if (_)
                    Pull.end
                  else
-                   output.take.flatMap(_.done).onError(_ => done.set(true) *> output.shutdown)
+                   output.take.flatMap(_.exit).onError(_ => done.set(true) *> output.shutdown)
                }
       } yield pull
     }.flatMap(repeatZIOChunkOption(_))
@@ -142,7 +144,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
     } yield {
       lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] = ZChannel.unwrap(
         output.take
-          .flatMap(_.done)
+          .flatMap(_.exit)
           .fold(
             maybeError =>
               ZChannel.fromZIO(output.shutdown) *>
@@ -166,7 +168,34 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
   )(implicit trace: Trace): ZStream[R, E, A] =
     asyncInterrupt(k => register(k).toRight(ZIO.unit), outputBuffer)
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
+
+  def fromFile(file: => String, chunkSize: => Int = ZStream.DefaultChunkSize)(implicit
+    trace: Trace
+  ): ZStream[Any, Throwable, Byte] = {
+    import scalajs.js.Dynamic.{global => g}
+    val fs = g.require("fs")
+    val reader = fs.createReadStream(
+      file,
+      new js.Object {
+        val highWaterMark = chunkSize
+      }
+    )
+    ZStream.async[Any, Throwable, Byte] { cb =>
+      reader
+        .on(
+          "data",
+          (data: js.typedarray.ArrayBuffer) =>
+            cb(
+              ZIO.succeed(
+                Chunk.fromArray(new Int8Array(data).toArray)
+              )
+            )
+        )
+        .on("end", () => cb(Exit.failNone))
+        .on("error", (err: js.Dynamic) => cb(ZIO.fail(Some(new Throwable(err.toString)))))
+    }
+  }
 }
 
 private[stream] trait ZSinkPlatformSpecificConstructors

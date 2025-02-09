@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -280,7 +280,7 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
               releaseThat(e).exit
                 .flatMap(e1 =>
                   releaseSelf(e).exit
-                    .flatMap(e2 => ZIO.done(e1 *> e2))
+                    .flatMap(e2 => e1 *> e2)
                 ),
             b
           )
@@ -522,10 +522,10 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
                                innerReleaseMap
                                  .releaseAll(e, ExecutionStrategy.Sequential)
                                  .exit
-                                 .zipWith(cleanup(exitEA).provideEnvironment(r1).exit)((l, r) => ZIO.done(l *> r))
+                                 .zipWith(cleanup(exitEA).provideEnvironment(r1).exit)((l, r) => l *> r)
                                  .flatten
                              }
-          a <- ZIO.done(exitEA)
+          a <- exitEA
         } yield (releaseMapEntry, a)
       }
     }
@@ -551,11 +551,11 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
                                  .provideEnvironment(r1)
                                  .exit
                                  .zipWith(innerReleaseMap.releaseAll(e, ExecutionStrategy.Sequential).exit)((l, r) =>
-                                   ZIO.done(l *> r)
+                                   l *> r
                                  )
                                  .flatten
                              }
-          a <- ZIO.done(exitEA)
+          a <- exitEA
         } yield (releaseMapEntry, a)
       }
     }
@@ -642,7 +642,7 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
                           c =>
                             releaseMap
                               .releaseAll(Exit.fail(c), ExecutionStrategy.Sequential) *>
-                              ZIO.refailCause(c),
+                              Exit.failCause(c),
                           { case (release, a) =>
                             ZIO.succeed(
                               ZManaged {
@@ -832,22 +832,45 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
     )
 
   /**
-   * Extracts the optional value, or returns the given 'default'.
+   * Extracts the optional value, or returns the given 'default'. Superseded by
+   * `someOrElse` with better type inference. This method was left for binary
+   * compatibility.
    */
-  final def someOrElse[B](
+  protected final def someOrElse[B](
     default: => B
   )(implicit ev: A IsSubtypeOfOutput Option[B], trace: Trace): ZManaged[R, E, B] =
     map(a => ev(a).getOrElse(default))
 
   /**
-   * Extracts the optional value, or executes the effect 'default'.
+   * Extracts the optional value, or returns the given 'default'.
    */
-  final def someOrElseManaged[B, R1 <: R, E1 >: E](
+  final def someOrElse[B, C](
+    default: => C
+  )(implicit ev0: A IsSubtypeOfOutput Option[B], ev1: C <:< B, trace: Trace): ZManaged[R, E, B] =
+    map(a => ev0(a).getOrElse(default))
+
+  /**
+   * Extracts the optional value, or executes the effect 'default'. Superseded
+   * by `someOrElseManaged` with better type inference. This method was left for
+   * binary compatibility.
+   */
+  protected final def someOrElseManaged[B, R1 <: R, E1 >: E](
     default: => ZManaged[R1, E1, B]
   )(implicit ev: A IsSubtypeOfOutput Option[B], trace: Trace): ZManaged[R1, E1, B] =
     self.flatMap(ev(_) match {
       case Some(value) => ZManaged.succeed(value)
       case None        => default
+    })
+
+  /**
+   * Extracts the optional value, or executes the effect 'default'.
+   */
+  final def someOrElseManaged[B, R1 <: R, E1 >: E, C](
+    default: => ZManaged[R1, E1, C]
+  )(implicit ev0: A IsSubtypeOfOutput Option[B], ev1: C <:< B, trace: Trace): ZManaged[R1, E1, B] =
+    self.flatMap(ev0(_) match {
+      case Some(value) => ZManaged.succeed(value)
+      case None        => default.map(ev1)
     })
 
   /**
@@ -967,7 +990,7 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
           a <- raceResult match {
                  case Right(value) => ZIO.succeed(Some(value))
                  case Left(fiber) =>
-                   ZIO.fiberId.flatMap { id =>
+                   ZIO.fiberIdWith { id =>
                      fiber.interrupt
                        .ensuring(innerReleaseMap.releaseAll(Exit.interrupt(id), ExecutionStrategy.Sequential))
                        .forkDaemon
@@ -1502,7 +1525,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreach(fins: Iterable[(Long, Finalizer)]) { case (_, fin) =>
                           update(fin).apply(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAll(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllDiscard),
                       Exited(nextKey, exit, update)
                     )
 
@@ -1512,7 +1535,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
                           update(finalizer)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit)),
+                        .flatMap(Exit.collectAllParDiscard),
                       Exited(nextKey, exit, update)
                     )
 
@@ -1522,7 +1545,7 @@ object ZManaged extends ZManagedPlatformSpecific {
                         .foreachPar(fins: Iterable[(Long, Finalizer)]) { case (_, finalizer) =>
                           update(finalizer)(exit).exit
                         }
-                        .flatMap(results => ZIO.done(Exit.collectAllPar(results) getOrElse Exit.unit))
+                        .flatMap(Exit.collectAllParDiscard)
                         .withParallelism(n),
                       Exited(nextKey, exit, update)
                     )
@@ -1793,7 +1816,7 @@ object ZManaged extends ZManagedPlatformSpecific {
    * Returns an effect from a lazily evaluated [[zio.Exit]] value.
    */
   def done[E, A](r: => Exit[E, A])(implicit trace: Trace): ZManaged[Any, E, A] =
-    ZManaged.fromZIO(ZIO.done(r))
+    ZManaged.fromZIO(r)
 
   /**
    * Accesses the whole environment of the effect.
@@ -2047,7 +2070,7 @@ object ZManaged extends ZManagedPlatformSpecific {
   def fromAutoCloseable[R, E, A <: AutoCloseable](fa: => ZIO[R, E, A])(implicit
     trace: Trace
   ): ZManaged[R, E, A] =
-    acquireReleaseWith(fa)(a => ZIO.succeed(a.close()))
+    acquireReleaseWith(fa)(a => if (a eq null) ZIO.unit else ZIO.succeed(a.close()))
 
   /**
    * Lifts an `Either` into a `ZManaged` value.
@@ -2136,7 +2159,7 @@ object ZManaged extends ZManagedPlatformSpecific {
    * method.
    */
   def interrupt(implicit trace: Trace): ZManaged[Any, Nothing, Nothing] =
-    ZManaged.fromZIO(ZIO.descriptor).flatMap(d => failCause(Cause.interrupt(d.id)))
+    ZManaged.fromZIO(ZIO.fiberId).flatMap(id => failCause(Cause.interrupt(id)))
 
   /**
    * Returns an effect that is interrupted as if by the specified fiber.
@@ -2707,7 +2730,7 @@ object ZManaged extends ZManagedPlatformSpecific {
     ZManaged.unwrap(Supervisor.track(true).map { supervisor =>
       // Filter out the fiber id of whoever is calling this:
       ZManaged(
-        get(supervisor.value.flatMap(children => ZIO.descriptor.map(d => children.filter(_.id != d.id)))).zio
+        get(supervisor.value.flatMap(children => ZIO.fiberId.map(id => children.filter(_.id != id)))).zio
           .supervised(supervisor)
       )
     })

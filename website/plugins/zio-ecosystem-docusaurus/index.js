@@ -53,7 +53,7 @@ function zioEcosystemPlugin(context, options) {
                         items: items
                     };
                 }
-                var result = zioProjects
+                var result = oldStyledZioProjects
                     // If the sidebar is simple and doesn't have label
                     .filter(function (e) { return (require("@zio.dev/".concat(e.routeBasePath, "/").concat(e.sidebarPath)).sidebar[0] == "index"); })
                     .map(function (project) {
@@ -61,12 +61,11 @@ function zioEcosystemPlugin(context, options) {
                         .sidebar
                         .filter(function (e) { return e != "index"; })), "".concat(project.routeBasePath, "/"));
                 })
-                    .concat(zioProjects
+                    .concat(zioNpmProjects()
                     // If the sidebar has all the metadata including the label
                     .filter(function (e) {
-                    return require("@zio.dev/".concat(e.routeBasePath, "/").concat(e.sidebarPath)).sidebar[0].label !== undefined;
+                    return require("@zio.dev/".concat(e, "/sidebars.js")).sidebar[0].label !== undefined;
                 })
-                    .map(function (p) { return p.routeBasePath; })
                     .map(function (project) {
                     return mapConfig(require("@zio.dev/".concat(project, "/sidebars.js")).sidebar[0], "".concat(project, "/"));
                 }))
@@ -103,165 +102,10 @@ function copy(srcDir, destDir) {
         console.error(err);
     }
 }
-var zioProjects = [
-    {
-        name: 'Caliban Deriving',
-        routeBasePath: 'caliban-deriving',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Monix',
-        routeBasePath: 'interop-monix',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Izumi Reflect',
-        routeBasePath: 'izumi-reflect',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Actors',
-        routeBasePath: 'zio-actors',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Akka Cluster",
-        routeBasePath: 'zio-akka-cluster',
-        sidebarPath: 'sidebars.js'
-    },
+var oldStyledZioProjects = [
     {
         name: 'ZIO AWS',
         routeBasePath: 'zio-aws',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Cache",
-        routeBasePath: 'zio-cache',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO CLI",
-        routeBasePath: 'zio-cli',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Config",
-        routeBasePath: 'zio-config',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Constraintless",
-        routeBasePath: 'zio-constraintless',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Connect",
-        routeBasePath: 'zio-connect',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Crypto",
-        routeBasePath: 'zio-crypto',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Deriving",
-        routeBasePath: 'zio-deriving',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO DynamoDB",
-        routeBasePath: 'zio-dynamodb',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Flow',
-        routeBasePath: 'zio-flow',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO FTP',
-        routeBasePath: 'zio-ftp',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Insight',
-        routeBasePath: 'zio-insight',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Guava',
-        routeBasePath: 'zio-interop-guava',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Scalaz',
-        routeBasePath: 'zio-interop-scalaz',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Reactivestreams',
-        routeBasePath: 'zio-interop-reactivestreams',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Twitter',
-        routeBasePath: 'zio-interop-twitter',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO JDBC",
-        routeBasePath: 'zio-jdbc',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO JSON",
-        routeBasePath: 'zio-json',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Kafka',
-        routeBasePath: 'zio-kafka',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Keeper',
-        routeBasePath: 'zio-keeper',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Memberlist',
-        routeBasePath: 'zio-memberlist',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Meta',
-        routeBasePath: 'zio-meta',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Mock',
-        routeBasePath: 'zio-mock',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO NIO',
-        routeBasePath: 'zio-nio',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Optics',
-        routeBasePath: 'zio-optics',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Profiling',
-        routeBasePath: 'zio-profiling',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Lambda',
-        routeBasePath: 'zio-lambda',
         sidebarPath: 'sidebars.js'
     },
     {
@@ -270,43 +114,8 @@ var zioProjects = [
         sidebarPath: 'sidebars.js'
     },
     {
-        name: 'ZIO Parser',
-        routeBasePath: 'zio-parser',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Prelude',
-        routeBasePath: 'zio-prelude',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Process',
-        routeBasePath: 'zio-process',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Query',
-        routeBasePath: 'zio-query',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Quill',
-        routeBasePath: 'zio-quill',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Redis',
-        routeBasePath: 'zio-redis',
-        sidebarPath: 'sidebars.js'
-    },
-    {
         name: 'ZIO Rocksdb',
         routeBasePath: 'zio-rocksdb',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Schema',
-        routeBasePath: 'zio-schema',
         sidebarPath: 'sidebars.js'
     },
     {
@@ -315,53 +124,8 @@ var zioProjects = [
         sidebarPath: 'sidebars.js'
     },
     {
-        name: 'ZIO SQL',
-        routeBasePath: 'zio-sql',
-        sidebarPath: 'sidebars.js'
-    },
-    {
         name: 'ZIO SQS',
         routeBasePath: 'zio-sqs',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Telemetry',
-        routeBasePath: 'zio-telemetry',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Webhooks',
-        routeBasePath: 'zio-webhooks',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO SBT',
-        routeBasePath: 'zio-sbt',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Direct Style',
-        routeBasePath: 'zio-direct',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Logging',
-        routeBasePath: 'zio-logging',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO 2.x Interop Cats 3.x',
-        routeBasePath: 'zio2-interop-cats3',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO 2.x Interop Cats 2.x',
-        routeBasePath: 'zio2-interop-cats2',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO HTTP',
-        routeBasePath: 'zio-http',
         sidebarPath: 'sidebars.js'
     }
 ];

@@ -77,7 +77,7 @@ object FiberSpec extends ZIOBaseSpec {
           exit  <- shard(queue, 4, worker).exit
           _     <- queue.shutdown
         } yield assert(exit)(fails(equalTo("fail")))
-      } @@ nonFlaky,
+      } @@ exceptJS(nonFlaky),
       test("child becoming interruptible is interrupted due to auto-supervision of uninterruptible parent") {
         for {
           latch <- Promise.make[Nothing, Unit]
@@ -85,7 +85,7 @@ object FiberSpec extends ZIOBaseSpec {
           _     <- child.fork.uninterruptible
           _     <- latch.await
         } yield assertCompletes
-      } @@ zioTag(interruption) @@ nonFlaky,
+      } @@ zioTag(interruption) @@ exceptJS(nonFlaky),
       suite("roots")(
         test("dual roots") {
           def rootContains(f: Fiber.Runtime[_, _]): UIO[Boolean] =
@@ -144,7 +144,7 @@ object FiberSpec extends ZIOBaseSpec {
           _        <- Fiber.interruptAll(List(fiber2, fiber1))
           _        <- fiber2.await
         } yield assertCompletes
-      } @@ TestAspect.nonFlaky,
+      } @@ exceptJS(nonFlaky),
       test("await does not return until all fibers have completed execution") {
         for {
           ref   <- Ref.make(0)

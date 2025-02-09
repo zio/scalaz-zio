@@ -47,18 +47,49 @@ class SmartAssertMacros(val c: blackbox.Context) {
     case class Raw(ast: c.Tree, span: (Int, Int))                              extends AST
   }
 
-  case class AssertAST(name: String, tpes: List[Type] = List.empty, args: List[c.Tree] = List.empty)
+  case class AssertAST(
+    name: String,
+    tpes: List[Type] = List.empty,
+    args: List[c.Tree] = List.empty,
+    implicits: Boolean = false
+  ) {
+    def this(name: String, tpes: List[Type], args: List[c.Tree]) =
+      this(name, tpes, args, false)
+    def copy(name: String = name, tpes: List[Type] = tpes, args: List[c.Tree] = args): AssertAST =
+      AssertAST(name, tpes, args, implicits)
+  }
 
   object AssertAST {
-    def toTree(assertAST: AssertAST): c.Tree = assertAST match {
-      case AssertAST(name, List(), List()) =>
-        q"$SA.${TermName(name)}"
-      case AssertAST(name, List(), args) =>
-        q"$SA.${TermName(name)}(..$args)"
-      case AssertAST(name, tpes, List()) =>
-        q"$SA.${TermName(name)}[..$tpes]"
-      case AssertAST(name, tpes, args) =>
-        q"$SA.${TermName(name)}[..$tpes](..$args)"
+    def apply(name: String, tpes: List[Type], args: List[c.Tree]): AssertAST = AssertAST(name, tpes, args, false)
+
+    def toTree(assertAST: AssertAST): c.Tree = {
+      val implicits = q"import zio.test.internal.SmartAssertions.Implicits._"
+      if (assertAST.implicits)
+        assertAST match {
+          case AssertAST(name, List(), List(), _) =>
+            q"""{$implicits
+            $SA.${TermName(name)}}"""
+          case AssertAST(name, List(), args, _) =>
+            q"""{$implicits
+            $SA.${TermName(name)}(..$args)}"""
+          case AssertAST(name, tpes, List(), _) =>
+            q"""{$implicits
+            $SA.${TermName(name)}[..$tpes]}"""
+          case AssertAST(name, tpes, args, _) =>
+            q"""{$implicits
+            $SA.${TermName(name)}[..$tpes](..$args)}"""
+        }
+      else
+        assertAST match {
+          case AssertAST(name, List(), List(), _) =>
+            q"$SA.${TermName(name)}"
+          case AssertAST(name, List(), args, _) =>
+            q"$SA.${TermName(name)}(..$args)"
+          case AssertAST(name, tpes, List(), _) =>
+            q"$SA.${TermName(name)}[..$tpes]"
+          case AssertAST(name, tpes, args, _) =>
+            q"$SA.${TermName(name)}[..$tpes](..$args)"
+        }
     }
   }
 
@@ -94,6 +125,12 @@ class SmartAssertMacros(val c: blackbox.Context) {
       case AST.Method(lhs, lhsTpe, _, "interrupted", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[Exit[_, _]]] =>
         q"${parseAsAssertion(lhs)(start)} >>> $SA.asExitInterrupted.span($span)"
 
+      case AST.Method(lhs, lhsTpe, _, "success", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[scala.util.Try[_]]] =>
+        q"${parseAsAssertion(lhs)(start)} >>> $SA.asTrySuccess.span($span)"
+
+      case AST.Method(lhs, lhsTpe, _, "failure", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[scala.util.Try[_]]] =>
+        q"${parseAsAssertion(lhs)(start)} >>> $SA.asTryFailure.span($span)"
+
       case AST.Method(lhs, lhsTpe, _, "die", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[Cause[_]]] =>
         q"${parseAsAssertion(lhs)(start)} >>> $SA.asCauseDie.span($span)"
 
@@ -102,6 +139,9 @@ class SmartAssertMacros(val c: blackbox.Context) {
 
       case AST.Method(lhs, lhsTpe, _, "interrupted", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[Cause[_]]] =>
         q"${parseAsAssertion(lhs)(start)} >>> $SA.asCauseInterrupted.span($span)"
+
+      case AST.Method(lhs, lhsTpe, _, "cause", _, _, span) if lhsTpe <:< weakTypeOf[TestLens[Exit[_, _]]] =>
+        q"${parseAsAssertion(lhs)(start)} >>> $SA.asExitCause.span($span)"
 
       case _ =>
         start
@@ -198,24 +238,22 @@ class SmartAssertMacros(val c: blackbox.Context) {
   }
 
   def assertOne_impl(expr: Expr[Boolean]): c.Tree = {
-    val (stmts, tree) = expr.tree match {
-      case Block(others, expr) => (others, expr)
-      case other               => (List.empty, other)
+    val (stats, tree) = expr.tree match {
+      case Block(stats, expr) => (stats, expr)
+      case other              => (Nil, other)
     }
 
-    val (_, start, codeString) = text(tree)
-    implicit val pos           = PositionContext(start, codeString)
+    val (_, start, codeString)        = text(tree)
+    implicit val pos: PositionContext = PositionContext(start, codeString)
 
-    val parsed = parseExpr(tree)
-    val ast    = astToAssertion(parsed)
+    val parsed   = parseExpr(tree)
+    val ast      = astToAssertion(parsed)
+    val location = Some(s"${tree.pos.source.file.path}:${tree.pos.line}")
 
-    val block =
-      q"""
-..$stmts
-$TestResult($ast.withCode($codeString).withLocation)
-        """
-
-    block
+    q"""
+..$stats
+$TestResult($ast.withCode($codeString).meta(location = $location))
+"""
   }
 
   object UnwrapImplicit {
@@ -313,6 +351,50 @@ $TestResult($ast.withCode($codeString).withLocation)
   }
 
   object Matcher {
+
+    def tpesPriority(tpe: Type): Int =
+      tpe.typeSymbol.fullName match {
+        case "scala.Byte" | "java.lang.Byte"      => 0
+        case "scala.Short" | "java.lang.Short"    => 1
+        case "scala.Char" | "java.lang.Character" => 2
+        case "scala.Int" | "java.lang.Integer"    => 3
+        case "scala.Long" | "java.lang.Long"      => 4
+        case "scala.Float" | "java.lang.Float"    => 5
+        case "scala.Double" | "java.lang.Double"  => 6
+        case _                                    => -1
+      }
+
+    // `true` for conversion from `lhs` to `rhs`.
+    def implicitConversionDirection(lhs: Type, rhs: Type): Option[Boolean] =
+      if (tpesPriority(lhs) == -1 || tpesPriority(rhs) == -1) {
+        // tq"lhs => rhs" does not work. It seems to generate untyped tree that cannot be typechecked
+        val function1 = weakTypeOf[_ => _]
+        c.inferImplicitValue(appliedType(function1, lhs, rhs)) match {
+          case EmptyTree =>
+            c.inferImplicitValue(appliedType(function1, rhs, lhs)) match {
+              case EmptyTree => None
+              case _         => Some(false)
+            }
+          case _ => Some(true)
+        }
+      } else if (tpesPriority(rhs) - tpesPriority(lhs) > 0) Some(true)
+      else Some(false)
+
+    def needsImplicits(lhs: Type, rhs: Type) =
+      lhs.typeSymbol.fullName.contains("java.lang") || rhs.typeSymbol.fullName.contains("java.lang")
+
+    def comparisonConverter(lhsTpe: Type, args: List[c.Tree], methodName: String): AssertAST = {
+      val rhsTpe = args.head.tpe.widen
+      if (lhsTpe =:= rhsTpe)
+        AssertAST(methodName, List(lhsTpe), args)
+      else
+        implicitConversionDirection(lhsTpe, rhsTpe) match {
+          case Some(true)  => AssertAST(methodName ++ "L", List(lhsTpe, rhsTpe), args, needsImplicits(lhsTpe, rhsTpe))
+          case Some(false) => AssertAST(methodName ++ "R", List(lhsTpe, rhsTpe), args, needsImplicits(lhsTpe, rhsTpe))
+          case None        => AssertAST(methodName, List(lhsTpe), args, needsImplicits(lhsTpe, rhsTpe))
+        }
+    }
+
     def unapply(method: AST.Method): Option[(AST, AssertAST, (Int, Int))] =
       all.reduce(_ orElse _).unapply(method)
 
@@ -328,7 +410,7 @@ $TestResult($ast.withCode($codeString).withLocation)
 
     val equalTo: ASTConverter =
       ASTConverter.make { case AST.Method(_, lhsTpe, _, "$eq$eq", _, Some(args), _) =>
-        AssertAST("equalTo", List(lhsTpe), args)
+        comparisonConverter(lhsTpe, args, "equalTo")
       }
 
     val get: ASTConverter =
@@ -375,22 +457,22 @@ $TestResult($ast.withCode($codeString).withLocation)
 
     val greaterThan: ASTConverter =
       ASTConverter.make { case AST.Method(_, lhsTpe, _, "$greater", _, Some(args), _) =>
-        AssertAST("greaterThan", List(lhsTpe), args)
+        comparisonConverter(lhsTpe, args, "greaterThan")
       }
 
     val greaterThanOrEqualTo: ASTConverter =
       ASTConverter.make { case AST.Method(_, lhsTpe, _, "$greater$eq", _, Some(args), _) =>
-        AssertAST("greaterThanOrEqualTo", List(lhsTpe), args)
+        comparisonConverter(lhsTpe, args, "greaterThanOrEqualTo")
       }
 
     val lessThan: ASTConverter =
       ASTConverter.make { case AST.Method(_, lhsTpe, _, "$less", _, Some(args), _) =>
-        AssertAST("lessThan", List(lhsTpe), args)
+        comparisonConverter(lhsTpe, args, "lessThan")
       }
 
     val lessThanOrEqualTo: ASTConverter =
       ASTConverter.make { case AST.Method(_, lhsTpe, _, "$less$eq", _, Some(args), _) =>
-        AssertAST("lessThanOrEqualTo", List(lhsTpe), args)
+        comparisonConverter(lhsTpe, args, "lessThanOrEqualTo")
       }
 
     val head: ASTConverter =
@@ -438,7 +520,10 @@ $TestResult($ast.withCode($codeString).withLocation)
     val containsSeq: ASTConverter =
       ASTConverter.make {
         case AST.Method(_, lhsTpe, _, "contains", _, Some(args), _) if lhsTpe <:< weakTypeOf[Seq[_]] =>
-          AssertAST("containsSeq", args = args, tpes = List(args.head.tpe.dealias, lhsTpe.typeArgs.head.dealias))
+          if (args.head.tpe.dealias <:< lhsTpe.typeArgs.head.dealias)
+            AssertAST("containsSeq", args = args, tpes = List(args.head.tpe.dealias, lhsTpe.typeArgs.head.dealias))
+          else
+            AssertAST("containsSeq", args = args)
       }
 
     val containsOption: ASTConverter =

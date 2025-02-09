@@ -15,7 +15,7 @@ import java.util.concurrent.{RejectedExecutionException, TimeUnit}
 
 object ClockSpec extends ZIOBaseSpec {
   override def aspects: Chunk[TestAspectAtLeastR[TestEnvironment]] =
-    if (TestPlatform.isJVM) Chunk(TestAspect.timeout(180.seconds))
+    if (TestPlatform.isJVM || TestPlatform.isNative) Chunk(TestAspect.timeout(180.seconds))
     else Chunk(TestAspect.sequential, TestAspect.timeout(180.seconds))
 
   def spec =
@@ -27,7 +27,7 @@ object ClockSpec extends ZIOBaseSpec {
           _      <- adjust(11.hours)
           result <- ref.get
         } yield assert(result)(isTrue)
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("sleep delays effect until time is adjusted") {
         for {
           ref    <- Ref.make(false)
@@ -35,7 +35,7 @@ object ClockSpec extends ZIOBaseSpec {
           _      <- adjust(9.hours)
           result <- ref.get
         } yield assert(result)(isFalse)
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("sleep correctly handles multiple sleeps") {
         for {
           ref    <- Ref.make("")
@@ -44,7 +44,7 @@ object ClockSpec extends ZIOBaseSpec {
           _      <- adjust(4.hours)
           result <- ref.get
         } yield assert(result)(equalTo("Hello, World!"))
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("sleep correctly handles new set time") {
         for {
           ref    <- Ref.make(false)
@@ -52,7 +52,7 @@ object ClockSpec extends ZIOBaseSpec {
           _      <- setTime(Instant.EPOCH.plus(11.hours))
           result <- ref.get
         } yield assert(result)(isTrue)
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("adjust correctly advances nanotime") {
         for {
           time1 <- nanoTime
@@ -133,7 +133,7 @@ object ClockSpec extends ZIOBaseSpec {
           result <- fiber.join
         } yield result == None
         assertZIO(example)(isTrue)
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("recurrence example from TestClock documentation works correctly") {
         val example = for {
           q <- Queue.unbounded[Unit]
@@ -147,14 +147,14 @@ object ClockSpec extends ZIOBaseSpec {
           e <- q.poll.map(_.isEmpty)
         } yield a && b && c && d && e
         assertZIO(example)(isTrue)
-      } @@ forked @@ nonFlaky,
+      } @@ forked @@ exceptJS(nonFlaky),
       test("clock time is always 0 at the start of a test that repeats")(
         for {
           clockTime <- currentTime(TimeUnit.NANOSECONDS)
           _         <- sleep(2.nanos).fork
           _         <- adjust(3.nanos)
         } yield assert(clockTime)(equalTo(0.millis.toNanos))
-      ) @@ forked @@ nonFlaky(3),
+      ) @@ forked @@ exceptJS(nonFlaky(3)),
       test("TestClock interacts correctly with Scheduled.fixed") {
         for {
           latch    <- Promise.make[Nothing, Unit]
@@ -195,7 +195,7 @@ object ClockSpec extends ZIOBaseSpec {
         for {
           _ <- ZIO.unit raceFirst Clock.instant
         } yield assertCompletes
-      }.provideLayer(scopedExecutor) @@ nonFlaky
+      }.provideLayer(scopedExecutor) @@ exceptJS(nonFlaky)
     )
 
   class ScopedExecutor extends Executor {

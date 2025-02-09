@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2022-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,14 +204,8 @@ trait Metric[+Type, -In, +Out] extends ZIOAspect[Nothing, Any, Nothing, Any, Not
     new ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] {
       def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
         zio.foldCauseZIO(
-          cause => {
-            unsafe.update(in)(Unsafe.unsafe)
-            ZIO.refailCause(cause)
-          },
-          a => {
-            unsafe.update(in)(Unsafe.unsafe)
-            ZIO.succeed(a)
-          }
+          cause => update(in) *> Exit.failCause(cause),
+          a => update(in) *> ZIO.succeed(a)
         )
     }
 
@@ -230,11 +224,11 @@ trait Metric[+Type, -In, +Out] extends ZIOAspect[Nothing, Any, Nothing, Any, Not
    */
   final def trackDefectWith(f: Throwable => In): ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] =
     new ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] {
-      val updater: Throwable => Unit =
-        defect => unsafe.update(f(defect))(Unsafe.unsafe)
+      val updater: Throwable => UIO[Unit] =
+        defect => update(f(defect))
 
       def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-        zio.tapDefect(cause => ZIO.succeed(cause.defects.foreach(updater)))
+        zio.tapDefect(cause => ZIO.foreachDiscard(cause.defects)(updater))
     }
 
   /**
@@ -256,12 +250,11 @@ trait Metric[+Type, -In, +Out] extends ZIOAspect[Nothing, Any, Nothing, Any, Not
         ZIO.suspendSucceed {
           val startTime = java.lang.System.nanoTime()
 
-          zio.map { a =>
+          zio.tap { a =>
             val endTime  = java.lang.System.nanoTime()
             val duration = Duration.fromNanos(endTime - startTime)
 
-            unsafe.update(f(duration))(Unsafe.unsafe)
-            a
+            update(f(duration))
           }
         }
     }
@@ -398,7 +391,10 @@ object Metric {
     val fiberSuccesses = Metric.counter("zio_fiber_successes")
     val fiberFailures  = Metric.counter("zio_fiber_failures")
     val fiberLifetimes =
-      Metric.histogram("zio_fiber_lifetimes", MetricKeyType.Histogram.Boundaries.exponential(0.001, 2.0, 100))
+      Metric.histogram(
+        "zio_fiber_lifetimes",
+        MetricKeyType.Histogram.Boundaries.exponential(0.001, 2.0, 20)
+      ) // ~18 minutes
   }
 
   /**
@@ -429,13 +425,13 @@ object Metric {
    * A counter, which can be incremented by integers.
    */
   def counterInt(name: String): Counter[Int] =
-    counterDouble(name).contramap[Int](_.toInt)
+    counterDouble(name).contramap[Int](_.toDouble)
 
   /**
    * A counter, which can be incremented by integers.
    */
   def counterInt(name: String, description: String): Counter[Int] =
-    counterDouble(name, description).contramap[Int](_.toInt)
+    counterDouble(name, description).contramap[Int](_.toDouble)
 
   /**
    * A string histogram metric, which keeps track of the counts of different

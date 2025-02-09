@@ -17,7 +17,7 @@ title: "ZIO NebulaGraph"
 In order to use this library, we need to add the following line in our `build.sbt` file:
 
 ```scala
-libraryDependencies += "io.github.jxnu-liguobin" %% "zio-nebula" % <latest version>
+libraryDependencies += "io.github.jxnu-liguobin" %% "zio-nebula" % <version>
 ```
 
 There are the version correspondence between zio-nebula and nebula-java:
@@ -31,6 +31,7 @@ There are the version correspondence between zio-nebula and nebula-java:
 ## Example
 
 Usually, we use a session client, which can be conveniently used in ZIO applications like this:
+
 ```scala
 import zio._
 import zio.nebula._
@@ -83,7 +84,9 @@ object NebulaSessionClientMain extends ZIOAppDefault {
 
 }
 ```
+
 Add configuration in classpath:
+
 ```hocon
 {
   graph {

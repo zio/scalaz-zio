@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import zio.internal.WeakConcurrentBag
  *   } yield (a, b)
  * }}}
  */
-abstract class Fiber[+E, +A] { self =>
+sealed abstract class Fiber[+E, +A] { self =>
 
   /**
    * Same as `zip` but discards the output of the left hand side.
@@ -166,7 +166,7 @@ abstract class Fiber[+E, +A] { self =>
    *   `UIO[Exit, E, A]]`
    */
   final def interrupt(implicit trace: Trace): UIO[Exit[E, A]] =
-    ZIO.fiberId.flatMap(fiberId => self.interruptAs(fiberId))
+    ZIO.fiberIdWith(fiberId => self.interruptAs(fiberId))
 
   /**
    * Interrupts the fiber as if interrupted from the specified fiber. If the
@@ -255,7 +255,7 @@ abstract class Fiber[+E, +A] { self =>
       final def interruptAsFork(id: FiberId)(implicit trace: Trace): UIO[Unit] =
         self.interruptAsFork(id)
       final def poll(implicit trace: Trace): UIO[Option[Exit[E1, B]]] =
-        self.poll.flatMap(_.fold[UIO[Option[Exit[E1, B]]]](ZIO.succeed(None))(_.foreach(f).map(Some(_))))
+        self.poll.flatMap(_.fold[UIO[Option[Exit[E1, B]]]](Exit.none)(_.foreach(f).map(Some(_))))
     }
 
   /**
@@ -356,15 +356,15 @@ abstract class Fiber[+E, +A] { self =>
     ZIO.suspendSucceed {
       val p: scala.concurrent.Promise[A] = scala.concurrent.Promise[A]()
 
-      def failure(cause: Cause[E]): UIO[p.type] = ZIO.succeed(p.failure(cause.squashTraceWith(f)))
-      def success(value: A): UIO[p.type]        = ZIO.succeed(p.success(value))
+      def failure(cause: Cause[E]): UIO[p.type] = Exit.succeed(p.failure(cause.squashTraceWith(f)))
+      def success(value: A): UIO[p.type]        = Exit.succeed(p.success(value))
 
       val completeFuture =
-        self.await.flatMap(_.foldExitZIO[Any, Nothing, p.type](failure(_), success(_)))
+        self.await.flatMap(_.foldExitZIO[Any, Nothing, p.type](failure, success))
 
       for {
         runtime <- ZIO.runtime[Any]
-        _ <- completeFuture.forkDaemon // Cannot afford to NOT complete the promise, no matter what, so we fork daemon
+        _       <- completeFuture.forkDaemon // Cannot afford to NOT complete the promise, no matter what, so we fork daemon
       } yield new CancelableFuture[A](p.future) {
         def cancel(): Future[Exit[Throwable, A]] =
           runtime.unsafe.runToFuture[Nothing, Exit[Throwable, A]](self.interrupt.map(_.mapErrorExit(f)))(
@@ -477,6 +477,8 @@ object Fiber extends FiberPlatformSpecific {
    */
   sealed abstract class Runtime[+E, +A] extends Fiber.Internal[E, A] { self =>
 
+    private[zio] def shouldYieldBeforeFork(): Boolean
+
     /**
      * The location the fiber was forked from.
      */
@@ -519,6 +521,10 @@ object Fiber extends FiberPlatformSpecific {
       def getFiberRefs()(implicit unsafe: Unsafe): FiberRefs
 
       def removeObserver(observer: Exit[E, A] => Unit)(implicit unsafe: Unsafe): Unit
+
+      def poll(implicit unsafe: Unsafe): Option[Exit[E, A]]
+
+      def interrupt(cause: Cause[Nothing])(implicit unsafe: Unsafe): Unit = ()
     }
 
     /**
@@ -528,6 +534,7 @@ object Fiber extends FiberPlatformSpecific {
      * '''NOTE''': This method must be invoked by the fiber itself.
      */
     private[zio] def addChild(child: Fiber.Runtime[_, _]): Unit
+    private[zio] def addChildren(children: Iterable[Fiber.Runtime[_, _]]): Unit
 
     /**
      * Deletes the specified fiber ref.
@@ -535,6 +542,13 @@ object Fiber extends FiberPlatformSpecific {
      * '''NOTE''': This method must be invoked by the fiber itself.
      */
     private[zio] def deleteFiberRef(ref: FiberRef[_]): Unit
+
+    /**
+     * Generates a full stack trace from the reified stack.
+     *
+     * '''NOTE''': This method must be invoked by the fiber itself.
+     */
+    private[zio] def generateStackTrace(): StackTrace
 
     /**
      * Retrieves the current executor that effects are executed on.
@@ -555,13 +569,35 @@ object Fiber extends FiberPlatformSpecific {
     private[zio] def getFiberRef[A](fiberRef: FiberRef[A]): A
 
     /**
+     * Retrieves the state of the fiber ref, or `null` if it hasn't been
+     * modified.
+     *
+     * '''NOTE''': This method is safe to invoke on any fiber, but if not
+     * invoked on this fiber, then values derived from the fiber's state
+     * (including the log annotations and log level) may not be up-to-date.
+     */
+    private[zio] def getFiberRefOrNull[A](fiberRef: FiberRef[A]): A
+
+    /**
      * Retrieves all fiber refs of the fiber.
      *
      * '''NOTE''': This method is safe to invoke on any fiber, but if not
      * invoked on this fiber, then values derived from the fiber's state
      * (including the log annotations and log level) may not be up-to-date.
      */
-    private[zio] def getFiberRefs(): FiberRefs
+    private[zio] def getFiberRefs(): FiberRefs = getFiberRefs(true)
+
+    /**
+     * Retrieves all fiber refs of the fiber. If `updateRuntimeFlagsWithin` is
+     * set to `false`, the FiberRefs will ''not'' be updated with the Fiber's
+     * current runtime flags. This can help performance for cases that we don't
+     * need to extract the runtime flags from the FiberRefs.
+     *
+     * '''NOTE''': This method is safe to invoke on any fiber, but if not
+     * invoked on this fiber, then values derived from the fiber's state
+     * (including the log annotations and log level) may not be up-to-date.
+     */
+    private[zio] def getFiberRefs(updateRuntimeFlagsWithin: Boolean): FiberRefs
 
     /**
      * Retrieves the executor that this effect is currently executing on.
@@ -607,6 +643,13 @@ object Fiber extends FiberPlatformSpecific {
     private[zio] def setFiberRef[A](fiberRef: FiberRef[A], value: A): Unit
 
     /**
+     * Resets the fiber ref to its initial value.
+     *
+     * '''NOTE''': This method must be invoked by the fiber itself.
+     */
+    private[zio] def resetFiberRef(fiberRef: FiberRef[?]): Unit
+
+    /**
      * Wholesale replaces all fiber refs of this fiber.
      *
      * '''NOTE''': This method must be invoked by the fiber itself.
@@ -617,17 +660,31 @@ object Fiber extends FiberPlatformSpecific {
      * Adds a message to add a child to this fiber.
      */
     private[zio] def tellAddChild(child: Fiber.Runtime[_, _]): Unit
+    private[zio] def tellAddChildren(children: Iterable[Fiber.Runtime[_, _]]): Unit
 
     /**
      * Adds a message to interrupt this fiber.
      */
     private[zio] def tellInterrupt(cause: Cause[Nothing]): Unit
+
+    /**
+     * Transfers all children of this fiber that are currently running to the
+     * specified fiber scope
+     *
+     * '''NOTE''': This method must be invoked by the fiber itself after it has
+     * evaluated the effects but prior to exiting
+     */
+    private[zio] def transferChildren(scope: FiberScope): Unit
+
   }
 
   private[zio] object Runtime {
 
-    implicit def fiberOrdering[E, A]: Ordering[Fiber.Runtime[E, A]] =
-      Ordering.by[Fiber.Runtime[E, A], (Long, Long)](fiber => (fiber.id.startTimeMillis, fiber.id.id))
+    implicit val fiberOrdering: Ordering[Fiber.Runtime[?, ?]] = { (x, y) =>
+      val byTime = x.id.startTimeMillis.compare(y.id.startTimeMillis)
+      if (byTime == 0) x.id.id.compare(y.id.id)
+      else byTime
+    }
 
     abstract class Internal[+E, +A] extends Runtime[E, A]
   }
@@ -685,11 +742,11 @@ object Fiber extends FiberPlatformSpecific {
   }
 
   sealed trait Status { self =>
-    def isDone: Boolean = self match { case Status.Done => true; case _ => false }
+    def isDone: Boolean = self eq Status.Done
 
-    def isRunning: Boolean = self match { case _: Status.Running => true; case _ => false }
+    def isRunning: Boolean = self.isInstanceOf[Status.Running]
 
-    def isSuspended: Boolean = self match { case _: Status.Suspended => true; case _ => false }
+    def isSuspended: Boolean = self.isInstanceOf[Status.Suspended]
   }
   object Status {
     sealed trait Unfinished extends Status {
@@ -706,7 +763,7 @@ object Fiber extends FiberPlatformSpecific {
     final case class Running(runtimeFlags: RuntimeFlags, trace: Trace) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace == Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Running(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation})"
@@ -719,7 +776,7 @@ object Fiber extends FiberPlatformSpecific {
     ) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace == Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Suspended(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation}, ${blockingOn})"
@@ -870,7 +927,8 @@ object Fiber extends FiberPlatformSpecific {
     new Fiber.Synthetic[Throwable, A] {
       lazy val ftr: Future[A] = thunk
 
-      final def await(implicit trace: Trace): UIO[Exit[Throwable, A]] = ZIO.fromFuture(_ => ftr).exit
+      final def await(implicit trace: Trace): UIO[Exit[Throwable, A]] =
+        ZIO.suspend(ZIO.fromFutureNow(ftr)(trace, Unsafe.unsafe)).exit
 
       final def children(implicit trace: Trace): UIO[Chunk[Fiber.Runtime[_, _]]] = ZIO.succeed(Chunk.empty)
 
@@ -914,7 +972,7 @@ object Fiber extends FiberPlatformSpecific {
    *   `UIO[Unit]`
    */
   def interruptAll(fs: Iterable[Fiber[Any, Any]])(implicit trace: Trace): UIO[Unit] =
-    ZIO.fiberId.flatMap(interruptAllAs(_)(fs))
+    ZIO.fiberIdWith(interruptAllAs(_)(fs))
 
   /**
    * Interrupts all fibers as by the specified fiber, awaiting their
@@ -1005,5 +1063,6 @@ object Fiber extends FiberPlatformSpecific {
     new ThreadLocal[Fiber.Runtime[_, _]]()
 
   private[zio] val _roots: WeakConcurrentBag[Fiber.Runtime[_, _]] =
-    WeakConcurrentBag(10000, _.isAlive())
+    WeakConcurrentBag[Fiber.Runtime[_, _]](10000, _.isAlive())
+      .withAutoGc(5.seconds)
 }

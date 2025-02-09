@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ package zio.test.sbt
 
 import sbt.testing._
 import zio.test.{FilteredSpec, Summary, TestArgs, ZIOSpecAbstract}
-import zio.{Exit, Runtime, Scope, Trace, Unsafe, ZIO, ZLayer}
+import zio.{CancelableFuture, Runtime, Scope, Trace, Unsafe, ZIO}
 
-import scala.collection.mutable
+import java.util.concurrent.ConcurrentLinkedQueue
+import scala.concurrent.Await
+import scala.concurrent.duration.{Duration => SDuration}
 
 sealed abstract class ZTestRunnerNative(
   val args: Array[String],
@@ -33,27 +35,37 @@ sealed abstract class ZTestRunnerNative(
 
   def sendSummary: SendSummary
 
-  val summaries: mutable.Buffer[Summary] = mutable.Buffer.empty
+  val summaries: ConcurrentLinkedQueue[Summary] = new ConcurrentLinkedQueue
 
   def done(): String = {
-    val total  = summaries.map(_.total).sum
-    val ignore = summaries.map(_.ignore).sum
+    val log     = new StringBuilder
+    var summary = summaries.poll()
+    var total   = 0
+    var ignore  = 0
+    val isEmpty = summary eq null
 
-    if (summaries.isEmpty || total == ignore)
+    while (summary ne null) {
+      total += summary.total
+      ignore += summary.ignore
+      val details = summary.failureDetails
+      if (!details.isBlank) {
+        log append colored(details)
+        log append '\n'
+      }
+      summary = summaries.poll()
+    }
+
+    if (isEmpty || total == ignore)
       s"${Console.YELLOW}No tests were executed${Console.RESET}"
     else
-      summaries
-        .map(_.failureDetails)
-        .filter(_.nonEmpty)
-        .flatMap(s => colored(s) :: "\n" :: Nil)
-        .mkString("", "", "Done")
+      log.append("Done").result()
   }
 
   def tasks(defs: Array[TaskDef]): Array[Task] =
     defs.map(ZTestTask(_, testClassLoader, runnerType, sendSummary, TestArgs.parse(args)))
 
   override def receiveMessage(summary: String): Option[String] = {
-    SummaryProtocol.deserialize(summary).foreach(s => summaries += s)
+    SummaryProtocol.deserialize(summary).foreach(summaries.offer)
 
     None
   }
@@ -68,9 +80,9 @@ sealed abstract class ZTestRunnerNative(
 final class ZMasterTestRunner(args: Array[String], remoteArgs: Array[String], testClassLoader: ClassLoader)
     extends ZTestRunnerNative(args, remoteArgs, testClassLoader, "master") {
 
-  //This implementation seems to be used when there's only single spec to run
+  // This implementation seems to be used when there's only single spec to run
   override val sendSummary: SendSummary = SendSummary.fromSend { summary =>
-    summaries += summary
+    summaries.offer(summary)
     ()
   }
 
@@ -101,13 +113,13 @@ sealed class ZTestTask(
     ) {
 
   override def execute(eventHandler: EventHandler, loggers: Array[Logger]): Array[sbt.testing.Task] = {
-    val fiber = Runtime.default.unsafe.fork {
-      val logic =
+    var resOutter: CancelableFuture[Unit] = null
+    try {
+      resOutter = Runtime.default.unsafe.runToFuture {
         ZIO.consoleWith { console =>
           (for {
-            summary <- spec
-                         .runSpecAsApp(FilteredSpec(spec.spec, args), args, console)
-            _ <- sendSummary.provide(ZLayer.succeed(summary))
+            summary <- spec.runSpecAsApp(FilteredSpec(spec.spec, args), args, console)
+            _       <- sendSummary.provideSomeEnvironment[Any](_.add(summary))
             // TODO Confirm if/how these events needs to be handled in #6481
             //    Check XML behavior
             _ <- ZIO.when(summary.status == Summary.Failure) {
@@ -129,16 +141,19 @@ sealed class ZTestTask(
             .provideLayer(
               sharedFilledTestLayer +!+ (Scope.default >>> spec.bootstrap)
             )
+        }.mapError {
+          case t: Throwable => t
+          case other        => new RuntimeException(s"Unknown error during tests: $other")
         }
-      logic
-    }(Trace.empty, Unsafe.unsafe)
-    fiber.unsafe.addObserver { exit =>
-      exit match {
-        case Exit.Failure(cause) => Console.err.println(s"$runnerType failed. $cause")
-        case _                   =>
-      }
-    }(Unsafe.unsafe)
-    Array()
+      }(Trace.empty, Unsafe.unsafe)
+
+      Await.result(resOutter, SDuration.Inf)
+      Array()
+    } catch {
+      case t: Throwable =>
+        if (resOutter != null) resOutter.cancel()
+        throw t
+    }
   }
 }
 

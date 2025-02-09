@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2021-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,8 @@ private[zio] object Hub {
    * Constructs a new bounded hub with the requested capacity.
    */
   def bounded[A](requestedCapacity: Int): Hub[A] = {
-    assert(requestedCapacity > 0)
+    // NOTE: Do not use `assert` as the compiler removes it in releases
+    require(requestedCapacity > 0)
     if (requestedCapacity == 1) new BoundedHubSingle
     else if (nextPow2(requestedCapacity) == requestedCapacity) new BoundedHubPow2(requestedCapacity)
     else new BoundedHubArb(requestedCapacity)

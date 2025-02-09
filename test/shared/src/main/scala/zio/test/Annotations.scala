@@ -41,14 +41,14 @@ object Annotations {
     ): ZIO[R, TestFailure[E], TestSuccess] =
       zio.foldZIO(e => ref.get.map(e.annotated).flip, a => ref.get.map(a.annotated))
     def supervisedFibers(implicit trace: Trace): UIO[SortedSet[Fiber.Runtime[Any, Any]]] =
-      ZIO.descriptorWith { descriptor =>
+      ZIO.fiberIdWith { fiberId =>
         get(TestAnnotation.fibers).flatMap {
           case Left(_) => ZIO.succeed(SortedSet.empty[Fiber.Runtime[Any, Any]])
           case Right(refs) =>
             ZIO
               .foreach(refs)(ref => ZIO.succeed(ref.get))
               .map(_.foldLeft(SortedSet.empty[Fiber.Runtime[Any, Any]])(_ ++ _))
-              .map(_.filter(_.id != descriptor.id))
+              .map(_.filter(_.id != fiberId))
         }
       }
     private[zio] def unsafe: UnsafeAPI =

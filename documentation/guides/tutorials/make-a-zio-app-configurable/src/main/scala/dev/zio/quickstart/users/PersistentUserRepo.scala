@@ -1,6 +1,6 @@
 package dev.zio.quickstart.users
 
-import io.getquill.context.ZioJdbc.DataSourceLayer
+import io.getquill.jdbczio.Quill
 import io.getquill.{Escape, H2ZioJdbcContext}
 import zio._
 
@@ -18,12 +18,12 @@ case class PersistentUserRepo(ds: DataSource) extends UserRepo {
     for {
       id <- Random.nextUUID
       _ <- ctx.run {
-        quote {
-          query[UserTable].insertValue {
-            lift(UserTable(id, user.name, user.age))
-          }
-        }
-      }
+             quote {
+               query[UserTable].insertValue {
+                 lift(UserTable(id, user.name, user.age))
+               }
+             }
+           }
     } yield id.toString
   }.provide(ZLayer.succeed(ds))
 
@@ -34,18 +34,21 @@ case class PersistentUserRepo(ds: DataSource) extends UserRepo {
           .filter(p => p.uuid == lift(UUID.fromString(id)))
           .map(u => User(u.name, u.age))
       }
-    }.provide(ZLayer.succeed(ds)).map(_.headOption)
+    }
+      .provide(ZLayer.succeed(ds))
+      .map(_.headOption)
 
   override def users: Task[List[User]] =
     ctx.run {
       quote {
         query[UserTable].map(u => User(u.name, u.age))
       }
-    }.provide(ZLayer.succeed(ds))
+    }
+      .provide(ZLayer.succeed(ds))
 }
 
 object PersistentUserRepo {
   def layer: ZLayer[Any, Throwable, PersistentUserRepo] =
-    DataSourceLayer.fromPrefix("UserApp") >>>
+    Quill.DataSource.fromPrefix("UserApp") >>>
       ZLayer.fromFunction(PersistentUserRepo(_))
 }

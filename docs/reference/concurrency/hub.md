@@ -244,17 +244,17 @@ trait ZStream[-R, +E, +O] {
 
 The hub will be constructed with the `bounded` constructor using the specified capacity.
 
-If you want to send values emitted by a stream to an existing hub or a hub created using one of the other hub constructors you can use the `intoHub` operator.
+If you want to send values emitted by a stream to an existing hub or a hub created using one of the other hub constructors you can use the `runIntoHub` operator.
 
 ```scala mdoc:nest
 trait ZStream[-R, +E, +O] {
-  def intoHub[E1 >: E, O1 >: O](
-    hub: Hub[Take[E1, O1]]
+  def runIntoHub[E1 >: E, O1 >: O](
+    hub: => Hub[Take[E1, O1]]
   ): ZIO[R, E1, Unit]
 }
 ```
 
-There is an `intoHubScoped` variant of this if you want to send values to the hub in the context of a `Scope`.
+There is an `runIntoHubScoped` variant of this if you want to send values to the hub in the context of a `Scope`.
 
 Here is the example above adapted to publish values from a stream to the hub:
 

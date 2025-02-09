@@ -383,7 +383,28 @@ object TestAspectSpec extends ZIOBaseSpec {
       for {
         value <- ZIO.config(Config.string("key"))
       } yield assertTrue(value == "value")
-    } @@ withConfigProvider(ConfigProvider.fromMap(Map("key" -> "value")))
+    } @@ withConfigProvider(ConfigProvider.fromMap(Map("key" -> "value"))),
+    suite("checks")(
+      test("runs aspect for every check sample") {
+        check(Gen.int)(_ => assertCompletesZIO) *>
+          checksCounter.get.map(assert(_)(equalTo((3, 3))))
+      } @@ samples(3) @@ checks(checksCounterAspect),
+      test("can interact with services in the environment") {
+        check(Gen.int) { n =>
+          for {
+            service <- ZIO.service[CounterService]
+            _       <- service.increment(n)
+            m       <- service.get
+          } yield assert(m)(equalTo(n))
+        }
+      }
+        .@@(checksZIO(resetCounterServiceAspect))
+        .provide(CounterService.live),
+      test("can combine multiple aspects") {
+        check(Gen.int)(_ => assertCompletesZIO) *>
+          checksCounter.get.map(assert(_)(equalTo((6, 6))))
+      } @@ samples(3) @@ checks(checksCounterAspect) @@ checks(checksCounterAspect)
+    ) @@ sequential @@ after(resetChecksCounter)
   )
 
   def diesWithSubtypeOf[E](implicit ct: ClassTag[E]): TestFailure[E] => Boolean =
@@ -404,4 +425,41 @@ object TestAspectSpec extends ZIOBaseSpec {
     )
 
   val seed = -1157790455010312737L
+
+  val checksCounter = Unsafe.unsafe(implicit u => FiberRef.unsafe.make((0, 0)))
+
+  val resetChecksCounter = checksCounter.set((0, 0))
+
+  val checksCounterAspect = new ZIOAspect[Nothing, Any, Nothing, Any, Nothing, Any] {
+    def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      ZIO
+        .acquireReleaseWith(
+          checksCounter.update { case (before, after) => (before + 1, after) }
+        )(_ => checksCounter.update { case (before, after) => (before, after + 1) })(_ => zio)
+  }
+
+  trait CounterService {
+    def get: UIO[Int]
+    def increment(amount: Int): UIO[Unit]
+    def reset: UIO[Unit]
+  }
+
+  object CounterService {
+    val live: ULayer[CounterService] = ZLayer {
+      for {
+        ref <- Ref.make[Int](0)
+      } yield new CounterService {
+        def get: UIO[Int]                     = ref.get
+        def increment(amount: Int): UIO[Unit] = ref.update(_ + amount)
+        def reset: UIO[Unit]                  = ref.set(0)
+      }
+    }
+  }
+
+  val resetCounterServiceAspect = ZIO.serviceWith[CounterService] { cs =>
+    new TestAspect.CheckAspect {
+      def apply[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace) =
+        zio <* cs.reset
+    }
+  }
 }

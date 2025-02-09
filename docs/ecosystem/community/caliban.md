@@ -18,36 +18,32 @@ Key features of Caliban
 In order to use this library, we need to add the following line in our `build.sbt` file:
 
 ```scala
-libraryDependencies += "com.github.ghostdogpr" %% "caliban" % "1.1.0"
+libraryDependencies += "com.github.ghostdogpr" %% "caliban"       % "2.8.1"
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-quick" % "2.8.1" // Optional: HTTP routes via ZIO HTTP
 ```
 
-Caliban also have lots of optional modules to inter-operate with other various libraries:
+Caliban also have lots of optional modules to interoperate with other various libraries:
 
 ```scala
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-http4s"     % "1.1.0" // routes for http4s
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-akka-http"  % "1.1.0" // routes for akka-http
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-play"       % "1.1.0" // routes for play
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-finch"      % "1.1.0" // routes for finch
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-zio-http"   % "1.1.0" // routes for zio-http
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-cats"       % "1.1.0" // interop with cats effect
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-monix"      % "1.1.0" // interop with monix
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-tapir"      % "1.1.0" // interop with tapir
-libraryDependencies += "com.github.ghostdogpr" %% "caliban-federation" % "1.1.0" // interop with apollo federation
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-http4s"     % "2.8.1" // routes for http4s
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-akka-http"  % "2.8.1" // routes for akka-http
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-play"       % "2.8.1" // routes for play
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-finch"      % "2.8.1" // routes for finch
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-cats"       % "2.8.1" // interop with cats effect
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-monix"      % "2.8.1" // interop with monix
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-tapir"      % "2.8.1" // interop with tapir
+libraryDependencies += "com.github.ghostdogpr" %% "caliban-federation" % "2.8.1" // interop with apollo federation
 ```
 
 ## Example
 
 First, to define Caliban API, we should define data models using case classes and ADTs. Then the Caliban can derive the whole GraphQL schema from these data models:
 
-```scala modc:silent:nest
-import caliban.GraphQL.graphQL
+```scala
+import caliban._
+import caliban.quick._
+import caliban.schema.{Schema, ArgBuilder}
 import caliban.schema.Annotations.GQLDescription
-import caliban.{RootResolver, ZHttpAdapter}
-import zhttp.http._
-import zhttp.service.Server
-import zio.{ExitCode, ZEnv, ZIO}
-
-import scala.language.postfixOps
 
 sealed trait Role
 
@@ -71,7 +67,10 @@ case class Queries(
     @GQLDescription("Find an employee by its name")
     employee: EmployeeArgs => Option[Employee]
 )
-object CalibanExample extends zio.App {
+
+object CalibanExample extends zio.ZIOAppDefault {
+  import ArgBuilder.auto._
+  import Schema.auto._
 
   val employees = List(
     Employee("Alex", Role.DevOps),
@@ -82,28 +81,19 @@ object CalibanExample extends zio.App {
     Employee("Roberta", Role.DevOps)
   )
 
-  val myApp = for {
-    interpreter <- graphQL(
+  override def run =
+    graphQL(
       RootResolver(
         Queries(
           args => employees.filter(e => args.role == e.role),
           args => employees.find(e => e.name == args.name)
         )
       )
-    ).interpreter
-    _ <- Server
-      .start(
-        port = 8088,
-        http = Http.route { case _ -> Root / "api" / "graphql" =>
-          ZHttpAdapter.makeHttpService(interpreter)
-        }
-      )
-      .forever
-  } yield ()
-
-  override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
-    myApp.exitCode
-
+    ).runServer(
+      port = 8088,
+      apiPath = "/api/graphql",
+      graphiqlPath = Some("/api/graphiql"),
+    )
 }
 ```
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package zio.test
 import zio.{Tag, URIO, ZIO, ZLayer}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.Trace
+import zio.ZIOAspect
 
 /**
  * The `TestConfig` service provides access to default configuration settings
@@ -48,28 +49,70 @@ trait TestConfig extends Serializable {
    * The maximum number of shrinkings to minimize large failures
    */
   def shrinks: Int
+
+  /**
+   * Aspect that should be applied to each check sample.
+   *
+   * NOTE: default implementation for backward compatibility. Remove in next
+   * major version.
+   */
+  def checkAspect: TestAspect.CheckAspect = ZIOAspect.identity
 }
 
 object TestConfig {
 
   val tag: Tag[TestConfig] = Tag[TestConfig]
 
+  @deprecated("use TestV2", "2.1.8")
   final case class Test(repeats: Int, retries: Int, samples: Int, shrinks: Int) extends TestConfig
+
+  final case class TestV2(
+    repeats: Int,
+    retries: Int,
+    samples: Int,
+    shrinks: Int,
+    override val checkAspect: TestAspect.CheckAspect
+  ) extends TestConfig
 
   /**
    * Constructs a new `TestConfig` with the default settings.
    */
   val default: ZLayer[Any, Nothing, TestConfig] =
-    live(100, 100, 200, 1000)(Trace.empty)
+    live(100, 100, 200, 1000, ZIOAspect.identity)(Trace.empty)
 
   /**
    * Constructs a new `TestConfig` service with the specified settings.
    */
-  def live(repeats: Int, retries: Int, samples: Int, shrinks: Int)(implicit
+  def live(
+    repeats: Int,
+    retries: Int,
+    samples: Int,
+    shrinks: Int
+  )(implicit
     trace: Trace
   ): ZLayer[Any, Nothing, TestConfig] =
     ZLayer.scoped {
-      val testConfig = Test(repeats, retries, samples, shrinks)
+      val testConfig = TestV2(repeats, retries, samples, shrinks, ZIOAspect.identity)
+      withTestConfigScoped(testConfig).as(testConfig)
+    }
+
+  /**
+   * Constructs a new `TestConfig` service with the specified settings.
+   *
+   * Note: manual overload instead of default argument for binary compatibility.
+   * Remove in next major version.
+   */
+  def live(
+    repeats: Int,
+    retries: Int,
+    samples: Int,
+    shrinks: Int,
+    checkAspect: TestAspect.CheckAspect
+  )(implicit
+    trace: Trace
+  ): ZLayer[Any, Nothing, TestConfig] =
+    ZLayer.scoped {
+      val testConfig = TestV2(repeats, retries, samples, shrinks, checkAspect)
       withTestConfigScoped(testConfig).as(testConfig)
     }
 
@@ -96,4 +139,10 @@ object TestConfig {
    */
   def shrinks(implicit trace: Trace): URIO[Any, Int] =
     testConfigWith(testConfig => ZIO.succeed(testConfig.shrinks))
+
+  /**
+   * Action that should be performed on each check sample.
+   */
+  def checkAspect(implicit trace: Trace): URIO[Any, TestAspect.CheckAspect] =
+    testConfigWith(testConfig => ZIO.succeed(testConfig.checkAspect))
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package zio.stm
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
+import zio.stm.ZSTM.RetryException
 import zio.stm.ZSTM.internal._
 import zio.{Chunk, ChunkBuilder, NonEmptyChunk, Unsafe}
 
@@ -28,6 +29,11 @@ final class TMap[K, V] private (
   private val tBuckets: TRef[TArray[List[(K, V)]]],
   private val tSize: TRef[Int]
 ) {
+
+  /**
+   * Lock used to avoid contention when resizing the array.
+   */
+  private[this] val resizeLock: ZSTMLockSupport.Lock = ZSTMLockSupport.Lock()
 
   /**
    * Tests whether or not map contains a key.
@@ -267,8 +273,17 @@ final class TMap[K, V] private (
 
         tSize.unsafeSet(journal, newSize)
 
-        if (capacity * TMap.LoadFactor < newSize) resize(journal, buckets)
-        else {
+        if (capacity * TMap.LoadFactor < newSize) {
+
+          /**
+           * Avoid contention of multiple threads all trying to resize the array
+           * by retrying if another thread is already resizing it
+           */
+          val acquired = ZSTMLockSupport.tryLock(resizeLock) {
+            resize(journal, buckets)
+          }
+          if (!acquired) throw RetryException
+        } else {
           val newBucket = (k, v) :: bucket
           buckets.array(idx).unsafeSet(journal, newBucket)
         }
@@ -511,8 +526,9 @@ final class TMap[K, V] private (
   /**
    * Collects all bindings into a map.
    */
-  def toMap: USTM[Map[K, V]] =
-    fold(Map.empty[K, V])(_ + _)
+  def toMap: USTM[Map[K, V]] = ZSTM.suspend {
+    fold(Map.newBuilder[K, V])(_ += _).map(_.result())
+  }
 
   /**
    * Atomically updates all bindings using a pure function.

@@ -122,6 +122,14 @@ object JavaSpec extends ZIOBaseSpec {
       test("return a `CompletableFuture` that produces the value from `IO`") {
         val someIO = ZIO.succeed[Int](42)
         assertZIO(someIO.toCompletableFuture.map(_.get()))(equalTo(42))
+      },
+      test("return a `CompletableFuture` immediately") {
+        for {
+          promise <- Promise.make[Nothing, Int]
+          future  <- promise.await.toCompletableFuture
+          _       <- promise.succeed(42)
+          value   <- ZIO.succeedBlocking(future.get())
+        } yield assertTrue(value == 42)
       }
     ) @@ zioTag(future),
     suite("`ZIO.toCompletableFutureE` must")(
@@ -218,6 +226,16 @@ object JavaSpec extends ZIOBaseSpec {
           succeeds[(Integer, (Integer, List[Byte]))](equalTo((Integer.valueOf(1), (Integer.valueOf(1), list))))
         )
       }
-    ) @@ zioTag(future) @@ TestAspect.unix
+    ) @@ zioTag(future) @@ TestAspect.unix,
+    suite("`ZIO.fromNullable` must")(
+      test("succeed when value is not null") {
+        val value = "123"
+        assertZIO(ZIO.fromNullable(value))(equalTo("123"))
+      },
+      test("fail when value is null") {
+        val value: String = null
+        assertZIO(ZIO.fromNullable(value).exit)(failsWithA[None.type])
+      }
+    )
   )
 }

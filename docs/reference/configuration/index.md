@@ -17,7 +17,7 @@ To make our application configurable, we should know about three essential eleme
 
 1. **Config Description**— To describe configuration data of type `A`, we should create an instance of `Config[A]`. If the configuration data is simple (such as `string`, `string`, `boolean`), we can use built-in configs inside companion object of `Config` data type. By combining primitive configs, we can model custom data types such as `HostPort`.
 
-2. **Config Front-end**— By using `ZIO.config` we can load configuration data described by `Config`. It takes a `Config[A]` instance and loads the config using the current `ConfigProvider`.
+2. **Config Front-end**— By using `ZIO.config` we can load configuration data described by `Config`. It takes a `Config[A]` instance or expect implicit `Config[A]` and loads the config using the current `ConfigProvider`.
 
 3. **Config Backend**— `ConfigProvider` is the underlying engine that `ZIO.config` uses to load configs. ZIO has a default config provider inside its default services. The default config provider reads configuration data from environment variables and if not found, from system properties. To change the default config provider, we can use `Runtime.setConfigProvider` layer to configure the ZIO runtime to use a custom config provider.
 
@@ -44,6 +44,10 @@ object MainApp extends ZIOAppDefault {
   }
 }
 ```
+
+:::note
+Use `ZIO.config(config: A)` overload for primitive data types instead of `ZIO.config[A]` to avoid potential implicit conflicts.
+:::
 
 If we run this application we will get the following output:
 
@@ -81,13 +85,13 @@ Let's say we have the `HostPort` data type, which consists of two fields: `host`
 case class HostPort(host: String, port: Int)
 ```
 
-We can define a config for this data type by combining primitive `string` and `int` configs:
+We can define implicit config for this data type by combining primitive `string` and `int` configs:
 
 ```scala mdoc:silent
 import zio._
 
 object HostPort {
-  val config: Config[HostPort] =
+  implicit val config: Config[HostPort] =
     (Config.string("host") ++ Config.int("port")).map { case (host, port) =>
       HostPort(host, port)
     }
@@ -95,14 +99,14 @@ object HostPort {
 ```
 
 :::note
-The best practice is to put the `Config` value in the companion object of the configuration data type and call it `config`.
+The best practice is to put the implicit `Config` value in the companion object of the configuration data type and call it `config`.
 :::
 
 If we use this customized config in our application, it tries to read corresponding values from environment variables (`HOST` and `PORT`) and system properties (`host` and `port`):
 
 ```scala mdoc:compile-only
 for {
-  config <- ZIO.config(HostPort.config)
+  config <- ZIO.config[HostPort]
   _      <- Console.printLine(s"Application started: $config")
 } yield ()
 ```
@@ -115,7 +119,7 @@ Now let's assume we want to have multiple `HostPort` configurations. We can defi
 case class HostPorts(hostPorts: List[HostPort])
 
 object HostPorts {
-  val config: Config[HostPorts] =
+  implicit val config: Config[HostPorts] =
     Config.listOf(HostPort.config).map(HostPorts(_))
 }
 ```
@@ -124,7 +128,7 @@ Then we can use this config in our application:
 
 ```scala mdoc:silent
 for {
-  config <- ZIO.config(HostPorts.config)
+  config <- ZIO.config[HostPorts]
   _      <- Console.printLine(s"Application started with:")
   _      <- ZIO.foreachDiscard(config.hostPorts)(e => Console.printLine(s"  - http://${e.host}:${e.port}"))
 } yield ()
@@ -161,7 +165,7 @@ Let's define a config for this type in its companion object:
 import zio._
 
 object ServiceConfig {
-  val config: Config[ServiceConfig] =
+  implicit val config: Config[ServiceConfig] =
     (HostPort.config ++ Config.int("timeout")).map {
       case (a, b) => ServiceConfig(a, b)
     }
@@ -174,7 +178,7 @@ But in most circumstances, we don't want to read all the configurations from the
 
 ```diff
 object ServiceConfig {
-  val config: Config[ServiceConfig] =
+  implicit val config: Config[ServiceConfig] =
 -    (HostPort.config ++ Config.int("timeout")).map {
 +    (HostPort.config.nested("hostport") ++ Config.int("timeout")).map {
       case (a, b) => ServiceConfig(a, b)

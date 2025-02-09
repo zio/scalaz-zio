@@ -3,7 +3,9 @@ id: index
 title: "ZIO Ecosystem"
 ---
 
-We have two categories of libraries: official and community. [Official libraries](officials/index.md) are maintained by the ZIO team under the [ZIO Organization](https://github.com/zio), while [community libraries](community/index.md) are maintained by the ZIO community members.
+We have two categories of libraries: official and community.    
+[Official libraries](officials/index.md) are maintained by the ZIO team under the [ZIO Organization](https://github.com/zio).   
+[Community libraries](community/index.md) are maintained by the ZIO community members.
 
 ## ZIO Compatible Libraries
 

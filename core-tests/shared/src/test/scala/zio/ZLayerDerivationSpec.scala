@@ -61,7 +61,21 @@ object ZLayerDerivationSpec extends ZIOBaseSpec {
         p.a == 2,
         p.b == "one"
       )
-    )
+    ),
+    test("type parameters") {
+      def run[A: Tag](value: A) = {
+
+        val provideA: ZLayer[Any, Any, A]        = ZLayer.succeed(value)
+        val anotherLayer: ZLayer[Any, Any, Unit] = ZLayer.succeed(())
+
+        (for {
+          _ <- ZIO.service[A]
+        } yield ()).provide(provideA, anotherLayer)
+      }
+
+      run[String]("test")
+        .as(assertTrue(true))
+    }
   ).provide(
     derivedZero,
     derivedOne,

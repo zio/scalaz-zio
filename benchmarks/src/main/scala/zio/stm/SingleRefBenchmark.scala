@@ -9,31 +9,37 @@ import java.util.concurrent.TimeUnit
 @State(JScope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Measurement(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 10)
-@Warmup(iterations = 15, timeUnit = TimeUnit.SECONDS, time = 10)
-@Fork(1)
+@Warmup(iterations = 5, timeUnit = TimeUnit.SECONDS, time = 1)
+@Measurement(iterations = 4, timeUnit = TimeUnit.SECONDS, time = 1)
+@Fork(4)
 class SingleRefBenchmark {
-  @Param(Array("10"))
+
+  @Param(Array("1", "10"))
+  var nSTM: Int = _
+
+  @Param(Array("2", "10"))
   var fibers: Int = _
 
-  @Param(Array("1000"))
-  var ops: Int = _
+  val ops: Int = 1000
 
   @Benchmark
   def refContention(): Unit =
-    unsafeRun(for {
-      ref   <- Ref.make(0)
-      fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(ref.update(_ + 1))))
-      _     <- fiber.join
-    } yield ())
+    unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
+      for {
+        ref   <- Ref.make(0)
+        fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(ref.update(_ + 1))))
+        _     <- fiber.join
+      } yield ()
+    })
 
   @Benchmark
   def trefContention(): Unit =
-    Unsafe.unsafe { implicit unsafe =>
-      unsafeRun(for {
+    unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
+      for {
         tref  <- TRef.make(0).commit
         fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(tref.update(_ + 1).commit)))
         _     <- fiber.join
-      } yield ())
-    }
+      } yield ()
+    })
+
 }

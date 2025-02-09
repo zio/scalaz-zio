@@ -11,7 +11,7 @@ import zio.test._
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
-import zio.{ Clock, FiberId, Random, Random, _ }
+import zio.{ Clock, FiberId, Random, _ }
 import zio.test.{ Gen, Live, Sized, ZIOSpecDefault }
 
 object ZIOSpec extends ZIOSpecDefault {

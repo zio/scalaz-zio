@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
   final def execute(defExec: ExecutionStrategy)(implicit
     trace: Trace
   ): ZIO[R with Scope, Nothing, Spec[Any, E]] =
-    ZIO.environmentWithZIO(provideEnvironment(_).foreachExec(defExec)(ZIO.refailCause(_), ZIO.succeed(_)))
+    ZIO.environmentWithZIO(provideEnvironment(_).foreachExec(defExec)(Exit.failCause, ZIO.successFn))
 
   /**
    * Returns a new spec with only those tests with annotations satisfying the
@@ -158,7 +158,7 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
       case LabeledCase(label, spec) => spec.foldScoped[R1, E1, Z](defExec)(f).flatMap(z => f(LabeledCase(label, z)))
       case ScopedCase(scoped) =>
         scoped.foldCauseZIO(
-          c => f(ScopedCase(ZIO.refailCause(c))),
+          c => f(ScopedCase(Exit.failCause(c))),
           spec => spec.foldScoped[R1, E1, Z](defExec)(f).flatMap(z => f(ScopedCase(ZIO.succeed(z))))
         )
       case MultipleCase(specs) =>
@@ -342,7 +342,9 @@ final case class Spec[-R, +E](caseValue: SpecCase[R, E, Spec[R, E]]) extends Spe
         )
       case MultipleCase(specs) =>
         Spec.scoped[R0](
-          layer.mapError(TestFailure.fail).build.map(r => Spec.multiple(specs.map(_.provideEnvironment(r))))
+          layer.memoize.flatMap(layer =>
+            layer.mapError(TestFailure.fail).build.map(_ => Spec.multiple(specs.map(_.provideLayer(layer))))
+          )
         )
       case TestCase(test, annotations) => Spec.test(test.provideLayer(layer.mapError(TestFailure.fail)), annotations)
     }
@@ -531,10 +533,10 @@ object Spec {
           )
         case MultipleCase(specs) =>
           Spec.scoped[R0](
-            layer
-              .mapError(TestFailure.fail)
-              .build
-              .map(r => Spec.multiple(specs.map(_.provideSomeLayer[R0](ZLayer.succeedEnvironment(r)))))
+            layer.memoize
+              .flatMap(layer =>
+                layer.mapError(TestFailure.fail).build.map(_ => Spec.multiple(specs.map(_.provideSomeLayer[R0](layer))))
+              )
           )
         case TestCase(test, annotations) =>
           Spec.test(test.provideSomeLayer(layer.mapError(TestFailure.fail)), annotations)

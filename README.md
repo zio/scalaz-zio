@@ -4,9 +4,9 @@
 | --- | --- | --- | --- | --- |
 | [![Project stage][Badge-Stage]][Badge-Stage-Page] | ![CI][Badge-CI] | [![Release Artifacts][Badge-SonatypeReleases]][Link-SonatypeReleases] | [![Snapshot Artifacts][Badge-SonatypeSnapshots]][Link-SonatypeSnapshots] | [![Average time to resolve an issue][Badge-IsItMaintained]][Link-IsItMaintained] |
 
-| Scaladoc | Scaladex | Discord | Twitter | Gitpod |
-| --- | --- | --- | --- | --- |
-| [Scaladoc][Link-Scaladoc] | [![Badge-Scaladex-page]][Link-Scaladex-page] | [![Badge-Discord]][Link-Discord] | [![Badge-Twitter]][Link-Twitter] | [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/zio/zio) |
+| Scaladoc | Scaladex | Discord | Twitter | Gitpod | Gurubase |
+| --- | --- | --- | --- | --- | --- |
+| [Scaladoc][Link-Scaladoc] | [![Badge-Scaladex-page]][Link-Scaladex-page] | [![Badge-Discord]][Link-Discord] | [![Badge-Twitter]][Link-Twitter] | [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/zio/zio) | [![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20ZIO%20Guru-006BFF)](https://gurubase.io/g/zio) |
 
 # Welcome to ZIO
 
@@ -14,7 +14,7 @@ ZIO is a zero-dependency Scala library for asynchronous and concurrent programmi
 
 Powered by highly-scalable, non-blocking fibers that never waste or leak resources, ZIO lets you build scalable, resilient, and reactive applications that meet the needs of your business.
 
- - **High-performance**. Build scalable applications with 100x the performance of Scala's `Future`.
+ - **High-performance**. Build scalable applications with minimal runtime overhead.
  - **Type-safe**. Use the full power of the Scala compiler to catch bugs at compile time.
  - **Concurrent**. Easily build concurrent apps without deadlocks, race conditions, or complexity.
  - **Asynchronous**. Write sequential code that looks the same whether it's asynchronous or synchronous.
@@ -146,6 +146,7 @@ Want to see your company here? [Submit a PR](https://github.com/zio/zio/edit/ser
 * [Risk Ident](https://riskident.com/)
 * [Rocker](https://rocker.com/)
 * [Rudder](https://www.rudder.io/)
+* [Samsung Food](https://samsungfood.com/)
 * [Sanjagh](https://sanjagh.pro/)
 * [Scalac](https://scalac.io/)
 * [SecurityScorecard](https://www.securityscorecard.io/)
@@ -191,10 +192,6 @@ Want to see your company here? [Submit a PR](https://github.com/zio/zio/edit/ser
 
 [Ziverge][Link-Ziverge] is a leading contributor to ZIO.
 
-[![Scalac][Image-Scalac]][Link-Scalac]
-
-[Scalac][Link-Scalac] sponsors ZIO Hackathons and contributes work to multiple projects in ZIO ecosystem.
-
 [![Septimal Mind][Image-SeptimalMind]][Link-SeptimalMind]
 
 [Septimal Mind][Link-SeptimalMind] sponsors work on ZIO Tracing and continuous maintenance.
@@ -223,7 +220,7 @@ Come chat with us on [![Badge-Discord]][Link-Discord].
 
 ### Legal
 
-Copyright 2017 - 2023 John A. De Goes and the ZIO Contributors. All rights reserved.
+Copyright 2017 - 2024 John A. De Goes and the ZIO Contributors. All rights reserved.
 
 
 [Link-Codecov]: https://codecov.io/gh/zio/zio?branch=master "Codecov"
@@ -251,6 +248,5 @@ Copyright 2017 - 2023 John A. De Goes and the ZIO Contributors. All rights reser
 [Badge-Stage-Page]: https://github.com/zio/zio/wiki/Project-Stages
 
 [Image-Ziverge]: ./website/static/img/ziverge.png "Ziverge"
-[Image-Scalac]: ./website/static/img/scalac.svg "Scalac"
 [Image-SeptimalMind]: ./website/static/img/septimal_mind.svg "Septimal Mind"
 [Image-YourKit]: ./website/static/img/yourkit.png "YourKit"

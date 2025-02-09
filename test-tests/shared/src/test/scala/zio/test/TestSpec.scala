@@ -20,6 +20,20 @@ object TestSpec extends ZIOBaseSpec {
         result <- ZIO.succeed("succeed")
       } yield assert(result)(equalTo("succeed"))
     } @@ failing,
+    test("rendering error is test failure") {
+      case class Foo(a: Int) {
+        override def productPrefix: String =
+          throw new Exception("Boooom!")
+      }
+      val spec = test("properly report bug") {
+        val foo1 = Foo(2)
+        assertTrue(foo1 == foo1)
+      }
+      for {
+        summary <- execute(spec)
+      } yield assert(summary.fail)(equalTo(1)) &&
+        assert(summary.failureDetails.unstyled)(containsString("Boooom!"))
+    },
     test("test is polymorphic in error type") {
       for {
         _      <- ZIO.attempt(())

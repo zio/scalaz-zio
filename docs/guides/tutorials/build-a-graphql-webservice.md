@@ -4,7 +4,7 @@ title: "Tutorial: How to Build a GraphQL Web Service"
 sidebar_label: "Building a GraphQL Web Service"
 ---
 
-Having GraphQL APIs enables the clients the ability to query the exact data they need. This powerful feature makes GraphQL more flexible than RESTful APIs. 
+Having GraphQL APIs enables the clients the ability to query the exact data they need. This powerful feature makes GraphQL more flexible than RESTful APIs.
 
 Instead of having endpoints for our resources, the GraphQL API only provides a set of types and fields in terms of schemas. The client can ask for this schema, and that will help the client to know what kind of data they can expect from the server, and finally, the client can use the schema to build its queries.
 
@@ -18,10 +18,8 @@ In this tutorial, we will build a GraphQL API using _Caliban_, and in order to s
 
 ```sbt
 libraryDependencies ++= Seq(
-  "dev.zio"               %% "zio"              % "2.0.0",
-  "com.github.ghostdogpr" %% "caliban"          % "2.0.0",
-  "com.github.ghostdogpr" %% "caliban-zio-http" % "2.0.0",
-  "io.d11"                %% "zhttp"            % "2.0.0-RC10"
+  "dev.zio"               %% "zio"              % "2.1.7",
+  "com.github.ghostdogpr" %% "caliban-quick"    % "2.8.1"
 )
 ```
 
@@ -90,20 +88,18 @@ case class Queries(
 ## Running the GraphQL Server
 
 After defining all the queries, in order to serve the GraphQL API, we need to perform the following steps:
+
 1. Create a `GraphQLInterpreter` instance, which is a wrapper around the _GraphQL API_. It allows us to add some middleware around the query execution.
 2. Create an `HttpApp` instance from the `GraphQLInterpreter` instance. We can do this by using the `ZHttpAdapter.makeHttpService` defined in the `caliban-zio-http` module.
 3. Serve the resulting `HttpApp` instance using the `Server.start` method of the _ZIO HTTP_ module.
 
 ```scala
-import caliban.GraphQL.graphQL
-import caliban.{RootResolver, ZHttpAdapter}
-import zhttp.http._
-import zhttp.service.Server
-import zio.ZIOAppDefault
+import caliban._
+import caliban.quick._
 
-import scala.language.postfixOps
-
-object MainApp extends ZIOAppDefault {
+object MainApp extends zio.ZIOAppDefault {
+  import caliban.schema.ArgBuilder.auto._
+  import caliban.schema.Schema.auto._
 
   private val employees = List(
     Employee("Alex", Role.DevOps),
@@ -122,18 +118,20 @@ object MainApp extends ZIOAppDefault {
           args => employees.find(e => e.name == args.name)
         )
       )
-    ).interpreter.flatMap(interpreter =>
-      Server
-        .start(
-          port = 8088,
-          http = Http.collectHttp { case _ -> !! / "api" / "graphql" =>
-            ZHttpAdapter.makeHttpService(interpreter)
-          }
-        )
+    ).runServer(
+      port = 8088,
+      apiPath = "/api/graphql",
+      graphiqlPath = Some("/api/graphiql"),
     )
 
 }
 ```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Effectful Queries
 
@@ -157,8 +155,8 @@ In this project, we have defined models of our employees with their names and ro
 So we can query all the employees that are software developers using the GraphQL query:
 
 ```graphql
-query{
-  employees(role: SoftwareDeveloper){
+query {
+  employees(role: SoftwareDeveloper) {
     name
     role
   }
@@ -175,15 +173,15 @@ The response will be as follows:
 
 ```json
 {
-  "data" : {
-    "employees" : [
+  "data": {
+    "employees": [
       {
-        "name" : "Maria",
-        "role" : "SoftwareDeveloper"
+        "name": "Maria",
+        "role": "SoftwareDeveloper"
       },
       {
-        "name" : "Peter",
-        "role" : "SoftwareDeveloper"
+        "name": "Peter",
+        "role": "SoftwareDeveloper"
       }
     ]
   }

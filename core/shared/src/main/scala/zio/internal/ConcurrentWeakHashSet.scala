@@ -378,19 +378,19 @@ private[zio] class ConcurrentWeakHashSet[V](
         case UpdateOperation.None =>
           false
         case UpdateOperation.AddElement =>
-          if (matchedRef == null) {
+          if (matchedRef eq null) {
             val newRef = new RefNode[V](element, hash, true, this.queue, head)
             this.references(index) = newRef
             this.counter.incrementAndGet()
             true
           } else false
         case UpdateOperation.RemoveElement =>
-          if (matchedRef != null) {
+          if (matchedRef ne null) {
             var previousRef = null.asInstanceOf[RefNode[V]]
             var currentRef  = head
             while (currentRef ne null) {
               if (currentRef == matchedRef) {
-                if (previousRef == null) {
+                if (previousRef eq null) {
                   this.references(index) = currentRef.nextRefNode // start chain with next ref
                 } else {
                   previousRef.nextRefNode = currentRef.nextRefNode // skip current ref
@@ -532,7 +532,7 @@ private[zio] class ConcurrentWeakHashSet[V](
     private def moveToNextReferenceIfNecessary(): Unit =
       while (this.nextElement == null) {
         moveToNextReference()
-        if (this.reference == null) return
+        if (this.reference eq null) return
         this.nextElement = this.reference.get()
       }
 
@@ -544,7 +544,7 @@ private[zio] class ConcurrentWeakHashSet[V](
       if (this.reference ne null) {
         this.reference = this.reference.nextRefNode
       }
-      while (this.reference == null && (this.references ne null)) {
+      while ((this.reference eq null) && (this.references ne null)) {
         if (this.referenceIndex >= this.references.length) {
           this.moveToNextSegment()
           this.referenceIndex = 0

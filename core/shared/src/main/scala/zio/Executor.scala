@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,11 @@ abstract class Executor extends ExecutorPlatformSpecific { self =>
   /**
    * Submits an effect for execution and signals that the current fiber is ready
    * to yield.
+   *
+   * '''NOTE''': The implementation of this method in the ZScheduler will
+   * attempt to run the runnable on the current thread if the current worker's
+   * queues are empty. This leads to improved performance as we avoid
+   * unnecessary parking/un-parking of threads.
    */
   def submitAndYield(runnable: Runnable)(implicit unsafe: Unsafe): Boolean =
     submit(runnable)
@@ -68,6 +73,10 @@ abstract class Executor extends ExecutorPlatformSpecific { self =>
   /**
    * Submits an effect for execution and signals that the current fiber is ready
    * to yield or throws.
+   *
+   * @see
+   *   [[submitAndYield]] for an explanation of the implementation in
+   *   ZScheduler.
    */
   final def submitAndYieldOrThrow(runnable: Runnable)(implicit unsafe: Unsafe): Unit =
     if (!submitAndYield(runnable)) throw new RejectedExecutionException(s"Unable to run ${runnable.toString()}")

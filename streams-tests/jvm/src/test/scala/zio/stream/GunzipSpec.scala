@@ -34,7 +34,8 @@ object GunzipSpec extends ZIOBaseSpec {
       ),
       test("long input, no SYNC_FLUSH")(
         assertZIO(
-          (jdkGzippedStream(longText, false).channel >>> Gunzip.makeGunzipper(64)).runCollect.map(_._1.flatten)
+          (jdkGzippedStream(longText, syncFlush = false).channel >>> Gunzip.makeGunzipper(64)).runCollect
+            .map(_._1.flatten)
         )(equalTo(Chunk.fromArray(longText)))
       ),
       test("long input, buffer smaller than chunks")(

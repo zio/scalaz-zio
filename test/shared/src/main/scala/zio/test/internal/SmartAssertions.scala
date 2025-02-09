@@ -6,7 +6,7 @@ import zio.internal.ansi.AnsiStringOps
 import zio.test.diff.{Diff, DiffResult}
 
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import zio.test.{ErrorMessage => M, SmartAssertionOps => _, _}
 
 object SmartAssertions {
@@ -40,6 +40,20 @@ object SmartAssertions {
       .make[Option[A], A] {
         case Some(value) => TestTrace.succeed(value)
         case None        => TestTrace.fail("Option was None")
+      }
+
+  def asTrySuccess[A]: TestArrow[Try[A], A] =
+    TestArrow
+      .make[Try[A], A] {
+        case Failure(_)     => TestTrace.fail("Try was Failure")
+        case Success(value) => TestTrace.succeed(value)
+      }
+
+  def asTryFailure[A]: TestArrow[Try[A], Throwable] =
+    TestArrow
+      .make[Try[A], Throwable] {
+        case Failure(exception) => TestTrace.succeed(exception)
+        case Success(_)         => TestTrace.fail("Try was Success")
       }
 
   def asRight[A]: TestArrow[Either[_, A], A] =
@@ -277,6 +291,70 @@ object SmartAssertions {
         }
       }
 
+  def greaterThanL[A, B](that: B)(implicit ordering: Ordering[B], conv: (A => B)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { (a: A) =>
+        TestTrace.boolean(ordering.gt(conv(a), that)) {
+          M.pretty(a) + M.was + "greater than" + M.pretty(that)
+        }
+      }
+
+  def greaterThanOrEqualToL[A, B](that: B)(implicit ordering: Ordering[B], conv: (A => B)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.gteq(conv(a), that)) {
+          M.pretty(a) + M.was + s"greater than or equal to" + M.pretty(that)
+        }
+      }
+
+  def lessThanL[A, B](that: B)(implicit ordering: Ordering[B], conv: (A => B)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.lt(conv(a), that)) {
+          M.pretty(a) + M.was + "less than" + M.pretty(that)
+        }
+      }
+
+  def lessThanOrEqualToL[A, B](that: B)(implicit ordering: Ordering[B], conv: (A => B)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.lteq(conv(a), that)) {
+          M.pretty(a) + M.was + "less than or equal to" + M.pretty(that)
+        }
+      }
+
+  def greaterThanR[A, B](that: B)(implicit ordering: Ordering[A], conv: (B => A)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { (a: A) =>
+        TestTrace.boolean(ordering.gt(a, conv(that))) {
+          M.pretty(a) + M.was + "greater than" + M.pretty(that)
+        }
+      }
+
+  def greaterThanOrEqualToR[A, B](that: B)(implicit ordering: Ordering[A], conv: (B => A)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.gteq(a, conv(that))) {
+          M.pretty(a) + M.was + s"greater than or equal to" + M.pretty(that)
+        }
+      }
+
+  def lessThanR[A, B](that: B)(implicit ordering: Ordering[A], conv: (B => A)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.lt(a, conv(that))) {
+          M.pretty(a) + M.was + "less than" + M.pretty(that)
+        }
+      }
+
+  def lessThanOrEqualToR[A, B](that: B)(implicit ordering: Ordering[A], conv: (B => A)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        TestTrace.boolean(ordering.lteq(a, conv(that))) {
+          M.pretty(a) + M.was + "less than or equal to" + M.pretty(that)
+        }
+      }
+
   def equalTo[A](that: A)(implicit diff: OptionalImplicit[Diff[A]]): TestArrow[A, Boolean] =
     TestArrow
       .make[A, Boolean] { a =>
@@ -289,6 +367,68 @@ object SmartAssertions {
           diff.value match {
             case Some(diff) if !diff.isLowPriority && !result =>
               val diffResult = diff.diff(that, a)
+              diffResult match {
+                case DiffResult.Different(_, _, None) =>
+                  M.pretty(a) + M.equals + M.pretty(that)
+                case diffResult =>
+                  M.choice("There was no difference", "There was a difference") ++
+                    M.custom(ConsoleUtils.underlined("Expected")) ++ M.custom(PrettyPrint(that)) ++
+                    M.custom(
+                      ConsoleUtils.underlined(
+                        "Diff"
+                      ) + s" ${scala.Console.RED}-expected ${scala.Console.GREEN}+obtained".faint
+                    ) ++
+                    M.custom(scala.Console.RESET + diffResult.render)
+              }
+            case _ =>
+              M.pretty(a) + M.equals + M.pretty(that)
+          }
+        }
+      }
+
+  def equalToL[A, B](that: B)(implicit diff: OptionalImplicit[Diff[B]], conv: (A => B)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        val result = (a, that) match {
+          case (a: Array[_], that: Array[_]) => a.sameElements[Any](that)
+          case _                             => a == that
+        }
+
+        TestTrace.boolean(result) {
+          diff.value match {
+            case Some(diff) if !diff.isLowPriority && !result =>
+              val diffResult = diff.diff(that, conv(a))
+              diffResult match {
+                case DiffResult.Different(_, _, None) =>
+                  M.pretty(a) + M.equals + M.pretty(that)
+                case diffResult =>
+                  M.choice("There was no difference", "There was a difference") ++
+                    M.custom(ConsoleUtils.underlined("Expected")) ++ M.custom(PrettyPrint(that)) ++
+                    M.custom(
+                      ConsoleUtils.underlined(
+                        "Diff"
+                      ) + s" ${scala.Console.RED}-expected ${scala.Console.GREEN}+obtained".faint
+                    ) ++
+                    M.custom(scala.Console.RESET + diffResult.render)
+              }
+            case _ =>
+              M.pretty(a) + M.equals + M.pretty(that)
+          }
+        }
+      }
+
+  def equalToR[A, B](that: B)(implicit diff: OptionalImplicit[Diff[A]], conv: (B => A)): TestArrow[A, Boolean] =
+    TestArrow
+      .make[A, Boolean] { a =>
+        val result = (a, that) match {
+          case (a: Array[_], that: Array[_]) => a.sameElements[Any](that)
+          case _                             => a == that
+        }
+
+        TestTrace.boolean(result) {
+          diff.value match {
+            case Some(diff) if !diff.isLowPriority && !result =>
+              val diffResult = diff.diff(conv(that), a)
               diffResult match {
                 case DiffResult.Different(_, _, None) =>
                   M.pretty(a) + M.equals + M.pretty(that)
@@ -456,4 +596,29 @@ object SmartAssertions {
 
   private def className[A](a: Option[A]) =
     M.value(a.toString.takeWhile(_ != '('))
+
+  object Implicits {
+    case class Converter[-A, +B](f: A => B)
+    case class Converter2[-A, +B](f: A => B)
+
+    implicit val byte: Converter[Byte, java.lang.Byte]         = Converter(x => x)
+    implicit val short: Converter[Short, java.lang.Short]      = Converter(x => x)
+    implicit val int: Converter[Int, java.lang.Integer]        = Converter(x => x)
+    implicit val long: Converter[Long, java.lang.Long]         = Converter(x => x)
+    implicit val float: Converter[Float, java.lang.Float]      = Converter(x => x)
+    implicit val double: Converter[Double, java.lang.Double]   = Converter(x => x)
+    implicit val byte2: Converter2[java.lang.Byte, Byte]       = Converter2(x => x)
+    implicit val short2: Converter2[java.lang.Short, Short]    = Converter2(x => x)
+    implicit val int2: Converter2[java.lang.Integer, Int]      = Converter2(x => x)
+    implicit val long2: Converter2[java.lang.Long, Long]       = Converter2(x => x)
+    implicit val float2: Converter2[java.lang.Float, Float]    = Converter2(x => x)
+    implicit val double2: Converter2[java.lang.Double, Double] = Converter2(x => x)
+
+    implicit def converter[A, B, C](implicit g: Converter[B, C], f: A => B): A => C =
+      g.f.compose(f)
+
+    implicit def converter2[A, B, C](implicit f: Converter2[A, B], g: B => C): A => C =
+      g.compose(f.f)
+  }
+
 }

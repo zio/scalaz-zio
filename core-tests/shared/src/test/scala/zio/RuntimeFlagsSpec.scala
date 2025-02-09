@@ -78,6 +78,55 @@ object RuntimeFlagsSpec extends ZIOBaseSpec {
                 )
               }
             }
-        }
+        } +
+        suite("setting flags via Runtime layers") {
+          import RuntimeFlag._
+          test("enabling") {
+            val expected =
+              RuntimeFlags.enableAll(RuntimeFlags.default)(RuntimeFlags(RuntimeMetrics, OpLog))
+            ZIO.runtimeFlags
+              .map(f => assertTrue(f == expected))
+              .provideLayer(Runtime.enableFlags(OpLog, RuntimeMetrics))
+          } +
+            test("disabling") {
+              val expected =
+                RuntimeFlags.disableAll(RuntimeFlags.default)(
+                  RuntimeFlags(FiberRoots, CooperativeYielding)
+                )
+              ZIO.runtimeFlags
+                .map(f => assertTrue(f == expected))
+                .provideLayer(Runtime.disableFlags(FiberRoots, CooperativeYielding))
+            } +
+            test("enabling & disabling via macros") {
+              val expected = {
+                val f1 = RuntimeFlags.enableAll(RuntimeFlags.default)(RuntimeFlags(OpLog, RuntimeMetrics))
+                RuntimeFlags.disableAll(f1)(RuntimeFlags(FiberRoots, CooperativeYielding))
+              }
+              ZIO.runtimeFlags
+                .map(f => assertTrue(f == expected))
+                .provideLayer(
+                  ZLayer.make[Any](
+                    Runtime.enableFlags(OpLog, RuntimeMetrics),
+                    Runtime.disableFlags(FiberRoots, CooperativeYielding)
+                  )
+                )
+            }
+        } +
+        suite("EagerShiftBack") {
+          test("enabled") {
+            for {
+              _    <- ZIO.fiberId
+              _    <- ZIO.succeedBlocking(())
+              name <- ZIO.succeed(Thread.currentThread().getName)
+            } yield assertTrue(name.startsWith("zio-default-blocking"))
+          }.provide(Runtime.disableFlags(RuntimeFlag.EagerShiftBack)) +
+            test("disabled") {
+              for {
+                _    <- ZIO.fiberId
+                _    <- ZIO.succeedBlocking(())
+                name <- ZIO.succeed(Thread.currentThread().getName)
+              } yield assertTrue(name.startsWith("ZScheduler-Worker"))
+            }.provide(Runtime.enableFlags(RuntimeFlag.EagerShiftBack))
+        } @@ TestAspect.jvmOnly
     }
 }

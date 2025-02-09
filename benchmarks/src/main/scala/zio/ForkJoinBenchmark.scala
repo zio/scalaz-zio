@@ -19,6 +19,22 @@ import java.util.concurrent.TimeUnit
  * [info] ForkJoinBenchmark.zioForkJoin  10000  thrpt    5  99.841 ∩┐╜  1.353  ops/s
  * [info] ForkJoinBenchmark.zioForkJoin  10000  thrpt    5  105.782 ∩┐╜ 1.599  ops/s
  * }}}
+ *
+ * {{{
+ * 13/04/2024
+ *
+ * JDK 17 (ZScheduler)
+ * [info] Benchmark                                    (n)   Mode  Cnt     Score     Error  Units
+ * [info] ForkJoinBenchmark.catsForkJoin             10000  thrpt   10  2906.462 ±  14.976  ops/s
+ * [info] ForkJoinBenchmark.zioForkJoin              10000  thrpt   10  1931.372 ±  19.676  ops/s
+ * [info] ForkJoinBenchmark.zioForkJoinNoFiberRoots  10000  thrpt   10  4812.394 ± 114.765  ops/s
+ *
+ * JDK 21 (Loom)
+ * [info] Benchmark                                    (n)   Mode  Cnt     Score    Error  Units
+ * [info] ForkJoinBenchmark.catsForkJoin             10000  thrpt   10  2913.651 ± 28.332  ops/s
+ * [info] ForkJoinBenchmark.zioForkJoin              10000  thrpt   10   613.202 ±  5.053  ops/s
+ * [info] ForkJoinBenchmark.zioForkJoinNoFiberRoots  10000  thrpt   10   764.049 ±  7.925  ops/s
+ * }}}
  */
 @State(JScope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
@@ -39,16 +55,25 @@ class ForkJoinBenchmark {
   def setup(): Unit =
     range = (0 to n).toList
 
-  @Benchmark
-  def zioForkJoin(): Unit = {
-    val forkFiber     = ZIO.unit.forkDaemon
-    val forkAllFibers = ZIO.foreach(range)(_ => forkFiber)
-
-    val _ =
-      unsafeRun(
-        forkAllFibers.flatMap(fibers => ZIO.foreach(fibers)(_.await))
-      )
+  private def zioEffect(forkFiber: UIO[Fiber.Runtime[Nothing, Unit]]) = {
+    val forkAllFibers = ZIO.yieldNow *> ZIO.foreach(range)(_ => forkFiber)
+    forkAllFibers.flatMap(fibers => ZIO.foreach(fibers)(_.await))
   }
+
+  private val zioFork       = zioEffect(ZIO.unit.fork)
+  private val zioForkDaemon = zioEffect(ZIO.unit.forkDaemon)
+
+  @Benchmark
+  def zioForkJoin(): Unit =
+    unsafeRun(zioFork)
+
+  @Benchmark
+  def zioForkDaemonJoin(): Unit =
+    unsafeRun(zioForkDaemon)
+
+  @Benchmark
+  def zioForkDaemonJoinNoFiberRoots(): Unit =
+    unsafeRun(zioForkDaemon, fiberRootsEnabled = false)
 
   @Benchmark
   def catsForkJoin(): Unit = {

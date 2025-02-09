@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,13 +86,15 @@ final class Promise[E, A] private (
    * Kills the promise with the specified error, which will be propagated to all
    * fibers waiting on the value of the promise.
    */
-  def die(e: Throwable)(implicit trace: Trace): UIO[Boolean] = completeWith(ZIO.die(e))
+  def die(e: Throwable)(implicit trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.die(e)(trace, Unsafe.unsafe))
 
   /**
    * Exits the promise with the specified exit, which will be propagated to all
    * fibers waiting on the value of the promise.
    */
-  def done(e: Exit[E, A])(implicit trace: Trace): UIO[Boolean] = completeWith(e)
+  def done(e: Exit[E, A])(implicit trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.completeWith(e)(Unsafe.unsafe))
 
   /**
    * Completes the promise with the result of the specified effect. If the
@@ -116,76 +118,49 @@ final class Promise[E, A] private (
    * promise with the result of an effect see [[Promise.complete]].
    */
   def completeWith(io: IO[E, A])(implicit trace: Trace): UIO[Boolean] =
-    ZIO.succeed {
-      var action: () => Boolean = null.asInstanceOf[() => Boolean]
-      var retry                 = true
-
-      while (retry) {
-        val oldState = state.get
-
-        val newState = oldState match {
-          case Pending(joiners) =>
-            action = () => { joiners.foreach(_(io)); true }
-
-            Done(io)
-
-          case Done(_) =>
-            action = Promise.ConstFalse
-
-            oldState
-        }
-
-        retry = !state.compareAndSet(oldState, newState)
-      }
-
-      action()
-    }
+    ZIO.succeed(unsafe.completeWith(io)(Unsafe.unsafe))
 
   /**
    * Fails the promise with the specified error, which will be propagated to all
    * fibers waiting on the value of the promise.
    */
-  def fail(e: E)(implicit trace: Trace): UIO[Boolean] = completeWith(ZIO.fail(e))
+  def fail(e: E)(implicit trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.fail(e)(trace, Unsafe.unsafe))
 
   /**
    * Fails the promise with the specified cause, which will be propagated to all
    * fibers waiting on the value of the promise.
    */
   def failCause(e: Cause[E])(implicit trace: Trace): UIO[Boolean] =
-    completeWith(ZIO.failCause(e))
+    ZIO.succeed(unsafe.failCause(e)(trace, Unsafe.unsafe))
 
   /**
    * Completes the promise with interruption. This will interrupt all fibers
    * waiting on the value of the promise as by the fiber calling this method.
    */
   def interrupt(implicit trace: Trace): UIO[Boolean] =
-    ZIO.fiberId.flatMap(id => completeWith(ZIO.interruptAs(id)))
+    ZIO.fiberIdWith(id => interruptAs(id))
 
   /**
    * Completes the promise with interruption. This will interrupt all fibers
    * waiting on the value of the promise as by the specified fiber.
    */
-  def interruptAs(fiberId: FiberId)(implicit trace: Trace): UIO[Boolean] = completeWith(ZIO.interruptAs(fiberId))
+  def interruptAs(fiberId: FiberId)(implicit trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.interruptAs(fiberId)(trace, Unsafe.unsafe))
 
   /**
    * Checks for completion of this Promise. Produces true if this promise has
    * already been completed with a value or an error and false otherwise.
    */
   def isDone(implicit trace: Trace): UIO[Boolean] =
-    ZIO.succeed(state.get() match {
-      case Done(_)    => true
-      case Pending(_) => false
-    })
+    ZIO.succeed(unsafe.isDone(Unsafe.unsafe))
 
   /**
    * Checks for completion of this Promise. Returns the result effect if this
    * promise has already been completed or a `None` otherwise.
    */
   def poll(implicit trace: Trace): UIO[Option[IO[E, A]]] =
-    ZIO.succeed(state.get).flatMap {
-      case Pending(_) => ZIO.succeed(None)
-      case Done(io)   => ZIO.succeed(Some(io))
-    }
+    ZIO.succeed(unsafe.poll(Unsafe.unsafe))
 
   /**
    * Fails the promise with the specified cause, which will be propagated to all
@@ -193,12 +168,13 @@ final class Promise[E, A] private (
    * to the cause.
    */
   def refailCause(e: Cause[E])(implicit trace: Trace): UIO[Boolean] =
-    completeWith(ZIO.refailCause(e))
+    ZIO.succeed(unsafe.refailCause(e)(trace, Unsafe.unsafe))
 
   /**
    * Completes the promise with the specified value.
    */
-  def succeed(a: A)(implicit trace: Trace): UIO[Boolean] = completeWith(ZIO.succeed(a))
+  def succeed(a: A)(implicit trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.succeed(a)(trace, Unsafe.unsafe))
 
   private def interruptJoiner(joiner: IO[E, A] => Any)(implicit trace: Trace): UIO[Any] = ZIO.succeed {
     var retry = true
@@ -210,7 +186,7 @@ final class Promise[E, A] private (
         case Pending(joiners) =>
           Pending(joiners.filter(j => !j.eq(joiner)))
 
-        case Done(_) =>
+        case _ =>
           oldState
       }
 
@@ -218,12 +194,49 @@ final class Promise[E, A] private (
     }
   }
 
-  private[zio] trait UnsafeAPI {
+  private[zio] trait UnsafeAPI extends Serializable {
+    def completeWith(io: IO[E, A])(implicit unsafe: Unsafe): Boolean
+    def die(e: Throwable)(implicit trace: Trace, unsafe: Unsafe): Boolean
     def done(io: IO[E, A])(implicit unsafe: Unsafe): Unit
+    def fail(e: E)(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def failCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def interruptAs(fiberId: FiberId)(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def isDone(implicit unsafe: Unsafe): Boolean
+    def poll(implicit unsafe: Unsafe): Option[IO[E, A]]
+    def refailCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean
   }
 
-  @transient private[zio] val unsafe: UnsafeAPI =
+  private[zio] val unsafe: UnsafeAPI =
     new UnsafeAPI {
+      def completeWith(io: IO[E, A])(implicit unsafe: Unsafe): Boolean = {
+        var action: () => Boolean = null.asInstanceOf[() => Boolean]
+        var retry                 = true
+
+        while (retry) {
+          val oldState = state.get
+
+          val newState = oldState match {
+            case Pending(joiners) =>
+              action = () => { joiners.foreach(_(io)); true }
+
+              Done(io)
+
+            case _ =>
+              action = Promise.ConstFalse
+
+              oldState
+          }
+
+          retry = !state.compareAndSet(oldState, newState)
+        }
+
+        action()
+      }
+
+      def die(e: Throwable)(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(ZIO.die(e))
+
       def done(io: IO[E, A])(implicit unsafe: Unsafe): Unit = {
         var retry: Boolean                 = true
         var joiners: List[IO[E, A] => Any] = null
@@ -243,7 +256,32 @@ final class Promise[E, A] private (
 
         if (joiners ne null) joiners.foreach(_(io))
       }
+
+      def fail(e: E)(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(ZIO.fail(e))
+
+      def failCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(ZIO.failCause(e))
+
+      def interruptAs(fiberId: FiberId)(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(ZIO.interruptAs(fiberId))
+
+      def isDone(implicit unsafe: Unsafe): Boolean =
+        state.get().isInstanceOf[Done[?, ?]]
+
+      def poll(implicit unsafe: Unsafe): Option[IO[E, A]] =
+        state.get() match {
+          case _: Pending[?, ?] => None
+          case Done(io)         => Some(io)
+        }
+
+      def refailCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(Exit.failCause(e))
+
+      def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(Exit.succeed(a))
     }
+
 }
 object Promise {
   private val ConstFalse: () => Boolean = () => false

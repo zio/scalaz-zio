@@ -5,7 +5,7 @@ import zio.test.assert
 import java.time.temporal.ChronoUnit
 import java.time.{Duration => JavaDuration}
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.{Duration => ScalaDuration}
+import scala.concurrent.duration.{Duration => ScalaDuration, FiniteDuration => ScalaFiniteDuration}
 
 object DurationSpec extends ZIOBaseSpec {
 
@@ -154,7 +154,7 @@ object DurationSpec extends ZIOBaseSpec {
         assert(Duration.Infinity.isZero)(equalTo(false))
       },
       test("It converts into the infinite s.c.d.Duration") {
-        assert(Duration.Infinity.asScala)(equalTo(ScalaDuration.Inf: ScalaDuration))
+        assert(Duration.Infinity.asScala)(equalTo(ScalaFiniteDuration(Long.MaxValue, TimeUnit.NANOSECONDS)))
       },
       test("It converts into a Long.MaxValue second-long JDK Duration") {
         assert(Duration.Infinity)(equalTo(JavaDuration.ofNanos(Long.MaxValue)))

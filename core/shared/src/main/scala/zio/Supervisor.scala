@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,7 +281,7 @@ object Supervisor {
   }
 
   private def removeSupervisor(self: Supervisor[Any], that: Supervisor[Any]): Supervisor[Any] =
-    if (self == that) Supervisor.none
+    if (self eq that) Supervisor.none
     else
       self match {
         case Zip(left, right) => removeSupervisor(left, that) ++ removeSupervisor(right, that)
@@ -289,7 +289,7 @@ object Supervisor {
       }
 
   private[zio] def toSet(supervisor: Supervisor[Any]): Set[Supervisor[Any]] =
-    if (supervisor == Supervisor.none) Set.empty
+    if (supervisor eq Supervisor.none) Set.empty
     else
       supervisor match {
         case Zip(left, right) => toSet(left) ++ toSet(right)

@@ -13,7 +13,7 @@ ZIO has a built-in metric system that allows us to monitor the performance of ou
 To access the code examples, you can clone the [ZIO Quickstarts](http://github.com/zio/zio-quickstarts) project:
 
 ```bash
-$ git clone git@github.com:zio/zio-quickstarts.git 
+$ git clone https://github.com/zio/zio-quickstarts.git
 $ cd zio-quickstarts/zio-quickstart-restful-webservice-metrics
 ```
 
@@ -22,6 +22,18 @@ And finally, run the application using sbt:
 ```bash
 $ sbt run
 ```
+
+Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
+
+```bash
+sbt reStart
+```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Trying a Simple Example
 
@@ -52,52 +64,29 @@ object MainApp extends ZIOAppDefault {
 }
 ```
 
-In this example, we are going to calculate the fibonacci number for a given number. We also count the number of times we call the `fib` function using the `count` metric. Finally, we will print the value of the metric as a debug message.
+In this example, we are going to calculate the Fibonacci number for a given number. We also count the number of times we call the `fib` function using the `count` metric. Finally, we will print the value of the metric as a debug message.
 
-This is a pedagogical example of how to use metrics. But in real life, we will probably want to poll the metrics using a web API and feed them to a monitoring system, e.g. Prometheus. In the following sections, we will learn how to do that by applying the metrics to our RESTful web service.
+This is a pedagogical example of how to use metrics. In real life, we will probably want to poll the metrics using a web API and feed them to a monitoring system, e.g. Prometheus. In the following sections, we will learn how to do that by applying the metrics to our RESTful web service.
 
-## Adding Metrics to Our Restful Web Service
+## Built-in ZIO HTTP Metrics
 
-In this section, we are going to define a new metric called `count_all_requests` that counts the number of requests to our web service:
-
-```scala mdoc:silent
-import zio._
-import zio.metrics._
-
-def countAllRequests(method: String, handler: String) =
-  Metric.counterInt("count_all_requests").fromConst(1)
-    .tagged(
-      MetricLabel("method", method),
-      MetricLabel("handler", handler)
-    )
-```
-
-This metric also has two tags, `method` and `handler`, which are used to tag the metric which enables us to group the metrics by HTTP method and the URL handler.
-
-All metrics are defined as a `ZIOAspect` that helps us to add metrics to our application in an aspect-oriented fashion.
-
-## Applying the Metrics to Our Restful Web Service
-
-After defining the metric, we need to apply it to our web service. We can do this by using the `@@` syntax:
+ZIO HTTP has built-in support for metrics. We can attach metrics middleware to our HTTP application using the `@@` syntax:
 
 ```scala mdoc:invisible
 import zio._
-import zio.json._
+import zio.schema._
 
 case class User(name: String, age: Int)
 
 object User {
-  implicit val encoder: JsonEncoder[User] =
-    DeriveJsonEncoder.gen[User]
-  implicit val decoder: JsonDecoder[User] =
-    DeriveJsonDecoder.gen[User]
+  implicit val schema: Schema[User] = DeriveSchema.gen[User]
 }
 
 trait UserRepo {
   def register(user: User): Task[String]
 
   def lookup(id: String): Task[Option[User]]
-  
+
   def users: Task[List[User]]
 }
 
@@ -114,36 +103,49 @@ object UserRepo {
 ```
 
 ```scala mdoc:silent
-import zhttp.http._
-import zio.json._
+import zio._
+import zio.http._
+import zio.schema.codec.JsonCodec.schemaBasedBinaryCodec
 
 
-object UserApp {
-  def apply(): Http[UserRepo, Throwable, Request, Response] =
-    Http.collectZIO[Request] {
-      // GET /users
-      case Method.GET -> !! / "users" =>
-        UserRepo.users
-          .map(response => Response.json(response.toJson)) @@
-          countAllRequests("GET", "/users")
-    }
+object UserRoutes {
+
+  def apply(): Routes[UserRepo, Response] =
+    Routes(
+      Method.GET / "users" -> handler {
+        UserRepo.users.foldZIO(
+          e =>
+            ZIO
+              .logError(s"Failed to retrieve users. $e") *>
+              ZIO.fail(Response.internalServerError("Cannot retrieve users!")),
+          users =>
+            ZIO
+              .log(
+                s"Retrieved users successfully: response length=${users.length}"
+              )
+              .as(Response(body = Body.from(users)))
+        )
+      }
+    ) @@ Middleware.metrics()
 }
 ```
 
-We can do the same for the rest of the HTTP request handlers in our web service. After applying all the metrics, it is time to prove the metrics as a RESTful API. Before that, let's add the required dependencies to our project.
+The `metrics` middleware is attached to all the routes in the `UserRoutes`. Currently, it only counts the number of requests to the `/users` endpoint. We can add more routes to the `UserRoutes` and all of them will be counted by the `metrics` middleware.
 
-## Adding Dependencies to the Project
+After adding the metrics to routes, it is time to serve the metrics as a RESTful API. Before that, let's add the required dependencies to our project.
+
+## Dependencies
 
 In the following sections, we are going to utilize the `zio-metrics-connector` module from the ZIO ZMX project and also provide metrics as a REST API. So let's add the following dependency to our project:
 
 ```scala
-libraryDependencies += "dev.zio" %% "zio-metrics-connectors" % "2.2.0"
-libraryDependencies += "dev.zio" %% "zio-metrics-connectors-prometheus" % "2.2.0"
+libraryDependencies += "dev.zio" %% "zio-metrics-connectors"            % "@ZIO_METRICS_CONNECTORS_VERSION@"
+libraryDependencies += "dev.zio" %% "zio-metrics-connectors-prometheus" % "@ZIO_METRICS_CONNECTORS_VERSION@"
 ```
 
 This module provides various connectors for metrics backend, e.g. Prometheus.
 
-## Providing Metrics as a REST API For Prometheus
+## Serving Prometheus Metrics
 
 The following snippet shows how to provide an HTTP endpoint that exposes the metrics as a REST API for Prometheus:
 
@@ -153,22 +155,22 @@ The following snippet shows how to provide an HTTP endpoint that exposes the met
 
 ```scala mdoc:invisible
 import zio._
-import zhttp.http._
+import zio.http._
 
-object GreetingApp {
-  def apply() = Http.empty
+object GreetingRoutes {
+  def apply() = Routes.empty
 }
 
-object DownloadApp {
-  def apply() = Http.empty
+object DownloadRoutes {
+  def apply() = Routes.empty
 }
 
-object CounterApp {
-  def apply() = Http.empty
+object CounterRoutes {
+  def apply() = Routes.empty
 }
 
-object UserApp {
-  def apply() = Http.empty
+object UserRoutes {
+  def apply() = Routes.empty
 }
 
 object InmemoryUserRepo {
@@ -177,37 +179,41 @@ object InmemoryUserRepo {
 ```
 
 ```scala mdoc:silent
-import zhttp.http._
+import zio.http._
 import zio._
 import zio.metrics.connectors.prometheus.PrometheusPublisher
 
-object PrometheusPublisherApp {
-  def apply(): Http[PrometheusPublisher, Nothing, Request, Response] = {
-    Http.collectZIO[Request] { case Method.GET -> !! / "metrics" =>
-      ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text))
-    }
+object PrometheusPublisherRoutes {
+  def apply(): Routes[PrometheusPublisher, Nothing] = {
+    Routes(
+      Method.GET / "metrics" ->
+        handler(
+          ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text))
+        )
+    )
   }
 }
 ```
 
-Next, we need to add the `PrometheusPublisherApp` HTTP App to our application:
+Next, we need to add the `PrometheusPublisherRoutes` HTTP App to our application:
 
 ```scala mdoc:silent
 import zio._
-import zhttp.service.Server
+import zio.http._
 import zio.metrics.connectors.{MetricsConfig, prometheus}
 
 object MainApp extends ZIOAppDefault {
   private val metricsConfig = ZLayer.succeed(MetricsConfig(1.seconds))
 
   def run =
-    Server.start(
-      port = 8080,
-      http = GreetingApp() ++ DownloadApp() ++ CounterApp() ++ UserApp() ++ PrometheusPublisherApp()
+    Server.serve(
+      GreetingRoutes() ++ DownloadRoutes() ++ CounterRoutes() ++ UserRoutes() ++ PrometheusPublisherRoutes()
     ).provide(
+      Server.default,
+
       // An layer responsible for storing the state of the `counterApp`
       ZLayer.fromZIO(Ref.make(0)),
-      
+
       // To use the persistence layer, provide the `PersistentUserRepo.layer` layer instead
       InmemoryUserRepo.layer,
 
@@ -237,14 +243,65 @@ If we fetch the metrics from the "/metrics" endpoint, we will see the metrics in
 $ curl -i http://localhost:8080/metrics
 HTTP/1.1 200 OK
 content-type: text/plain
-content-length: 278
+date: Tue, 30 Apr 2024 18:58:26 GMT
+content-length: 4801
 
-# TYPE count_all_requests counter
-# HELP count_all_requests Some help
-count_all_requests{method="POST",handler="/users"}  2.0 1655210796102
-# TYPE count_all_requests counter
-# HELP count_all_requests Some help
-count_all_requests{method="GET",handler="/users"}  1.0 1655210796102⏎
+# TYPE http_concurrent_requests_total gauge
+# HELP http_concurrent_requests_total
+http_concurrent_requests_total{method="GET",path="/users",} 0.0 1714503503829
+# TYPE http_concurrent_requests_total gauge
+# HELP http_concurrent_requests_total
+http_concurrent_requests_total{method="POST",path="/users",} 0.0 1714503503829
+# TYPE http_request_duration_seconds histogram
+# HELP http_request_duration_seconds
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.005",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.01",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.025",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.05",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.075",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.1",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.25",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.5",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="0.75",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="1.0",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="2.5",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="5.0",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="7.5",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="10.0",} 2.0 1714503503829
+http_request_duration_seconds_bucket{method="POST",path="/users",status="200",le="+Inf",} 2.0 1714503503829
+
+http_request_duration_seconds_sum{method="POST",path="/users",status="200",} 0.100570365 1714503503829
+http_request_duration_seconds_count{method="POST",path="/users",status="200",} 2.0 1714503503829
+http_request_duration_seconds_min{method="POST",path="/users",status="200",} 0.00120463 1714503503829
+http_request_duration_seconds_max{method="POST",path="/users",status="200",} 0.099365735 1714503503829
+# TYPE http_request_duration_seconds histogram
+# HELP http_request_duration_seconds
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.005",} 0.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.01",} 0.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.025",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.05",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.075",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.1",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.25",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.5",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="0.75",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="1.0",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="2.5",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="5.0",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="7.5",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="10.0",} 1.0 1714503503829
+http_request_duration_seconds_bucket{method="GET",path="/users",status="200",le="+Inf",} 1.0 1714503503829
+
+http_request_duration_seconds_sum{method="GET",path="/users",status="200",} 0.017157212 1714503503829
+http_request_duration_seconds_count{method="GET",path="/users",status="200",} 1.0 1714503503829
+http_request_duration_seconds_min{method="GET",path="/users",status="200",} 0.017157212 1714503503829
+http_request_duration_seconds_max{method="GET",path="/users",status="200",} 0.017157212 1714503503829
+# TYPE http_requests_total counter
+# HELP http_requests_total
+http_requests_total{method="POST",path="/users",status="200",} 2.0 1714503503829
+# TYPE http_requests_total counter
+# HELP http_requests_total
+http_requests_total{method="GET",path="/users",status="200",} 1.0 1714503503829⏎
 ```
 
 Now that we have the metrics as a REST API, we can add this endpoint to our Prometheus server to fetch the metrics periodically.
@@ -253,4 +310,4 @@ Now that we have the metrics as a REST API, we can add this endpoint to our Prom
 
 In this tutorial, we have learned how to define metrics and apply them to our application. We have also learned how to provide the metrics as a REST API which then can be polled by a Prometheus server.
 
-All the source code associated with this article is available on the [ZIO Quickstart](http://github.com/zio/zio-quickstarts) on Github.
+All the source code associated with this article is available on the [ZIO Quickstart](http://github.com/zio/zio-quickstarts) on GitHub.

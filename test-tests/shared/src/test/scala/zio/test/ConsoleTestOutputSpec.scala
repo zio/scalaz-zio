@@ -74,7 +74,7 @@ object ConsoleTestOutputSpec extends ZIOBaseSpec {
                             ),
                             ancestors = List.empty
                           ),
-                          true
+                          includeCause = true
                         )
                       )
             res <- extractSingleExecutionResult(result)
@@ -91,7 +91,7 @@ object ConsoleTestOutputSpec extends ZIOBaseSpec {
                             failure = TestFailure.assertion(assertTrue(true)),
                             ancestors = List.empty
                           ),
-                          true
+                          includeCause = true
                         )
                       )
             res <- extractSingleExecutionResult(result)

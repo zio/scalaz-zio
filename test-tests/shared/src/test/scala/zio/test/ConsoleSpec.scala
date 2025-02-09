@@ -2,7 +2,7 @@ package zio.test
 
 import zio.Console._
 import zio.test.Assertion._
-import zio.test.TestAspect.{nonFlaky, silent}
+import zio.test.TestAspect.{exceptJS, nonFlaky, silent}
 import zio.test.TestConsole._
 import zio.{Console, ZIO}
 
@@ -84,6 +84,6 @@ object ConsoleSpec extends ZIOBaseSpec {
           output <- TestConsole.output
           _      <- printLine("Input")
         } yield assert(output)(isEmpty)
-      } @@ nonFlaky
+      } @@ exceptJS(nonFlaky)
     ) @@ silent
 }

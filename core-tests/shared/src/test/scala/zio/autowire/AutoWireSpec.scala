@@ -5,6 +5,8 @@ import zio.internal.macros.StringUtils.StringOps
 import zio.test.Assertion.{anything, equalTo, isLeft}
 import zio.test._
 
+import scala.annotation.nowarn
+
 object AutoWireSpec extends ZIOBaseSpec {
 
   def containsStringWithoutAnsi(element: String): Assertion[String] =
@@ -182,7 +184,52 @@ object AutoWireSpec extends ZIOBaseSpec {
                     )
               """
             })(isLeft(anything))
-          } @@ TestAspect.exceptScala3
+          } @@ TestAspect.exceptScala3,
+          test("uses service statically known to be available") {
+            trait Foo
+            class Bar
+            class Foo1 extends Foo
+            class Foo2 extends Foo
+
+            val barLayer: ULayer[Bar] = ZLayer.make[Bar & Foo](ZLayer.succeed(new Foo2), ZLayer.succeed(new Bar))
+            val fooLayer: ULayer[Foo] = ZLayer.succeed(new Foo1)
+
+            val l1 = ZLayer.make[Foo & Bar](barLayer, fooLayer)
+            val l2 = ZLayer.make[Foo & Bar](fooLayer, barLayer)
+
+            for {
+              a1 <- ZIO.service[Foo].provideLayer(l1)
+              a2 <- ZIO.service[Foo].provideLayer(l2)
+            } yield assertTrue(a1.isInstanceOf[Foo1], a2.isInstanceOf[Foo1])
+          },
+          test("ZLayer.Debug") {
+            val hello = ZLayer(ZIO.serviceWith[Int](i => s"Hello $i!"))
+            @nowarn("msg=.*ZLayer Wiring Graph.*")
+            val tree = ZLayer.make[String](hello, ZLayer.succeed(1), ZLayer.Debug.tree)
+            @nowarn("msg=.*Mermaid Live Editor Link.*")
+            val mermaid = ZLayer.make[String](hello, ZLayer.succeed(2), ZLayer.Debug.mermaid)
+
+            for {
+              s1 <- ZIO.service[String].provideLayer(tree)
+              s2 <- ZIO.service[String].provideLayer(mermaid)
+            } yield assertTrue(s1 == "Hello 1!", s2 == "Hello 2!")
+          },
+          test("takes trace from the implicit scope") {
+            var numTraces: Int = 0
+            val layer = {
+              implicit def trace: Trace = {
+                numTraces += 1
+                Trace.empty
+              }
+
+              ZLayer.make[String](
+                ZLayer.succeed(42),
+                ZLayer.fromFunction((_: Int).toString)
+              )
+            }
+
+            assertZIO(layer.build.as(numTraces))(equalTo(3))
+          }
         ),
         suite("`ZLayer.makeSome`")(
           test("automatically constructs a layer, leaving off some remainder") {

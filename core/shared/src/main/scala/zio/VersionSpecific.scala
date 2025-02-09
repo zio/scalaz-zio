@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,23 @@
 
 package zio
 
-import zio.internal.Platform
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import izumi.reflect.macrortti.LightTypeTagRef
-
-import java.util.{Map => JMap}
+import java.util.concurrent.ConcurrentHashMap
 
 private[zio] trait VersionSpecific {
 
   type EnvironmentTag[A] = izumi.reflect.Tag[A]
-  lazy val EnvironmentTag = izumi.reflect.Tag
+  val EnvironmentTag = izumi.reflect.Tag
 
   type TagK[F[_]] = izumi.reflect.TagK[F]
-  lazy val TagK = izumi.reflect.TagK
+  val TagK = izumi.reflect.TagK
 
   type TagKK[F[_, _]] = izumi.reflect.TagKK[F]
-  lazy val TagKK = izumi.reflect.TagKK
+  val TagKK = izumi.reflect.TagKK
 
   type TagK3[F[_, _, _]] = izumi.reflect.TagK3[F]
-  lazy val TagK3 = izumi.reflect.TagK3
+  val TagK3 = izumi.reflect.TagK3
 
   type TagK4[F[_, _, _, _]]                                                        = izumi.reflect.TagK4[F]
   type TagK5[F[_, _, _, _, _]]                                                     = izumi.reflect.TagK5[F]
@@ -59,14 +56,18 @@ private[zio] trait VersionSpecific {
 
   type LightTypeTag = izumi.reflect.macrortti.LightTypeTag
 
-  private[zio] def taggedIsSubtype(left: LightTypeTag, right: LightTypeTag): Boolean =
-    taggedSubtypes.computeIfAbsent(
-      (left, right),
-      new java.util.function.Function[(LightTypeTag, LightTypeTag), Boolean] {
-        override def apply(tags: (LightTypeTag, LightTypeTag)): Boolean =
-          tags._1 <:< tags._2
-      }
-    )
+  private[zio] def taggedIsSubtype(left: LightTypeTag, right: LightTypeTag): Boolean = {
+    // NOTE: Prefer get/putIfAbsent pattern as it offers better read performance at the cost of
+    // potentially computing `<:<` multiple times during app warmup
+    val k = (left, right)
+    taggedSubtypes.get(k) match {
+      case null =>
+        val v = left <:< right
+        taggedSubtypes.putIfAbsent(k, v)
+        v
+      case v => v.booleanValue()
+    }
+  }
 
   private[zio] def taggedTagType[A](tagged: EnvironmentTag[A]): LightTypeTag =
     tagged.tag
@@ -78,8 +79,30 @@ private[zio] trait VersionSpecific {
    * `Tag[A with B]` should produce `Set(Tag[A], Tag[B])`
    */
   private[zio] def taggedGetServices[A](t: LightTypeTag): Set[LightTypeTag] =
-    t.decompose
+    // NOTE: See `taggedIsSubtype` for implementation notes
+    taggedServices.get(t) match {
+      case null =>
+        val v = t.decompose
+        taggedServices.putIfAbsent(t, v)
+        v
+      case v => v
+    }
 
-  private val taggedSubtypes: JMap[(LightTypeTag, LightTypeTag), Boolean] =
-    Platform.newConcurrentMap()(Unsafe.unsafe)
+  private val taggedSubtypes: ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean] =
+    /*
+     * '''NOTE''': Larger maps have lower chance of collision which offers better
+     * read performance and smaller chance of entering synchronized blocks during writes
+     */
+    new ConcurrentHashMap[(LightTypeTag, LightTypeTag), java.lang.Boolean](1024)
+
+  private val taggedServices: ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]] =
+    new ConcurrentHashMap[LightTypeTag, Set[LightTypeTag]](256)
+
+  private sealed trait BoxedBool { self =>
+    final def value: Boolean = self eq BoxedBool.True
+  }
+  private object BoxedBool {
+    case object True  extends BoxedBool
+    case object False extends BoxedBool
+  }
 }

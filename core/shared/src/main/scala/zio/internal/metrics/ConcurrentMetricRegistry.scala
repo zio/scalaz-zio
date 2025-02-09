@@ -35,7 +35,7 @@ private[zio] class ConcurrentMetricRegistry {
 
     var hook0: MetricHook[_, zio.metrics.MetricState.Untyped] = map.get(key)
 
-    if (hook0 == null) {
+    if (hook0 eq null) {
       (key.keyType match {
         case MetricKeyType.Counter             => getCounter(key.asInstanceOf[MetricKey.Counter])
         case MetricKeyType.Frequency           => getSetCount(key.asInstanceOf[MetricKey.Frequency])
@@ -45,6 +45,9 @@ private[zio] class ConcurrentMetricRegistry {
       }).asInstanceOf[Result]
     } else hook0.asInstanceOf[Result]
   }
+
+  def remove[Type <: MetricKeyType](key: MetricKey[Type])(implicit unsafe: Unsafe): Boolean =
+    map.remove(key) ne null
 
   @tailrec
   final def addListener(listener: MetricListener)(implicit unsafe: Unsafe): Unit = {

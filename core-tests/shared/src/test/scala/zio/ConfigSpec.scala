@@ -7,6 +7,40 @@ import zio.Config.Secret
 
 object ConfigSpec extends ZIOBaseSpec {
 
+  def boxTest[A](
+    slow: ZIO[Any, Throwable, A],
+    fast: ZIO[Any, Throwable, A],
+    factor: Double = 1.0
+  ): ZIO[Any, Throwable, Boolean] = {
+
+    // Box test from "Opportunities and Limits of Remote Timing Attacks", Scott A. Crosby, Dan S. Wallach, Rudolf H. Riedi
+    val i = 0.02
+    val j = 0.15
+
+    val nOfTries = 1000
+
+    def statistics[A](a: ZIO[Any, Throwable, A]): ZIO[Any, Throwable, (Long, Long)] =
+      ZIO.loop(0)(_ < nOfTries, _ + 1)(_ => measure(a)).map { sampleUnsorted =>
+        val sample = sampleUnsorted.sorted
+        val tail   = sample.drop((nOfTries * i).round.toInt)
+        val low    = tail.head
+        val high   = tail.drop((nOfTries * (j - i)).round.toInt).head
+        (low, high)
+      }
+
+    def measure[A](f: ZIO[Any, Throwable, A]): ZIO[Any, Throwable, Long] =
+      for {
+        before <- Clock.nanoTime
+        _      <- f
+        after  <- Clock.nanoTime
+      } yield after - before
+
+    for {
+      statisticsA <- statistics(slow)
+      statisticsB <- statistics(fast)
+    } yield !(statisticsA._1 * factor > statisticsB._2)
+  }
+
   def secretSuite =
     suite("Secret")(
       test("Chunk constructor") {
@@ -49,7 +83,33 @@ object ConfigSpec extends ZIOBaseSpec {
           secret.unsafe.wipe(Unsafe.unsafe)
 
           assertTrue(secret.hashCode == Chunk.fill[Char]("secret".length)(0).hashCode)
-        }
+        } +
+        suite("timing vulnerabilities")(
+          // if flaky, decrease `factor` param of `boxTest`
+          test("doesn't leak length") {
+            val secret          = zio.Config.Secret("some-secret" * 1000)
+            val differentLength = zio.Config.Secret("some-secre" * 1000)
+            val sameLength      = zio.Config.Secret("some-secrez" * 1000)
+            assertZIO(boxTest(ZIO.attempt(secret equals sameLength), ZIO.attempt(secret equals differentLength), 0.9))(
+              equalTo(true)
+            )
+          },
+          test("leak length inverted") {
+            val secret          = zio.Config.Secret("some-secret" * 1000)
+            val differentLength = zio.Config.Secret("some-secre" * 1000)
+            val sameLength      = zio.Config.Secret("some-secrez" * 1000)
+            assertZIO(boxTest(ZIO.attempt(sameLength equals secret), ZIO.attempt(differentLength equals secret)))(
+              equalTo(false)
+            )
+          },
+          test("doesn't leak char") {
+            val secret     = zio.Config.Secret("some-secret" * 1000)
+            val sameLength = zio.Config.Secret("some-secrez" * 1000)
+            assertZIO(boxTest(ZIO.attempt(secret equals secret), ZIO.attempt(secret equals sameLength), 0.9))(
+              equalTo(true)
+            )
+          }
+        ) @@ TestAspect.sequential @@ TestAspect.withLiveClock @@ TestAspect.flaky
     )
 
   def withDefaultSuite =

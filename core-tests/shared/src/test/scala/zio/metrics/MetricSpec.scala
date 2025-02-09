@@ -553,6 +553,15 @@ object MetricSpec extends ZIOBaseSpec {
         pair3.metricState == MetricState.Counter(1.0),
         pair3.metricKey.description.contains("description2")
       )
+    },
+    test("trackDurationWith propagates regional tags") {
+      val metric = Metric.timer("timer", ChronoUnit.MILLIS)
+      val aspect = metric.trackDuration
+      for {
+        _     <- ZIO.tagged("key", "value")(ZIO.unit @@ aspect)
+        value <- metric.tagged("key", "value").value
+        count  = value.count
+      } yield assertTrue(count == 1L)
     }
   )
 }

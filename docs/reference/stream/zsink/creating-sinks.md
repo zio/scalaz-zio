@@ -34,8 +34,8 @@ val last: ZIO[Any, Nothing, Option[Int]]                 = ZStream(1, 2, 3, 4).r
 **ZSink.count** — A sink that consumes all elements of the stream and counts the number of elements fed to it:
 
 ```scala mdoc:silent:nest
-val sink : ZSink[Any, Nothing, Int, Nothing, Int] = ZSink.sum[Int]
-val count: ZIO[Any, Nothing, Int]                 = ZStream(1, 2, 3, 4, 5).run(sink)
+val sink : ZSink[Any, Nothing, Int, Nothing, Long] = ZSink.count
+val count: ZIO[Any, Nothing, Long]                 = ZStream(1, 2, 3, 4, 5).run(sink)
 // Result: 5
 ```
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ private[zio] class ZInputStream(private var chunks: Iterator[Chunk[Byte]]) exten
     if (done) {
       -1
     } else {
-      //cater to InputStream specification
+      // cater to InputStream specification
       if (len != 0) {
         val written = doRead(bytes, off, len, 0)
         if (written == 0) -1 else written

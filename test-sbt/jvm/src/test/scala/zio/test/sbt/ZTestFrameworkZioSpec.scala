@@ -199,7 +199,7 @@ object ZTestFrameworkZioSpec extends ZIOSpecDefault {
       testC <- testConsole
       tasksZ <-
         ZIO
-          .attempt(
+          .attemptBlocking(
             new ZTestFramework()
               .runner(testArgs, Array(), getClass.getClassLoader)
               .tasksZ(tasks, testC)

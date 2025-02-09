@@ -34,21 +34,28 @@ cd zio
 git clone git@github.com:your-user-name/zio.git .
 ```
 
+Then you need to add a remote upstream to the original ZIO project repository and fetch tags that will be used for proper project versioning by the build tool:
+
+```bash
+git remote add upstream git@github.com:zio/zio.git
+git fetch --tags upstream
+```
+
 If these steps were successful, then congratulations, you now have a complete copy of the ZIO project!
 
 The next step is to build the project on your machine, to ensure you know how to compile the project and run tests.
 
 ### Build the Project
 
-The official way to build the project is with sbt. An sbt build file is included in the project, so if you choose to build the project this way, you won't have to do any additional configuration or setup (others choose to build the project using IntelliJ IDEA, Gradle, Maven, Mill, or Fury).
+The official way to build the project is with [sbt](https://www.scala-sbt.org/download/). An sbt build file is included in the project, so if you choose to build the project this way, you won't have to do any additional configuration or setup (others choose to build the project using IntelliJ IDEA, Gradle, Maven, Mill, or Fury).
 
-We use a custom sbt script, which is included in the repository, in order to ensure settings are uniform across all development machines, and the continuous integration service (Circle CI).
-
-The sbt script is in the root of the repository. To launch this script from your Terminal window, simply type:
+To launch this sbt from your Terminal window, simply type:
 
 ```bash
-./sbt
+sbt -J-Xmx8g
 ```
+
+Where `-J-Xmx8g` is an optional settings to increase maximum heap size of JVM that could be useful to avoid slowdown on default settings.
 
 Sbt will launch, read the project build file, and download dependencies as required.
 

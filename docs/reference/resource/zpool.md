@@ -41,6 +41,27 @@ The two fundamental operators on a `ZPool` is `get` and `invalidate`:
 - The `get` operator retrieves an item from the pool in a scoped effect.
 - The `invalidate` operator invalidates the specified item. This will cause the pool to eventually reallocate the item.
 
+Let's assume we have a resource that is expensive to create and release. We want to access this resource frequently, but we don't want to create a new resource every time we need it. We can use `ZPool` to create a pool of resources and acquire them when only needed.
+
+```scala
+import zio._
+
+object PoolExample extends ZIOAppDefault {
+  def resource: ZIO[Scope, Nothing, UUID] = ZIO.acquireRelease(
+    ZIO.random.flatMap(_.nextUUID).flatMap(uuid => ZIO.debug(s"Acquiring the resource: $uuid!").as(uuid))
+  )(uuid => ZIO.debug(s"Releasing the resource $uuid!"))
+
+  def run =
+    for {
+      pool <- ZPool.make(resource, 3)
+      item <- pool.get
+      _ <- ZIO.debug(s"Item: $item")
+    } yield ()
+}
+```
+
+In this example, we created a pool of 3 resources. When we call `pool.get`, it will return one of the resources from the pool. After calling the `pool.get` three times, if we call it again, it will block until one of the resources is released back to the pool using `ZPool#invalidate`.
+
 ## Constructing ZPools
 
 ### Fixed-size Pools

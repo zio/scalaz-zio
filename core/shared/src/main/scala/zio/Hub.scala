@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2021-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,7 +140,7 @@ object Hub {
             strategy.unsafeCompleteSubscribers(hub, subscribers)
             ZIO.succeed(true)
           } else {
-            strategy.handleSurplus(hub, subscribers, Chunk(a), shutdownFlag)
+            strategy.handleSurplus(hub, subscribers, Chunk.single(a), shutdownFlag)
           }
         }
       def publishAll[A1 <: A](as: Iterable[A1])(implicit trace: Trace): UIO[Chunk[A1]] =
@@ -149,7 +149,7 @@ object Hub {
           else {
             val surplus = unsafePublishAll(hub, as)
             strategy.unsafeCompleteSubscribers(hub, subscribers)
-            if (surplus.isEmpty) ZIO.succeed(Chunk.empty)
+            if (surplus.isEmpty) Exit.emptyChunk
             else
               strategy.handleSurplus(hub, subscribers, surplus, shutdownFlag).map { published =>
                 if (published) Chunk.empty else surplus

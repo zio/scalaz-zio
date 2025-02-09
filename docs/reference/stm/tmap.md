@@ -216,17 +216,18 @@ val foldSTMTMap: UIO[Int] = (for {
 } yield sum).commit
 ```
 
-## Perform side-effect for TMap key-value pairs
+## Perform effects for TMap key-value pairs
 
-`foreach` is used for performing side-effect for each key-value pair in the map:
+`foreach` is used for performing an STM effect for each key-value pair in the map:
 
 ```scala mdoc:silent
 import zio._
 import zio.stm._
 
 val foreachTMap = (for {
-  tMap <- TMap.make(("a", 1), ("b", 2), ("c", 3))
-  _    <- tMap.foreach((k, v) => STM.succeed(println(s"$k -> $v")))
+  tMap   <- TMap.make(("a", 1), ("b", 2), ("c", 3))
+  tQueue <- TQueue.unbounded[String]
+  _      <- tMap.foreach((k, v) => tQueue.offer(s"$k -> $v").unit)
 } yield tMap).commit
 ```
 

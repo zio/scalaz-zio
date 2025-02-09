@@ -477,18 +477,17 @@ On the other hand, ZIO has a library called [ZIO HTTP][56] which is a pure funct
 Let's see how the above Akka HTTP service can be written in ZIO:
 
 ```scala mdoc:compile-only
-import zhttp.html.Html
-import zhttp.http._
-import zhttp.service.Server
+import zio.http._
+import zio.http.template.Html
 import zio.ZIOAppDefault
 
 object ZIOHttpServer extends ZIOAppDefault {
-  def run = Server.start(
-    port = 8080,
-    http = Http.collect[Request] { case Method.GET -> !! / "hello" =>
-      Response.html(Html.fromString("<h1>Say hello to zio-http</h1>"))
-    }
-  )
+  val routes =
+    Routes(
+      Method.GET / "hello" -> handler(Response.html(Html.fromString("<h1>Say hello to zio-http</h1>")))
+    )
+
+  def run = Server.serve(routes).provide(Server.defaultWithPort(8080))
 }
 ```
 
@@ -682,7 +681,7 @@ To demonstrate how the backend works, we can write a simple web service that acc
 
 ```scala
 import zio.*
-import zhttp.http.*
+import zio.http.*
 import edomata.core.CommandMessage
 import BackendService.Service
 import java.time.Instant
@@ -690,19 +689,20 @@ import java.time.Instant
 object ZIOCounterHttpApp {
 
   def apply(service: Service) =
-    Http.collectZIO[Request] {
+    Routes(
       // command: inc or dec
       // GET /{edomaton address}/{command}/{command id}
-      case Method.GET -> !! / address / command / commandId =>
-        val cmd = command match {
-          case "inc" => Command.Inc
-          case "dec" => Command.Dec
-        }
+      Method.GET / string("address") / string("command") / string("commandId") ->
+        handler { (address: String, command: String, commandId: String, _: Request) =>
+          val cmd = command match {
+            case "inc" => Command.Inc
+            case "dec" => Command.Dec
+          }
 
-        service(CommandMessage(commandId, Instant.now, address, cmd))
-          .map(r => Response.text(r.toString))
-          .orDie
-    }
+          service(CommandMessage(commandId, Instant.now, address, cmd))
+            .map(r => Response.text(r.toString))
+            .orDie
+        })
 }
 ```
 
@@ -711,8 +711,7 @@ Now we can wire everything and run the application:
 ```scala
 import zio.*
 import zio.interop.catz.*
-import zhttp.http.*
-import zhttp.service.Server
+import zio.http.*
 import cats.effect.std.Console
 
 object MainApp extends ZIOAppDefault {
@@ -722,7 +721,7 @@ object MainApp extends ZIOAppDefault {
     ZIO.scoped {
       for {
         backendService <- BackendService.service
-        _ <- Server.start(8090, ZIOCounterHttpApp(backendService))
+        _ <- ZIOCounterHttpApp(backendService).serve.provide(Server.defaultWithPort(8090))
       } yield ()
     }
 }
@@ -960,12 +959,7 @@ In the ZIO community, there is a library called [Shardcake][73] that provides a 
 
 First, we are going to define the `Counter` entity:
 
-```scala mdoc:invisible:reset
-
-```
-
-```scala mdoc:silent
-import com.devsisters.shardcake.Messenger.Replier
+```scala mdoc:silent:reset
 import com.devsisters.shardcake._
 import zio._
 
@@ -1016,25 +1010,25 @@ object Counter extends EntityType[CounterMessage]("counter") {
 To be able to receive messages from the clients, let's define a web service:
 
 ```scala mdoc:silent
-import com.devsisters.shardcake.{ Messenger, Sharding }
-import zhttp.http._
+import com.devsisters.shardcake.{Messenger, Sharding}
+import zio.http._
 import zio.Scope
 
 object WebService {
-  def apply(
-    counter: Messenger[CounterMessage]
-  ): Http[Sharding with Scope, Throwable, Request, Response] =
-    Http.collectZIO[Request] {
-      case Method.GET -> !! / entityId / "inc" =>
+  def apply(counter: Messenger[CounterMessage]): Routes[Sharding with Scope, Nothing] =
+
+    Routes(
+      Method.GET / string("entityId") / "inc" -> handler { (entityId: String, _: Request) =>
         counter
           .send(entityId)(CounterMessage.Increase)
           .map(r => Response.text(r.toString))
-
-      case Method.GET -> !! / entityId / "dec" =>
+      },
+      Method.GET / string("entityId") / "dec" -> handler { (entityId: String, _: Request) =>
         counter
           .send(entityId)(CounterMessage.Decrease)
           .map(r => Response.text(r.toString))
-    }
+      }
+    ).sandbox
 }
 ```
 
@@ -1094,7 +1088,7 @@ Now we are ready to create our application:
 ```scala mdoc:silent
 import com.devsisters.shardcake._
 import zio._
-import zhttp.service.Server
+import zio.http.Server
 
 object HttpApp extends ZIOAppDefault {
 
@@ -1105,7 +1099,7 @@ object HttpApp extends ZIOAppDefault {
         _       <- Sharding.registerEntity(Counter, Counter.behavior)
         _       <- Sharding.registerScoped
         counter <- Sharding.messenger(Counter)
-        _       <- Server.start(port, WebService(counter))
+        _       <- Server.serve(WebService(counter)).provideSome[Sharding & Scope](Server.defaultWithPort(port))
       } yield ()
     }.provide(
       ShardConfig.layer,

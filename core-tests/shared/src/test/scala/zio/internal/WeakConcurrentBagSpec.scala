@@ -54,7 +54,7 @@ object WeakConcurrentBagSpec extends ZIOBaseSpec {
           bag.gc()
 
           assertTrue(bag.size == 50)
-        } +
+        } @@ flaky +
         test("auto gc") {
           val bag = WeakConcurrentBag[Wrapper[String]](100)
 

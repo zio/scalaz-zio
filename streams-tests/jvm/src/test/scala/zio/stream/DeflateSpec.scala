@@ -23,13 +23,13 @@ object DeflateSpec extends ZIOBaseSpec {
       test("deflate empty bytes, small buffer")(
         assertZIO(
           (ZStream.fromIterable(List.empty).rechunk(1).channel >>> Deflate
-            .makeDeflater(100, false)).runCollect
+            .makeDeflater(100, noWrap = false)).runCollect
             .map(_._1.flatten.toList)
         )(equalTo(jdkDeflate(Array.empty, new Deflater(-1, false)).toList))
       ),
       test("deflates same as JDK")(
         assertZIO(
-          (ZStream.fromIterable(longText).rechunk(128).channel >>> Deflate.makeDeflater(256, false)).runCollect
+          (ZStream.fromIterable(longText).rechunk(128).channel >>> Deflate.makeDeflater(256, noWrap = false)).runCollect
             .map(_._1.flatten)
         )(
           equalTo(Chunk.fromArray(jdkDeflate(longText, new Deflater(-1, false))))
@@ -37,7 +37,7 @@ object DeflateSpec extends ZIOBaseSpec {
       ),
       test("deflates same as JDK, nowrap")(
         assertZIO(
-          (ZStream.fromIterable(longText).rechunk(128).channel >>> Deflate.makeDeflater(256, true)).runCollect
+          (ZStream.fromIterable(longText).rechunk(128).channel >>> Deflate.makeDeflater(256, noWrap = true)).runCollect
             .map(_._1.flatten)
         )(
           equalTo(Chunk.fromArray(jdkDeflate(longText, new Deflater(-1, true))))
@@ -45,7 +45,7 @@ object DeflateSpec extends ZIOBaseSpec {
       ),
       test("deflates same as JDK, small buffer")(
         assertZIO(
-          (ZStream.fromIterable(longText).rechunk(64).channel >>> Deflate.makeDeflater(1, false)).runCollect
+          (ZStream.fromIterable(longText).rechunk(64).channel >>> Deflate.makeDeflater(1, noWrap = false)).runCollect
             .map(_._1.flatten)
         )(
           equalTo(Chunk.fromArray(jdkDeflate(longText, new Deflater(-1, false))))
@@ -53,7 +53,7 @@ object DeflateSpec extends ZIOBaseSpec {
       ),
       test("deflates same as JDK, nowrap, small buffer ")(
         assertZIO(
-          (ZStream.fromIterable(longText).rechunk(64).channel >>> Deflate.makeDeflater(1, true)).runCollect
+          (ZStream.fromIterable(longText).rechunk(64).channel >>> Deflate.makeDeflater(1, noWrap = true)).runCollect
             .map(_._1.flatten)
         )(
           equalTo(Chunk.fromArray(jdkDeflate(longText, new Deflater(-1, true))))

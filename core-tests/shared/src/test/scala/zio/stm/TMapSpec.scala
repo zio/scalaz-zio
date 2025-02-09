@@ -1,7 +1,7 @@
 package zio.stm
 
 import zio.test.Assertion._
-import zio.test.TestAspect.nonFlaky
+import zio.test.TestAspect.{exceptJS, nonFlaky}
 import zio.test._
 import zio.{Chunk, ZIO, ZIOBaseSpec}
 
@@ -402,9 +402,68 @@ object TMapSpec extends ZIOBaseSpec {
                     }
                     .exit
         } yield assert(exit)(succeeds(isUnit))
-      } @@ nonFlaky
+      }
+    ),
+    suite("concurrency")(
+      test("modifying the same key is atomic") {
+        val n = 1000
+        for {
+          map <- TMap.empty[String, Int].commit
+          _ <- ZIO
+                 .foreachParDiscard(1 to n) { _ =>
+                   ZIO.yieldNow *>
+                     (for {
+                       i <- map.get("foo")
+                       _ <- map.put("foo", i.fold(1)(_ + 1))
+                     } yield ()).commit
+                 }
+                 .withParallelism(10)
+          res <- map.get("foo").commit
+        } yield assertTrue(res.contains(n))
+      }
+    ),
+    suite("collection transformation transactions are idempotent")(
+      test("toMap") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toMap.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == Map("a" -> 2),
+          s2 == Map.empty[String, Int]
+        )
+      },
+      test("toList") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toList.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == List("a" -> 2),
+          s2 == List.empty[(String, Int)]
+        )
+      },
+      test("toChunk") {
+        for {
+          state <- TMap.empty[String, Int].commit
+          a      = state.toChunk.commit
+          _     <- state.put("a", 2).commit
+          s1    <- a
+          _     <- state.delete("a").commit
+          s2    <- a
+        } yield assertTrue(
+          s1 == Chunk("a" -> 2),
+          s2 == Chunk.empty[(String, Int)]
+        )
+      }
     )
-  )
+  ) @@ exceptJS(nonFlaky)
 
   private final case class HashContainer(val i: Int) {
     override def hashCode(): Int = i

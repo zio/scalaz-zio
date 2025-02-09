@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,16 @@
 
 package zio
 
-import zio.internal.IsFatal
+import zio.internal.{Blocking, IsFatal}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-
-import scala.concurrent.ExecutionContext
 
 private[zio] trait RuntimePlatformSpecific {
 
   final val defaultExecutor: Executor =
-    Executor.fromExecutionContext(ExecutionContext.global)
+    Executor.makeDefault(autoBlocking = false)
 
   final val defaultBlockingExecutor: Executor =
-    defaultExecutor
+    Blocking.blockingExecutor
 
   final val defaultFatal: IsFatal =
     IsFatal.empty
@@ -43,4 +41,9 @@ private[zio] trait RuntimePlatformSpecific {
 
   final val defaultSupervisor: Supervisor[Any] =
     Supervisor.none
+
+  def enableAutoBlockingExecutor(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    ZLayer.suspend {
+      Runtime.setExecutor(Executor.makeDefault(autoBlocking = true))
+    }
 }

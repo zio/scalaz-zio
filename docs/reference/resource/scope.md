@@ -16,9 +16,50 @@ trait Scope {
   def addFinalizerExit(finalizer: Exit[Any, Any] => UIO[Any]): UIO[Unit]
   def close(exit: => Exit[Any, Any]): UIO[Unit]
 }
+
+object Scope {
+  def make: UIO[Scope] = ???
+}
 ```
 
-The `addFinalizerExit` operator lets us add a finalizer to the `Scope`. The `close` operator closes the scope, running all the finalizers that have been added to the scope.
+The `addFinalizerExit` operator lets us add a finalizer to the `Scope`. Based on the `Exit` value that the `Scope` is closed with, the finalizer will be run. The finalizer is guaranteed to be run when the scope is closed. The `close` operator closes the scope, running all the finalizers that have been added to the scope. It takes an `Exit` value and runs the finalizers based on that value.
+
+In the following example, we create a `Scope`, add a finalizer to it, and then close the scope:
+
+```scala mdoc:compile-only
+import zio._
+
+for {
+  scope <- Scope.make
+  _ <- ZIO.debug("Scope is created!")
+  _ <- scope.addFinalizer(
+    for {
+      _ <- ZIO.debug("The finalizer is started!")
+      _ <- ZIO.sleep(5.seconds)
+      _ <- ZIO.debug("The finalizer is done!")
+    } yield ()
+  )
+  _ <- ZIO.debug("Leaving scope!")
+  _ <- scope.close(Exit.succeed(()))
+  _ <- ZIO.debug("Scope is closed!")
+} yield ()
+```
+
+The output of this program will be:
+
+```
+Scope is created!
+Leaving scope!
+The finalizer is started!
+The finalizer is done!
+Scope is closed!
+```
+
+We can see that the finalizer is run after we called `close` on the scope. So the finalizer is guaranteed to be run when the scope is closed.
+
+The `Scope#extend` operator, takes a `ZIO` effect that requires a `Scope` and provides it with a `Scope` without closing it afterwards. This allows us to extend the lifetime of a scoped resource to the lifetime of a scope.
+
+## Scopes and The ZIO Environment
 
 In combination with the ZIO environment, `Scope` gives us an extremely powerful way to manage resources.
 
@@ -50,7 +91,15 @@ source("cool.txt").flatMap { source =>
 }
 ```
 
-When we are done working with the file we can close the scope using the `ZIO.scoped` operator, which creates a new `Scope`, provides it to the workflow, and closes the `Scope` when the workflow is done.
+Once we are finished working with the file, we can close the scope using the `ZIO.scoped` operator. This function creates a new `Scope`, provides it to the workflow, and closes the `Scope` once the workflow is complete:
+
+```scala
+object ZIO {
+  def scoped[R, E, A](zio: ZIO[Scope with R, E, A]): ZIO[R, E, A] = ???
+}
+```
+
+The `scoped` operator removes the `Scope` from the environment, indicating that there are no longer any resources used by this workflow that require a scope. We now have a workflow that is ready to run:
 
 ```scala mdoc
 def contents(name: => String): ZIO[Any, IOException, Chunk[String]] =
@@ -61,9 +110,70 @@ def contents(name: => String): ZIO[Any, IOException, Chunk[String]] =
   }
 ```
 
-The `scoped` operator removes the `Scope` from the environment, indicating that there are no longer any resources used by this workflow which require a scope. We now have a workflow that is ready to run.
-
 In some cases ZIO applications may provide a `Scope` for us for resources that we don't specify a scope for. For example `ZIOApp` provides a `Scope` for our entire application and ZIO Test provides a `Scope` for each test.
+
+:::note
+Please note that like any other services that we can obtain from the ZIO environment, we can do the same with `Scope`. By calling `ZIO.service[Scope]` we can obtain the `Scope` service and then use it to manage resources by adding finalizers to it:
+
+```scala mdoc:silent
+import zio._
+
+val resourcefulApp: ZIO[Scope, Nothing, Unit] =
+  for {
+    scope <- ZIO.service[Scope]
+    _     <- ZIO.debug("Entering the scope!")
+    _ <- scope.addFinalizer(
+      for {
+        _ <- ZIO.debug("The finalizer is started!")
+        _ <- ZIO.sleep(5.seconds)
+        _ <- ZIO.debug("The finalizer is done!")
+      } yield ()
+    )
+    _ <- ZIO.debug("Leaving scope!")
+  } yield ()
+```
+
+Then we can run the `app` workflow by providing the `Scope` service to it:
+
+```scala mdoc:compile-only
+val finalApp: ZIO[Any, Nothing, Unit] =
+  Scope.make.flatMap(scope => resourcefulApp.provide(ZLayer.succeed(scope)).onExit(scope.close(_)))
+```
+
+Here is the output of the program:
+
+```
+Entering the scope!
+Leaving scope!
+The finalizer is started!
+The finalizer is done!
+```
+
+So we can think of `Scope` as a service that helps us manage resources effectfully. However, the way we utilized it in the previous example is not as per the best practices, and it was only for educational purposes.
+
+In real-world applications, we can easily manage resources by utilizing high-level operators such as `ZIO.acquireRelease` and `ZIO.scoped`.
+:::
+
+## Scopes are Dynamic
+
+One important thing to note about `Scope` is that they are dynamic. This means that if we have an effect that requires a `Scope` we can `flatMap` over that effect and use its value to create a new effect. The new effect extends the lifetime of the original scope. So as we don't close the scope (by calling `ZIO.scoped`) the resources will not be released, and they can become bigger and bigger until we close them:
+
+```scala mdoc:invisible
+def file(name: String): ZIO[Any, IOException, Source] =
+  ZIO.attemptBlockingIO(Source.fromFile(name))
+
+def getLines(source: Source): ZIO[Any, Throwable, Iterator[String]] =
+  ZIO.from(source.getLines())
+
+def processLines(lines: Iterator[String]): ZIO[Any, Nothing, Unit] =
+  ZIO.succeed(lines.foreach(println))
+```
+
+```scala mdoc:compile-only
+ZIO.scoped {
+  file("path/to/file.txt").flatMap(getLines).flatMap(processLines) 
+}
+```
 
 ## Defining Resources
 
@@ -162,11 +272,81 @@ So far we have seen that while `Scope` is the foundation of safe and composable 
 
 In most cases we just use the `acquireRelease` constructor or one of its variants to construct our resource and either work with the resource and close its scope using `ZIO.scoped` or convert the resource into another ZIO data type using an operator such as `ZStream.scoped` or `ZLayer.scoped`. However, for more advanced use cases we may need to work with scopes directly and `Scope` has several useful operators for helping us do so.
 
-First, we can `use` a `Scope` by providing it to a workflow that needs a `Scope` and closing the `Scope` immediately after. This is analogous to the `ZIO.scoped` operator.
+### Using a Scope
 
-Second, we can use the `extend` operator on `Scope` to provide a workflow with a scope without closing it afterwards. This allows us to extend the lifetime of a scoped resource to the lifetime of a scope, effectively allowing us to "extend" the lifetime of that resource.
+First, we can `use` a `Scope` by providing it to a workflow that needs a `Scope` and closing the `Scope` immediately after. This is analogous to the `ZIO.scoped` operator:
 
-Third, we can `close` a `Scope`. One thing to note here is that by default only the creator of a `Scope` can close it.
+```scala
+trait Closeable extends Scope {
+  def use[R, E, A](zio: => ZIO[R with Scope, E, A]): ZIO[R, E, A]
+}
+
+object ZIO {
+  def scoped[R, E, A](zio: => ZIO[R with Scope, E, A]): ZIO[R, E, A] = ???
+}
+```
+
+In the following example, we obtained a `Scope` and added a finalizer to it, and then extended its lifetime to the lifetime of the `resource1` and `resource2`:
+
+```scala mdoc:compile-only
+import zio._
+
+object ExtendingScopesExample extends ZIOAppDefault {
+  val resource1: ZIO[Scope, Nothing, Unit] =
+    ZIO.acquireRelease(ZIO.debug("Acquiring the resource 1"))(_ =>
+      ZIO.debug("Releasing the resource one") *> ZIO.sleep(5.seconds)
+    )
+  val resource2: ZIO[Scope, Nothing, Unit] =
+    ZIO.acquireRelease(ZIO.debug("Acquiring the resource 2"))(_ =>
+      ZIO.debug("Releasing the resource two") *> ZIO.sleep(3.seconds)
+    )
+
+  def run =
+    ZIO.scoped(
+      for {
+        scope <- ZIO.scope
+        _     <- ZIO.debug("Entering the main scope!")
+        _     <- scope.addFinalizer(ZIO.debug("Releasing the main resource!") *> ZIO.sleep(2.seconds))
+        _     <- scope.extend(resource1)
+        _     <- scope.extend(resource2)
+        _     <- ZIO.debug("Leaving scope!")
+      } yield ()
+    )
+
+}
+```
+
+output:
+
+```
+Entering the main scope!
+Acquiring the resource 1
+Acquiring the resource 2
+Leaving scope!
+Releasing the resource two
+Releasing the resource one
+Releasing the main resource!
+```
+
+### Extending a Scope
+
+Second, we can use the `extend` operator on `Scope` to provide a workflow with a scope without closing it afterwards. This allows us to extend the lifetime of a scoped resource to the lifetime of a scope, effectively allowing us to "extend" the lifetime of that resource:
+
+```scala
+trait Scope {
+  def extend[R, E, A](zio: => ZIO[Scope with R, E, A]): ZIO[R, E, A]
+}
+```
+
+### Closing a Scope
+
+Third, we can `close` a `Scope`. One thing to note here is that by default only the creator of a `Scope` can close it:
+
+```scala
+trait Closeable extends Scope {
+  def close(exit: => Exit[Any, Any]): UIO[Unit]
+}
+```
 
 Creating a new `Scope` returns a `Scope.Closeable` which can be closed. Normally users of a `Scope` will only be provided with a `Scope` which does not expose a `close` operator.
 

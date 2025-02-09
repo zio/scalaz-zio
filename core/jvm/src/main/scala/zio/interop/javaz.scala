@@ -1,5 +1,7 @@
+package zio.interop
+
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +16,11 @@
  * limitations under the License.
  */
 
-package zio.interop
-
-import _root_.java.nio.channels.CompletionHandler
-import _root_.java.util.concurrent.{CompletableFuture, CompletionException, CompletionStage, Future}
 import zio._
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import java.util.concurrent.CancellationException
+import _root_.java.nio.channels.CompletionHandler
+import _root_.java.util.concurrent._
 import scala.concurrent.ExecutionException
 
 private[zio] object javaz {
@@ -30,7 +29,7 @@ private[zio] object javaz {
     ZIO.isFatalWith[Any, Throwable, T] { isFatal =>
       ZIO.async { k =>
         val handler = new CompletionHandler[T, Any] {
-          def completed(result: T, u: Any): Unit = k(ZIO.succeed(result))
+          def completed(result: T, u: Any): Unit = k(Exit.succeed(result))
 
           def failed(t: Throwable, u: Any): Unit = t match {
             case e if !isFatal(e) => k(ZIO.fail(e))
@@ -74,17 +73,18 @@ private[zio] object javaz {
           if (cf.isDone) {
             unwrapDone(isFatal)(cf)
           } else {
+            val cancel = ZIO.succeed(cf.cancel(false))
             restore {
               ZIO.asyncInterrupt[Any, Throwable, A] { cb =>
                 val _ = cs.handle[Unit] { (v: A, t: Throwable) =>
-                  val io = Option(t).fold[Task[A]](ZIO.succeed(v)) { t =>
-                    catchFromGet(isFatal).lift(t).getOrElse(ZIO.die(t))
-                  }
+                  val io =
+                    if (t eq null) Exit.succeed(v)
+                    else catchFromGet(isFatal).applyOrElse(t, (d: Throwable) => ZIO.die(d))
                   cb(io)
                 }
-                Left(ZIO.succeed(cf.cancel(false)))
+                Left(cancel)
               }
-            }.onInterrupt(ZIO.succeed(cf.cancel(false)))
+            }.onInterrupt(cancel)
           }
         }
       }

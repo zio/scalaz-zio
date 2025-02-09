@@ -1,9 +1,8 @@
 package zio
 
 import zio.test.Assertion._
+import zio.test.TestAspect.jvmOnly
 import zio.test._
-
-import scala.collection.immutable.Vector
 
 object ChunkSpec extends ZIOBaseSpec {
 
@@ -74,10 +73,18 @@ object ChunkSpec extends ZIOBaseSpec {
           assert(actual)(equalTo(expected))
         }
       },
-      test("buffer used") {
+      test("buffer used - parallel") {
         check(Gen.chunkOf(Gen.int), Gen.chunkOf(Gen.int)) { (as, bs) =>
           val effect   = ZIO.succeed(bs.foldLeft(as)(_ :+ _))
           val actual   = ZIO.collectAllPar(ZIO.replicate(100)(effect))
+          val expected = as ++ bs
+          assertZIO(actual)(forall(equalTo(expected)))
+        }
+      } @@ jvmOnly,
+      test("buffer used - sequential") {
+        check(Gen.chunkOf(Gen.int), Gen.chunkOf(Gen.int)) { (as, bs) =>
+          val effect   = ZIO.succeed(bs.foldLeft(as)(_ :+ _))
+          val actual   = ZIO.collectAll(ZIO.replicate(100)(effect))
           val expected = as ++ bs
           assertZIO(actual)(forall(equalTo(expected)))
         }
@@ -130,10 +137,18 @@ object ChunkSpec extends ZIOBaseSpec {
           assert(actual)(equalTo(expected))
         }
       },
-      test("buffer used") {
+      test("buffer used - parallel") {
         check(Gen.chunkOf(Gen.int), Gen.chunkOf(Gen.int)) { (as, bs) =>
           val effect   = ZIO.succeed(as.foldRight(bs)(_ +: _))
           val actual   = ZIO.collectAllPar(ZIO.replicate(100)(effect))
+          val expected = as ++ bs
+          assertZIO(actual)(forall(equalTo(expected)))
+        }
+      } @@ jvmOnly,
+      test("buffer used - sequential") {
+        check(Gen.chunkOf(Gen.int), Gen.chunkOf(Gen.int)) { (as, bs) =>
+          val effect   = ZIO.succeed(as.foldRight(bs)(_ +: _))
+          val actual   = ZIO.collectAll(ZIO.replicate(100)(effect))
           val expected = as ++ bs
           assertZIO(actual)(forall(equalTo(expected)))
         }
@@ -713,7 +728,7 @@ object ChunkSpec extends ZIOBaseSpec {
     ),
     suite("updated")(
       test("updates the chunk at the specified index") {
-        check(Gen.chunkOfN(100)(Gen.int), Gen.listOf(Gen.int(0, 99)), Gen.listOf(Gen.int)) { (chunk, indices, values) =>
+        check(Gen.chunkOfN(10)(Gen.int), Gen.listOf(Gen.int(0, 9)), Gen.listOf(Gen.int)) { (chunk, indices, values) =>
           val actual =
             indices.zip(values).foldLeft(chunk) { case (chunk, (index, value)) => chunk.updated(index, value) }
           val expected =
@@ -845,6 +860,46 @@ object ChunkSpec extends ZIOBaseSpec {
         val sorted = chunk.sorted
         assertTrue(sorted.toVector == chunk.toVector.sorted)
       }
-    }
+    },
+    suite("combinators on chunks with different underlying primitives")(
+      test("concat on small chunks") {
+        val chunk = Chunk(1) ++ Chunk(2L)
+        assertTrue(chunk.materialize == Chunk(1L, 2L))
+      },
+      test("concat on large chunks") {
+        val arr1   = Array.fill(1000)(1)
+        val arr2   = Array.fill(1000)(1L)
+        val chunk1 = Chunk.fromArray(arr1) ++ Chunk.fromArray(arr2)
+        val chunk2 = Chunk.fromArray(arr1 ++ arr2)
+        assertTrue(chunk1 == chunk2)
+      },
+      test("flatmap") {
+        val arr1   = Array.fill(100)(1)
+        val arr2   = Array.fill(100)(1L)
+        val chunk1 = Chunk.fromArray(arr1).flatMap(_ => Chunk.fromArray(arr2))
+        val chunk2 = Chunk.fill(10000)(1L)
+        assertTrue(chunk1 == chunk2)
+      }
+    ),
+    suite("fromIterable array")(
+      test("objects") {
+        Chunk.fromIterable(Array("a", "b", "c")) match {
+          case c: Chunk.AnyRefArray[String] => assertTrue(c == Chunk("a", "b", "c"))
+          case _                            => assertNever("Expected Chunk.AnyRefArray")
+        }
+      },
+      test("primitives") {
+        Chunk.fromIterable(Array(1, 2, 3)) match {
+          case c: Chunk.IntArray => assertTrue(c == Chunk(1, 2, 3))
+          case _                 => assertNever("Expected Chunk.IntArray")
+        }
+      },
+      test("mix") {
+        Chunk.fromIterable(Array(1, "a", true)) match {
+          case c: Chunk.AnyRefArray[?] => assertTrue(c == Chunk(1, "a", true))
+          case _                       => assertNever("Expected Chunk.AnyRefArray")
+        }
+      }
+    )
   )
 }

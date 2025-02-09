@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 @OutputTimeUnit(TimeUnit.SECONDS)
 class NewEncodingBenchmark {
 
-  @Param(Array("5", "10")) //, "20", "40"))
+  @Param(Array("5", "10")) // , "20", "40"))
   var depth: Int = _
 
   @Benchmark
@@ -73,7 +73,7 @@ object Classic {
       cur match {
         case FlatMap(first, andThen) =>
           cur = first
-          stack.push(andThen)
+          stack.push(andThen.asInstanceOf[ErasedK])
 
         case Succeed(thunk) =>
           val value = thunk()

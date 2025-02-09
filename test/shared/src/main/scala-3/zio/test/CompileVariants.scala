@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.{UIO, ZIO, Trace}
 
 import scala.annotation.tailrec
-import scala.compiletime.testing.typeChecks
+import scala.compiletime.testing.{typeCheckErrors, Error}
 
 trait CompileVariants {
 
@@ -32,26 +32,28 @@ trait CompileVariants {
    * compile time.
    */
   inline def typeCheck(inline code: String): UIO[Either[String, Unit]] =
-    try {
-      if (typeChecks(code)) ZIO.succeed(Right(()))
-      else ZIO.succeed(Left(errorMessage))
-    } catch {
-      case _: Throwable => ZIO.die(new RuntimeException("Compilation failed"))
+    try failWith(typeCheckErrors(code))
+    catch {
+      case cause: Throwable =>
+        ZIO.die(new RuntimeException("Compilation failed", cause))
     }
 
-  private val errorMessage =
-    "Reporting of compilation error messages on Scala 3 is not currently supported due to instability of the underlying APIs."
+  private def failWith(errors: List[Error])(using Trace) =
+    if errors.isEmpty then ZIO.right(())
+    else ZIO.left(errors.iterator.map(_.message).mkString("\n"))
 
-  inline def assertTrue(inline exprs: => Boolean*)(implicit sourceLocation: SourceLocation): TestResult =
-    ${SmartAssertMacros.smartAssert('exprs, 'sourceLocation)}
+  inline def assertTrue(inline exprs: => Boolean*): TestResult =
+    ${ SmartAssertMacros.smartAssert('exprs) }
 
-  inline def assert[A](inline value: => A)(inline assertion: Assertion[A])(implicit trace: Trace, sourceLocation: SourceLocation): TestResult =
-    ${Macros.assert_impl('value)('assertion, 'trace, 'sourceLocation)}
+  inline def assert[A](inline value: => A)(
+    inline assertion: Assertion[A]
+  )(implicit trace: Trace, sourceLocation: SourceLocation): TestResult =
+    ${ Macros.assert_impl('value)('assertion, 'trace, 'sourceLocation) }
 
   inline def assertZIO[R, E, A](effect: ZIO[R, E, A])(assertion: Assertion[A]): ZIO[R, E, TestResult] =
-     ${Macros.assertZIO_impl('effect)('assertion)}
+    ${ Macros.assertZIO_impl('effect)('assertion) }
 
-  private[zio] inline def showExpression[A](inline value: => A): String = ${Macros.showExpression_impl('value)}
+  private[zio] inline def showExpression[A](inline value: => A): String = ${ Macros.showExpression_impl('value) }
 }
 
 /**
@@ -65,7 +67,7 @@ object CompileVariants {
     zio.test.assertImpl(value, Some(expression), Some(assertionCode))(assertion)
 
   def assertZIOProxy[R, E, A](effect: ZIO[R, E, A], expression: String, assertionCode: String)(
-    assertion: Assertion[A],
+    assertion: Assertion[A]
   )(implicit trace: Trace, sourceLocation: SourceLocation): ZIO[R, E, TestResult] =
     zio.test.assertZIOImpl(effect, Some(expression), Some(assertionCode))(assertion)
 }

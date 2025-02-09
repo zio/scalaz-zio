@@ -208,17 +208,18 @@ val foldSTMTSet: UIO[Int] = (for {
 } yield sum).commit
 ```
 
-## Perform side-effect for TSet elements
+## Perform effects for TSet elements
 
-`foreach` is used for performing side-effect for each element in set:
+`foreach` is used for performing an STM effect for each element in set:
 
 ```scala mdoc:silent
 import zio._
 import zio.stm._
 
 val foreachTSet = (for {
-  tSet <- TSet.make(1, 2, 3, 4)
-  _    <- tSet.foreach(a => STM.succeed(println(a)))
+  tSet   <- TSet.make(1, 2, 3, 4)
+  tQueue <- TQueue.unbounded[Int]
+  _      <- tSet.foreach(a => tQueue.offer(a).unit)
 } yield tSet).commit
 ```
 

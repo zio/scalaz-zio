@@ -267,7 +267,7 @@ object MainApp extends ZIOAppDefault {
 }
 ```
 
-In the above example, the `bar` fiber forked in the local scope has bigger lifetime than its parent fiber (`foo`. So, when its parent fiber (`foo`) is terminated, the `bar` fiber still running in the local scope until the local scope is closed. Let's see the output:
+In the above example, the `bar` fiber forked in the local scope has bigger lifetime than its parent fiber (`foo`). So, when its parent fiber (`foo`) is terminated, the `bar` fiber still running in the local scope until the local scope is closed. Let's see the output:
 
 ```
 Local scope started!

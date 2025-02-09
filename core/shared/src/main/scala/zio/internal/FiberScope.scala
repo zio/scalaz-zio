@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,15 @@ private[zio] sealed trait FiberScope {
     trace: Trace,
     unsafe: Unsafe
   ): Unit
+
+  private[zio] def addAll(
+    currentFiber: Fiber.Runtime[_, _],
+    runtimeFlags: RuntimeFlags,
+    children: Iterable[Fiber.Runtime[_, _]]
+  )(implicit
+    trace: Trace,
+    unsafe: Unsafe
+  ): Unit
 }
 
 private[zio] object FiberScope {
@@ -55,6 +64,20 @@ private[zio] object FiberScope {
     ): Unit =
       if (RuntimeFlags.fiberRoots(runtimeFlags)) {
         Fiber._roots.add(child)
+      }
+
+    private[zio] def addAll(
+      currentFiber: Fiber.Runtime[_, _],
+      runtimeFlags: RuntimeFlags,
+      children: Iterable[Fiber.Runtime[_, _]]
+    )(implicit
+      trace: Trace,
+      unsafe: Unsafe
+    ): Unit =
+      if (RuntimeFlags.fiberRoots(runtimeFlags)) {
+        children.foreach {
+          Fiber._roots.add(_)
+        }
       }
   }
 
@@ -83,6 +106,37 @@ private[zio] object FiberScope {
         // Parent was GC'd. We immediately interrupt the child fiber using the id
         // of the current fiber (which is adding the child to the parent):
         child.tellInterrupt(Cause.interrupt(currentFiber.id))
+      }
+    }
+
+    private[zio] def addAll(
+      currentFiber: Fiber.Runtime[_, _],
+      runtimeFlags: RuntimeFlags,
+      children: Iterable[Fiber.Runtime[_, _]]
+    )(implicit
+      trace: Trace,
+      unsafe: Unsafe
+    ): Unit = if (children.nonEmpty) {
+      val parent = parentRef.get()
+
+      if (parent ne null) {
+        // Parent is not GC'd. Let's check to see if the parent is the current
+        // fiber:
+        if (currentFiber eq parent) {
+          // The parent is the current fiber so it is safe to directly add the
+          // child to the parent:
+          parent.addChildren(children)
+        } else {
+          // The parent is not the current fiber. So we need to send a message
+          // to the parent so it will add the child to itself:
+          parent.tellAddChildren(children)
+        }
+      } else {
+        // Parent was GC'd. We immediately interrupt the child fiber using the id
+        // of the current fiber (which is adding the child to the parent):
+        children.foreach(
+          _.tellInterrupt(Cause.interrupt(currentFiber.id))
+        )
       }
     }
   }

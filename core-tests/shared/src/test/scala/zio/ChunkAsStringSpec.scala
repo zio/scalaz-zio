@@ -31,6 +31,30 @@ object ChunkAsStringSpec extends ZIOBaseSpec {
         val chunk = Chunk.fromIterable(List.fill(5)(str))
         assert(chunk.asString)(equalTo(str * 5))
       }
+    },
+    test("bytes asBase64String") {
+      check(Gen.alphaNumericString) { str =>
+        val chunk = Chunk.fromArray(str.getBytes(StandardCharsets.UTF_8))
+        assert(chunk.asBase64String)(
+          equalTo(java.util.Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8)))
+        )
+      }
+    },
+    test("chars asBase64String") {
+      check(Gen.alphaNumericString) { str =>
+        val chunk = Chunk.fromArray(str.toCharArray)
+        assert(chunk.asBase64String)(
+          equalTo(java.util.Base64.getEncoder.encodeToString(str.getBytes(StandardCharsets.UTF_8)))
+        )
+      }
+    },
+    test("strings asBase64String") {
+      check(Gen.alphaNumericString) { str =>
+        val chunk = Chunk.fromIterable(List.fill(5)(str))
+        assert(chunk.asBase64String)(
+          equalTo(java.util.Base64.getEncoder.encodeToString((str * 5).getBytes(StandardCharsets.UTF_8)))
+        )
+      }
     }
   )
 

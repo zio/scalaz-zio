@@ -45,7 +45,11 @@ Person(
       assertTrue(
         PrettyPrint(Person("Glenda", 123)).unstyled == expected
       )
-    } @@ TestAspect.exceptScala212
+    } @@ TestAspect.exceptScala212,
+    test("Huge list") {
+      val list = (1 to 1000).toList
+      assertTrue(PrettyPrint(list).unstyled == "List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10 + 990 more)")
+    }
   )
 
 }

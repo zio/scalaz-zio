@@ -4,6 +4,7 @@ title: "Fhir-indexer"
 ---
 
 [Fhir-indexer](https://github.com/royashcenazi/fhir-indexer) is a ZIO based library for fetching FHIR resources fast and easy.
+
 ## Introduction
 
 Welcome to the FHIR Indexing with ZIO and HAPI FHIR repository! This open-source project aims to provide a robust and efficient solution for indexing FHIR (Fast Healthcare Interoperability Resources) based APIs. The project leverages the power of the ZIO framework to handle concurrency and asynchronicity, while wrapping around the widely-used HAPI FHIR library for working with FHIR resources.
@@ -25,7 +26,8 @@ Welcome to the FHIR Indexing with ZIO and HAPI FHIR repository! This open-source
 `libraryDependencies += "io.github.royashcenazi" % "fhir-indexer" % "v0.0.2"`
 
 ### Maven
-```
+
+```xml
    <dependency>
         <groupId>io.github.royashcenazi</groupId>
         <artifactId>fhir-indexer</artifactId>
@@ -90,4 +92,5 @@ object ZioApp extends ZIOAppDefault {
   }
 }
 ```
+
 Happy indexing!

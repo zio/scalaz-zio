@@ -35,7 +35,7 @@ object ZTestLogger {
    * A layer which constructs a new `ZTestLogger` and runs the effect it is
    * provided to with the `Runtime` updated to add the `ZTestLogger`.
    */
-  val default: ZLayer[Any, Nothing, Any] =
+  val default: ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped {
       for {
         testLogger <- ZTestLogger.make

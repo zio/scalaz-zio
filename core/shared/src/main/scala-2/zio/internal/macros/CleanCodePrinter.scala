@@ -129,7 +129,7 @@ private[zio] object CleanCodePrinter {
 
     def loop(expr: c.Tree): c.Tree =
       expr match {
-        case Apply(t, args) if args.exists(t => t.tpe <:< tracerType || t.tpe <:< tagType) =>
+        case Apply(t, args) if args.exists(t => t.tpe != null && (t.tpe <:< tracerType || t.tpe <:< tagType)) =>
           loop(t)
         case Apply(t, args) =>
           Apply(loop(t), args.map(t => loop(t)))

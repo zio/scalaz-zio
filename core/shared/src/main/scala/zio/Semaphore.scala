@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,12 @@ sealed trait Semaphore extends Serializable {
    * Returns the number of available permits.
    */
   def available(implicit trace: Trace): UIO[Long]
+
+  /**
+   * Returns the number of tasks currently waiting for permits. The default
+   * implementation returns 0.
+   */
+  def awaiting(implicit trace: Trace): UIO[Long] = ZIO.succeed(0L)
 
   /**
    * Executes the specified workflow, acquiring a permit immediately before the
@@ -84,6 +90,12 @@ object Semaphore {
           ref.get.map {
             case Left(_)        => 0L
             case Right(permits) => permits
+          }
+
+        override def awaiting(implicit trace: Trace): UIO[Long] =
+          ref.get.map {
+            case Left(queue) => queue.size.toLong
+            case Right(_)    => 0L
           }
 
         def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
@@ -140,10 +152,10 @@ object Semaphore {
               case Right(permits) => acc -> Right(permits + n)
               case Left(queue) =>
                 queue.dequeueOption match {
-                  case None => acc -> Right(permits)
+                  case None => acc -> Right(n)
                   case Some(((promise, permits), queue)) =>
                     if (n > permits)
-                      loop(n - permits, Left(queue), acc <* promise.succeed(()))
+                      loop(n - permits, Left(queue), acc *> promise.succeed(()))
                     else if (n == permits)
                       (acc *> promise.succeed(())) -> Left(queue)
                     else

@@ -7,7 +7,17 @@ import zio.{Cause, Chunk, Promise, Ref, Schedule, ZIO, ZIOBaseSpec}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+import java.nio.charset.StandardCharsets
+import zio.test.Assertion.containsString
+
 object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
+
+  private def getTempDir: String = {
+    import scalajs.js.Dynamic.{global => g}
+    val os = g.require("os")
+    os.tmpdir().toString
+  }
+
   def spec = suite("ZStream JS")(
     test("async")(check(Gen.chunkOf(Gen.int)) { chunk =>
       val s = ZStream.async[Any, Throwable, Int](k => chunk.foreach(a => k(ZIO.succeed(Chunk.single(a)))))
@@ -214,6 +224,24 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
         } yield assert(isDone)(isFalse) &&
           assert(exit.untraced)(failsCause(containsCause(Cause.interrupt(selfId))))
       }
-    )
+    ),
+    test("FromFile should work") {
+      val content = "Hello World"
+      val path    = getTempDir + "/zio-streams-test.txt"
+
+      val s = ZStream.fromFile(path)
+      for {
+        _   <- ZIO.writeFile(path, content)
+        res <- s.runCollect.map(chunk => new String(chunk.toArray, StandardCharsets.UTF_8))
+      } yield assert(res)(equalTo(content))
+    },
+    test("FromFile should fail on non existing file") {
+      val path = getTempDir + "/zio-streams-test-2.txt"
+      val s    = ZStream.fromFile(path)
+      for {
+
+        res <- s.runCollect.flip
+      } yield assert(res.getMessage())(containsString(s"Error: ENOENT: no such file or directory"))
+    }
   )
 }

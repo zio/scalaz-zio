@@ -6,7 +6,7 @@ trait UserRepo {
   def register(user: User): Task[String]
 
   def lookup(id: String): Task[Option[User]]
-  
+
   def users: Task[List[User]]
 }
 
@@ -20,4 +20,3 @@ object UserRepo {
   def users: ZIO[UserRepo, Throwable, List[User]] =
     ZIO.serviceWithZIO[UserRepo](_.users)
 }
-

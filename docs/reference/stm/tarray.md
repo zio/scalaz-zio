@@ -128,9 +128,9 @@ val foldSTMTArray: UIO[Int] = (for {
 } yield sum).commit
 ```
 
-## Perform side-effect for TArray elements
+## Perform effects for TArray elements
 
-`foreach` is used for performing side-effect for each element in the array:
+`foreach` is used for performing an STM effect for each element in the array:
 
 ```scala mdoc:silent
 import zio._
@@ -138,6 +138,7 @@ import zio.stm._
 
 val foreachTArray = (for {
   tArray <- TArray.make(1, 2, 3, 4)
-  _      <- tArray.foreach(a => STM.succeed(println(a)))
+  tQueue <- TQueue.unbounded[Int]
+  _      <- tArray.foreach(a => tQueue.offer(a).unit)
 } yield tArray).commit
 ```

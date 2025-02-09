@@ -5,13 +5,14 @@ import org.openjdk.jmh.annotations.{Scope => JScope, _}
 import java.util.concurrent.{TimeUnit, ThreadLocalRandom}
 import java.util.concurrent.atomic.AtomicLong
 
-@BenchmarkMode(Array(Mode.Throughput))
 @State(JScope.Thread)
+@BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Warmup(iterations = 5)
-@Measurement(iterations = 5)
-@Fork(1)
-private[zio] class WeakConcurrentBagBenchmark {
+@Warmup(iterations = 5, time = 1)
+@Measurement(iterations = 5, time = 1)
+@Fork(2)
+@Threads(16)
+class WeakConcurrentBagBenchmark {
 
   @Param(Array("1000"))
   var capacity: Int = _
@@ -43,6 +44,7 @@ private[zio] class WeakConcurrentBagBenchmark {
     println(s"aliveness: ${alive.toDouble / (alive.toDouble + dead.toDouble)}")
   }
 }
+
 object WeakConcurrentBagBenchmark {
   val alive: AtomicLong = new AtomicLong(0L)
   val dead: AtomicLong  = new AtomicLong(0L)

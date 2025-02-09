@@ -3,7 +3,7 @@ package zio.test
 import zio._
 import zio.test.Assertion._
 import zio.test.GenUtils._
-import zio.test.TestAspect.{jvmOnly, nonFlaky, scala2Only}
+import zio.test.TestAspect.{exceptJS, jvmOnly, nonFlaky, scala2Only}
 import zio.test.{check => Check, checkN => CheckN}
 
 import java.time.{Duration => _, _}
@@ -379,7 +379,7 @@ object GenSpec extends ZIOBaseSpec {
       },
       test("sized accesses size in environment") {
         checkSample(Gen.sized(Gen.const(_)), size = 50)(forall(equalTo(50)))
-      } @@ nonFlaky,
+      } @@ exceptJS(nonFlaky),
       test("small generates sizes in range") {
         val gen = Gen.small(Gen.listOfN(_)(Gen.int(-10, 10)))
         checkSample(gen)(forall(isGreaterThanEqualTo(0) && isLessThanEqualTo(100)), _.map(_.length))

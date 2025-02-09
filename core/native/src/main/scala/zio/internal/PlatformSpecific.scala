@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package zio.internal
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import java.util.{HashMap, HashSet, Map => JMap, Set => JSet}
+import java.util.concurrent.ConcurrentHashMap
+import java.util.{Collections, WeakHashMap, Map => JMap, Set => JSet}
 
 private[zio] trait PlatformSpecific {
 
@@ -70,17 +71,23 @@ private[zio] trait PlatformSpecific {
    */
   final val isNative = true
 
-  final def newWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] = new HashSet[A]()
+  final def newWeakHashMap[A, B]()(implicit unsafe: zio.Unsafe): JMap[A, B] =
+    Collections.synchronizedMap(new WeakHashMap[A, B]())
 
-  final def newConcurrentSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] = new HashSet[A]()
+  final def newConcurrentMap[A, B]()(implicit unsafe: zio.Unsafe): JMap[A, B] =
+    new ConcurrentHashMap[A, B]()
 
-  final def newConcurrentWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] = new HashSet[A]()
+  final def newConcurrentWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
+    Collections.synchronizedSet(newWeakSet[A]())
 
-  final def newWeakHashMap[A, B]()(implicit unsafe: zio.Unsafe): JMap[A, B] = new HashMap[A, B]()
+  final def newWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
+    Collections.newSetFromMap(new WeakHashMap[A, java.lang.Boolean]())
 
-  final def newConcurrentMap[A, B]()(implicit unsafe: zio.Unsafe): JMap[A, B] = new HashMap[A, B]()
+  final def newConcurrentSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
+    ConcurrentHashMap.newKeySet[A]()
 
-  final def newWeakReference[A](value: A)(implicit unsafe: zio.Unsafe): () => A = { () => value }
+  final def newConcurrentSet[A](initialCapacity: Int)(implicit unsafe: zio.Unsafe): JSet[A] =
+    ConcurrentHashMap.newKeySet[A](initialCapacity)
 
   private def blackhole(a: Any): Unit = {
     val _ = a

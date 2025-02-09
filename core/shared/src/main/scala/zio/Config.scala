@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2022-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -154,11 +154,18 @@ object Config {
   final class Secret private (private val raw: Array[Char]) { self =>
     override def equals(that: Any): Boolean =
       that match {
-        case that: Secret =>
-          self.raw.length == that.raw.length &&
-            (0 until raw.length).foldLeft(true) { (b, i) =>
-              self.raw(i) == that.raw(i) && b
-            }
+        case that: Secret => {
+          val selfLength = self.raw.length
+          val thatLength = that.raw.length
+          var isEqual    = if (selfLength == thatLength) 0 else 1
+          var i          = 0
+          while (i < selfLength) {
+            val char = if (i >= thatLength) 'a' else that.raw(i)
+            isEqual = isEqual | (self.raw(i) ^ char)
+            i += 1
+          }
+          isEqual == 0
+        }
         case _ => false
       }
 
@@ -176,9 +183,9 @@ object Config {
   object Secret extends (Chunk[Char] => Secret) {
     def apply(chunk: Chunk[Char]): Secret = new Secret(chunk.toArray)
 
-    def apply(cs: CharSequence): Secret = Secret(cs.toString())
+    def apply(cs: CharSequence): Secret = Secret(cs.toString)
 
-    def apply(s: String): Secret = Secret(Chunk.fromArray(s.toCharArray))
+    def apply(s: String): Secret = new Secret(s.toCharArray)
 
     def unapply(secret: Secret): Some[Chunk[Char]] = Some(secret.value)
   }
@@ -289,40 +296,42 @@ object Config {
   final case class Described[A](config: Config[A], description: String) extends Composite[A]
   final case class Lazy[A](thunk: () => Config[A])                      extends Composite[A]
   case object LocalDateTime extends Primitive[java.time.LocalDateTime] {
-    final def parse(text: String): Either[Config.Error, java.time.LocalDateTime] = try Right(
-      java.time.LocalDateTime.parse(text)
-    )
-    catch {
-      case NonFatal(e) =>
-        Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local date-time value, but found ${text}"))
-    }
+    final def parse(text: String): Either[Config.Error, java.time.LocalDateTime] =
+      try
+        Right(java.time.LocalDateTime.parse(text))
+      catch {
+        case NonFatal(e) =>
+          Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local date-time value, but found ${text}"))
+      }
   }
   case object LocalDate extends Primitive[java.time.LocalDate] {
-    final def parse(text: String): Either[Config.Error, java.time.LocalDate] = try Right(
-      java.time.LocalDate.parse(text)
-    )
-    catch {
-      case NonFatal(e) => Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local date value, but found ${text}"))
-    }
+    final def parse(text: String): Either[Config.Error, java.time.LocalDate] =
+      try
+        Right(java.time.LocalDate.parse(text))
+      catch {
+        case NonFatal(e) =>
+          Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local date value, but found ${text}"))
+      }
   }
   case object LocalTime extends Primitive[java.time.LocalTime] {
-    final def parse(text: String): Either[Config.Error, java.time.LocalTime] = try Right(
-      java.time.LocalTime.parse(text)
-    )
-    catch {
-      case NonFatal(e) => Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local time value, but found ${text}"))
-    }
+    final def parse(text: String): Either[Config.Error, java.time.LocalTime] =
+      try
+        Right(java.time.LocalTime.parse(text))
+      catch {
+        case NonFatal(e) =>
+          Left(Config.Error.InvalidData(Chunk.empty, s"Expected a local time value, but found ${text}"))
+      }
   }
   final case class MapOrFail[A, B](original: Config[A], mapOrFail: A => Either[Config.Error, B]) extends Composite[B]
   final case class Nested[A](name: String, config: Config[A])                                    extends Composite[A]
   case object OffsetDateTime extends Primitive[java.time.OffsetDateTime] {
-    final def parse(text: String): Either[Config.Error, java.time.OffsetDateTime] = try Right(
-      java.time.OffsetDateTime.parse(text)
-    )
-    catch {
-      case NonFatal(e) =>
-        Left(Config.Error.InvalidData(Chunk.empty, s"Expected an offset date-time value, but found ${text}"))
-    }
+    final def parse(text: String): Either[Config.Error, java.time.OffsetDateTime] =
+      try
+        Right(java.time.OffsetDateTime.parse(text))
+      catch {
+        case NonFatal(e) =>
+          Left(Config.Error.InvalidData(Chunk.empty, s"Expected an offset date-time value, but found ${text}"))
+      }
   }
   case object SecretType extends Primitive[Secret] {
     final def parse(text: String): Either[Config.Error, Secret] = Right(
@@ -544,6 +553,16 @@ object Config {
   def long: Config[Long] = bigInt.map(_.toLong)
 
   def long(name: String): Config[Long] = long.nested(name)
+
+  def nonEmptyChunkOf[A](config: Config[A]): Config[NonEmptyChunk[A]] =
+    chunkOf(config).mapOrFail(
+      NonEmptyChunk
+        .fromChunk(_)
+        .toRight(Config.Error.InvalidData(message = "Expected a NonEmptyChunk, but found Chunk.Empty"))
+    )
+
+  def nonEmptyChunkOf[A](name: String, config: Config[A]): Config[NonEmptyChunk[A]] =
+    nonEmptyChunkOf(config).nested(name)
 
   def offsetDateTime: Config[java.time.OffsetDateTime] = OffsetDateTime
 

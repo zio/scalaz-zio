@@ -240,6 +240,43 @@ class StreamBenchmarks {
     unsafeRun(result)
   }
 
+  val chunkToConst: Chunk[Int] => Int                                                        = _ => 1
+  val strmChunkToStrmConsts: ZStream[Any, Nothing, Chunk[Int]] => ZStream[Any, Nothing, Int] = _.map(chunkToConst)
+
+  @Benchmark
+  def zioChunkToConstDirect: Long = {
+    val result =
+      strmChunkToStrmConsts(
+        ZStream
+          .fromChunks(zioChunks: _*)
+          .chunks
+      ).runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioChunkToConstBaseline: Long = {
+    val result = ZStream
+      .fromChunks(zioChunks: _*)
+      .chunks
+      .via(ZPipeline.map(chunkToConst))
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioChunkToConstFromFunction: Long = {
+    val result = ZStream
+      .fromChunks(zioChunks: _*)
+      .chunks
+      .via(ZPipeline.fromFunction(strmChunkToStrmConsts))
+      .runCount
+
+    unsafeRun(result)
+  }
+
 }
 
 @State(JScope.Thread)

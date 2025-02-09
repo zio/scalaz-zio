@@ -240,6 +240,43 @@ Application started!
 Application is about to exit!
 ```
 
+### Enabling Virtual Threads
+
+It is possible to configure the Runtime to use Java virtual threads if you are using JDK 21 and later.
+ZIO offers two ways to utilize virtual threads:
+
+1. For the main executor (handles non-blocking ZIO operations):
+
+```scala mdoc:compile-only
+import zio._
+
+object MainApp extends ZIOAppDefault {
+
+  override val bootstrap = 
+    Runtime.enableLoomBasedExecutor
+
+  override def run = ZIO.attempt {
+    println(s"Task running on a virtual-thread: ${Thread.currentThread().getName()}")
+  }
+}
+```
+
+2. For the blocking executor (handles blocking operations):
+
+```scala mdoc:compile-only
+import zio._
+
+object MainApp extends ZIOAppDefault {
+
+  override val bootstrap = 
+    Runtime.enableLoomBasedBlockingExecutor
+
+  override def run = ZIO.attemptBlocking {
+    println(s"Blocking task running on a virtual-thread: ${Thread.currentThread().getName()}")
+  }
+}
+```
+
 ## Top-level Runtime Configuration
 
 When we write a ZIO application using the `ZIOAppDefault` trait, a default top-level runtime is created and used to run the application automatically under the hood. Further, we can customize the rest of the ZIO application by providing locally scoped configuration layers using [`provideXYZ` operations](#configuring-runtime-by-providing-configuration-layers) or [`bootstrap` layer](#configuring-runtime-using-bootstrap-layer).
@@ -337,7 +374,7 @@ trait LoggingService {
 
 object LoggingService {
   def log(line: String): URIO[LoggingService, Unit] =
-    ZIO.serviceWith[LoggingService](_.log(line))
+    ZIO.serviceWithZIO[LoggingService](_.log(line))
 }
 
 trait EmailService {
@@ -346,7 +383,7 @@ trait EmailService {
 
 object EmailService {
   def send(user: String, content: String): ZIO[EmailService, Throwable, Unit] =
-    ZIO.serviceWith[EmailService](_.send(user, content))
+    ZIO.serviceWithZIO[EmailService](_.send(user, content))
 }
 ```
 

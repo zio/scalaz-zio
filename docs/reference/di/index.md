@@ -3,7 +3,7 @@ id: index
 title: "Introduction to Dependency Injection in ZIO"
 ---
 
-## What is Dependency?
+## What is a Dependency?
 
 When we implement a service, we might need to use other services. So a dependency is just another service that is required to fulfill its functionality:
 
@@ -83,7 +83,7 @@ We will discuss them in more detail throughout [this page](dependency-injection-
 
 ## ZIO's Dependency Injection Features
 
-Dependency injection in ZIO is very powerful which increases the developer productivity. Let's recap some important features of dependency injection in ZIO:
+Dependency injection in ZIO is very powerful, which increases developer productivity. Let's recap some important features of dependency injection in ZIO:
 
 1. **Composable**
 
@@ -91,9 +91,9 @@ Dependency injection in ZIO is very powerful which increases the developer produ
   
      For example, if we `zip` two effects of type `ZIO[A, Nothing, Int]` and `ZIO[B, Throwable, String]`, the result of this operation will become `ZIO[A with B, Throwable, (Int, String)]`. The result operation requires both `A` and `B` services.
 
-    2. **Composable Dependencies**— The `ZLayer` is also composable, As well as the ZIO's environment type parameter. So we can compose multiple layers to [create a complex dependency graph](building-dependency-graph.md).
+    2. **Composable Dependencies**— The `ZLayer` is also composable, as well as ZIO's environment type parameter. So we can compose multiple layers to [create a complex dependency graph](building-dependency-graph.md).
 
-2. **Type-Safe**— All the required dependencies should be provided at compile time. If we forget to provide the required services at compile time, we will get a compile error. So if our program compiles successfully, we are sure that we haven't runtime errors due to missing dependencies.
+2. **Type-Safe**— All the required dependencies should be provided at compile time. If we forget to provide the required services at compile time, we will get a compile error. So if our program compiles successfully, we can be sure that we won't have runtime errors due to missing dependencies.
 
 3. **Effectful**— We build dependency graphs using `ZLayer`. Since `ZLayer` is effectful, we can create a dependency graph in an effectful way.
 

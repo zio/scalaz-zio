@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -244,7 +244,20 @@ private[zio] abstract class RingBuffer[A](override final val capacity: Int)
     }
   }
 
-  override final def offerAll[A1 <: A](as: Iterable[A1]): Chunk[A1] = {
+  override final def offerAll[A1 <: A](as: Iterable[A1]): Chunk[A1] =
+    offerAll(as.iterator, as.size)
+
+  /**
+   * This method is similar to `offerAll` but it allows to offer an iterator
+   * instead.
+   *
+   * @param offers
+   *   the number of elements to take from the iterator. For performance
+   *   reasons, the iterators hasNext method is not called, so it's the
+   *   responsibility of the caller to ensure that `offers` is equal or less
+   *   than the remaining number of elements in the iterator.
+   */
+  final def offerAll[A1 <: A](as: Iterator[A1], offers: Long): Chunk[A1] = {
     val aCapacity = capacity
 
     val aSeq   = seq
@@ -257,7 +270,6 @@ private[zio] abstract class RingBuffer[A](override final val capacity: Int)
     var curTail = 0L
     var curIdx  = 0
 
-    val offers  = as.size.toLong
     var enqHead = 0L
     var enqTail = 0L
 
@@ -310,20 +322,16 @@ private[zio] abstract class RingBuffer[A](override final val capacity: Int)
       // We have successfully resserved space in the queue and have exclusive
       // ownership of each space until we publish our changes. Enqueue the
       // elements sequentially and publish our changes as we go.
-      val iterator = as.iterator
       while (enqHead < enqTail) {
-        val a = iterator.next()
+        val a = as.next()
         curIdx = posToIdx(enqHead, aCapacity)
         buf(curIdx) = a.asInstanceOf[AnyRef]
         aSeq.lazySet(curIdx, enqHead + 1)
         enqHead += 1
       }
-      Chunk.fromIterator(iterator)
-    } else {
-      // There was no space in the queue or the original collection was empty.
-      // Just return the original collection unchanged.
-      Chunk.fromIterable(as)
     }
+    // If there was no space in the queue we return the remainder of the iterator
+    Chunk.fromIterator(as)
   }
 
   override final def poll(default: A): A = {
@@ -480,14 +488,13 @@ private[zio] abstract class RingBuffer[A](override final val capacity: Int)
       // We have successfully reserved space in the queue and have exclusive
       // ownership of each space until we publish our changes. Dequeue the
       // elements sequentially and publish our changes as we go.
-      val builder = ChunkBuilder.make[A]()
-      builder.sizeHint((deqTail - deqHead).toInt)
+      val builder = ChunkBuilder.make[A]((deqTail - deqHead).toInt)
       while (deqHead < deqTail) {
         curIdx = posToIdx(deqHead, aCapacity)
         val a = buf(curIdx).asInstanceOf[A]
         buf(curIdx) = null
         aSeq.lazySet(curIdx, deqHead + aCapacity)
-        builder += a
+        builder.addOne(a)
         deqHead += 1
       }
       builder.result()

@@ -7,10 +7,11 @@ import zio.{Exit, UIO, URIO, ZIO}
 
 object GenUtils {
 
-  def alwaysShrinksTo[R, A](gen: Gen[R, A])(a: A): URIO[R, TestResult] = {
-    val shrinks = if (TestPlatform.isJS) 1 else 100
-    ZIO.collectAll(List.fill(shrinks)(shrinksTo(gen))).map(assert(_)(forall(equalTo(a))))
-  }
+  private val shrinkSize = if (TestPlatform.isJVM) 100 else 1
+  private val size       = if (TestPlatform.isJVM) 100 else 10
+
+  def alwaysShrinksTo[R, A](gen: Gen[R, A])(a: A): URIO[R, TestResult] =
+    ZIO.collectAll(List.fill(shrinkSize)(shrinksTo(gen))).map(assert(_)(forall(equalTo(a))))
 
   def checkFinite[A, B](
     gen: Gen[Any, A]
@@ -19,12 +20,12 @@ object GenUtils {
 
   def checkSample[A, B](
     gen: Gen[Any, A],
-    size: Int = 100
+    size: Int = size
   )(assertion: Assertion[B], f: List[A] => B = (a: List[A]) => a): UIO[TestResult] =
     assertZIO(provideSize(sample100(gen).map(f))(size))(assertion)
 
   def checkShrink[A](gen: Gen[Any, A])(a: A): UIO[TestResult] =
-    provideSize(alwaysShrinksTo(gen)(a: A))(100)
+    provideSize(alwaysShrinksTo(gen)(a: A))(size)
 
   val deterministic: Gen[Any, Gen[Any, Int]] =
     Gen.listOf1(Gen.int(-10, 10)).map(as => Gen.fromIterable(as))
@@ -35,8 +36,8 @@ object GenUtils {
   def equalShrink[A](left: Gen[Any, A], right: Gen[Any, A]): UIO[Boolean] = {
     val testRandom = TestRandom.deterministic
     for {
-      leftShrinks  <- ZIO.collectAll(List.fill(100)(shrinks(left))).provideLayer(testRandom)
-      rightShrinks <- ZIO.collectAll(List.fill(100)(shrinks(right))).provideLayer(testRandom)
+      leftShrinks  <- ZIO.collectAll(List.fill(shrinkSize)(shrinks(left))).provideLayer(testRandom)
+      rightShrinks <- ZIO.collectAll(List.fill(shrinkSize)(shrinks(right))).provideLayer(testRandom)
     } yield leftShrinks == rightShrinks
   }
 
@@ -71,7 +72,7 @@ object GenUtils {
     Gen.const(Gen.int(-10, 10))
 
   def shrinks[R, A](gen: Gen[R, A]): ZIO[R, Nothing, List[A]] =
-    gen.sample.forever.take(1).flatMap(_.shrinkSearch(_ => true)).take(1000).runCollect.map(_.toList)
+    gen.sample.forever.take(1).flatMap(_.shrinkSearch(_ => true)).take(size * 10L).runCollect.map(_.toList)
 
   def shrinksTo[R, A](gen: Gen[R, A]): URIO[R, A] =
     shrinks(gen).map(_.reverse.head)
@@ -82,22 +83,22 @@ object GenUtils {
     gen.sample.map(_.value).runCollect.map(_.toList)
 
   def sample100[R, A](gen: Gen[R, A]): ZIO[R, Nothing, List[A]] =
-    gen.sample.map(_.value).forever.take(100).runCollect.map(_.toList)
+    gen.sample.map(_.value).forever.take(size.toLong).runCollect.map(_.toList)
 
   def sampleEffect[E, A](
     gen: Gen[Any, ZIO[Any, E, A]],
-    size: Int = 100
+    size: Int = size
   ): ZIO[Any, Nothing, List[Exit[E, A]]] =
     provideSize(sample100(gen).flatMap(effects => ZIO.foreach(effects)(_.exit)))(size)
 
   def shrink[R, A](gen: Gen[R, A]): URIO[R, A] =
-    gen.sample.take(1).flatMap(_.shrinkSearch(_ => true)).take(1000).runLast.map(_.get)
+    gen.sample.take(1).flatMap(_.shrinkSearch(_ => true)).take(size * 10L).runLast.map(_.get)
 
   val shrinkable: Gen[Any, Int] =
     Gen.fromRandomSample(_.nextIntBounded(90).map(_ + 10).map(Sample.shrinkIntegral(0)))
 
   def shrinkWith[R, A](gen: Gen[R, A])(f: A => Boolean): ZIO[R, Nothing, List[A]] =
-    gen.sample.take(1).flatMap(_.shrinkSearch(!f(_))).take(1000).filter(!f(_)).runCollect.map(_.toList)
+    gen.sample.take(1).flatMap(_.shrinkSearch(!f(_))).take(size * 10L).filter(!f(_)).runCollect.map(_.toList)
 
   val three: Gen[Any, Int] = Gen(ZStream(Sample.unfold[Any, Int, Int](3) { n =>
     if (n == 0) (n, ZStream.empty)

@@ -101,6 +101,42 @@ object AssertionSpec extends ZIOBaseSpec {
           )
         )
       } @@ TestAspect.scala2Only,
+      test("equalTo must print out shortened value when using simple class") {
+        val probe: SampleUser    = SampleUser("User", 42)
+        val expected: SampleUser = SampleUser("User", 50)
+        assert(probe)(equalTo(expected))
+      } @@ TestAspect.failing[String] {
+        case TestFailure.Assertion(result, _) => {
+          val failures            = FailureCase.fromTrace(result.failures.get, Chunk.empty)
+          val errorString: String = failures(0).errorMessage.lines(0).fragments(0).text
+          errorString == "SampleUser.age : expected '50' got '42'\n"
+        }
+        case _ => false
+      },
+      test("equalTo must print out shortened error value when using nested class") {
+        val probe: Person    = Person("John", 30, Address("New York", "123 Main St"))
+        val expected: Person = Person("John", 30, Address("San Francisco", "456 Oak St"))
+        assert(probe)(equalTo(expected))
+      } @@ TestAspect.failing[String] {
+        case TestFailure.Assertion(result, _) => {
+          val failures            = FailureCase.fromTrace(result.failures.get, Chunk.empty)
+          val errorString: String = failures(0).errorMessage.lines(0).fragments(0).text
+          errorString == "Person.address.city : expected 'San Francisco' got 'New York'\nPerson.address.street : expected '456 Oak St' got '123 Main St'\n"
+        }
+        case _ => false
+      },
+      test("equalTo must print out shortened value when using list inside class") {
+        val probe: Gambler    = Gambler("User", List(100, 200))
+        val expected: Gambler = Gambler("User", List(100, 300, 500))
+        assert(probe)(equalTo(expected))
+      } @@ TestAspect.failing[String] {
+        case TestFailure.Assertion(result, _) => {
+          val failures            = FailureCase.fromTrace(result.failures.get, Chunk.empty)
+          val errorString: String = failures(0).errorMessage.lines(0).fragments(0).text
+          errorString == "Gambler.bets[1] : expected '300' got '200'\nGambler.bets[2] : expected '500' got 'null'\n"
+        }
+        case _ => false
+      },
       test("equalTo should succeed for same CharSequence value") {
         val probe: CharSequence = "test"
         assert(probe)(equalTo(probe))
@@ -620,6 +656,10 @@ object AssertionSpec extends ZIOBaseSpec {
         assert(t)(hasThrowableCause(hasMessage(equalTo("cause"))))
       } @@ failing
     )
+
+  case class Person(name: String, age: Int, address: Address)
+  case class Address(city: String, street: String)
+  case class Gambler(name: String, bets: List[Int])
 
   case class SampleUser(name: String, age: Int)
   val sampleUser: SampleUser = SampleUser("User", 42)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -487,7 +487,8 @@ trait Schedule[-Env, -In, +Out] extends Serializable { self =>
           now   <- Clock.currentDateTime
           dec   <- self.step(now, in, state)
           v <- dec match {
-                 case (state, out, Done) => ref.set((Some(out), state)) *> ZIO.fail(None)
+                 case (state, out, Done) =>
+                   ref.set((Some(out), state)) *> Exit.failNone.asInstanceOf[Exit[None.type, Out]]
                  case (state, out, Continue(interval)) =>
                    ref.set((Some(out), state)) *> ZIO.sleep(Duration.fromInterval(now, interval.start)) as out
                }
@@ -495,7 +496,7 @@ trait Schedule[-Env, -In, +Out] extends Serializable { self =>
 
       val last = ref.get.flatMap {
         case (None, _)    => ZIO.fail(new NoSuchElementException("There is no value left"))
-        case (Some(b), _) => ZIO.succeed(b)
+        case (Some(b), _) => Exit.succeed(b)
       }
 
       val reset = ref.set((None, self.initial))

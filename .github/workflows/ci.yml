@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags -Xmx6G -Xss4M -XX:+UseG1GC # JDK_JAVA_OPTIONS is _the_ env. variable to use for modern Java
-  JVM_OPTS: -XX:+PrintCommandLineFlags -Xmx6G -Xss4M -XX:+UseG1GC # for Java 8 only (sadly, it is not modern enough for JDK_JAVA_OPTIONS)
+  JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M # JDK_JAVA_OPTIONS is _the_ env. variable to use for modern Java
+  SBT_OPTS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M # Needed for sbt
   NODE_OPTIONS: --max_old_space_size=6144
 
 on:
@@ -23,111 +23,79 @@ jobs:
     if: ${{ ((github.event_name != 'repository_dispatch') && (github.event.action != 'update-docs')) }}
     steps:
     - name: Checkout current branch
-      uses: actions/checkout@v3.0.2
+      uses: actions/checkout@v4.2.2
     - name: Setup Java
-      uses: actions/setup-java@v2.5.0
+      uses: actions/setup-java@v4.7.0
       with:
         distribution: temurin
         java-version: 17
         check-latest: true
     - name: Cache scala dependencies
       uses: coursier/cache-action@v6
-    - name: Install libuv
-      run: sudo apt-get update && sudo apt-get install -y libuv1-dev
     - name: Lint code
-      run: ./sbt check
-
-  compile:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 120
-    if: ${{ ((github.event_name != 'repository_dispatch') && (github.event.action != 'update-docs')) }}
-    strategy:
-      fail-fast: false
-      matrix:
-        scala: ['2.12.*', '2.13.*', '3.*']
-    steps:
-      - name: Checkout current branch
-        uses: actions/checkout@v3.0.2
-      - name: Setup Java
-        uses: actions/setup-java@v2.5.0
-        with:
-          distribution: temurin
-          java-version: 17
-          check-latest: true
-      - name: Cache scala dependencies
-        uses: coursier/cache-action@v6
-      - name: Install libuv
-        run: sudo apt-get update && sudo apt-get install -y libuv1-dev
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 7
-      - name: Test/compile 2.12
-        if: ${{ startsWith(matrix.scala, '2.12.') }}
-        run: free --si -tmws 10 & ./sbt ++${{ matrix.scala }} root212/Test/compile
-      - name: Test/compile 2.13
-        if: ${{ startsWith(matrix.scala, '2.13.') }}
-        run: free --si -tmws 10 & ./sbt ++${{ matrix.scala }} root213/Test/compile
-      - name: Test/compile 3
-        if: ${{ startsWith(matrix.scala, '3.') }}
-        run: free --si -tmws 10 & ./sbt ++${{ matrix.scala }} root3/Test/compile
+      run: sbt "++2.13; check; ++3.3; check"
 
   publishLocal:
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     if: ${{ ((github.event_name != 'repository_dispatch') && (github.event.action != 'update-docs')) }}
+    env:
+      CI_RELEASE_MODE: 1 # Needed to enable optimizers
     strategy:
       fail-fast: false
       matrix:
-        scala: ['2.12.*', '2.13.*', '3.*']
+        scala: ['2.12.x', '2.13.x', '3.x']
     steps:
       - name: Checkout current branch
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
       - name: Setup Java
-        uses: actions/setup-java@v2.5.0
+        uses: actions/setup-java@v4.7.0
         with:
           distribution: temurin
-          java-version: 8
+          java-version: 11
           check-latest: true
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
-      - name: Install libuv
-        run: sudo apt-get update && sudo apt-get install -y libuv1-dev
       - name: publishLocal 2.12
         if: ${{ startsWith(matrix.scala, '2.12.') }}
-        run: ./sbt ++${{ matrix.scala }} root212/publishLocal
+        run: sbt --client -v "++${{ matrix.scala }}; root212/Test/compile; root212/publishLocal"
       - name: publishLocal 2.13
         if: ${{ startsWith(matrix.scala, '2.13.') }}
-        run: ./sbt ++${{ matrix.scala }} root213/publishLocal
+        run: sbt --client -v "++${{ matrix.scala }}; root213/Test/compile; root213/publishLocal"
       - name: publishLocal 3
         if: ${{ startsWith(matrix.scala, '3.') }}
-        run: ./sbt ++${{ matrix.scala }} root3/publishLocal
+        run: sbt --client -v "++${{ matrix.scala }}; root3/Test/compile; root3/publishLocal"
+      - name: Mima Checks
+        run: sbt --client mimaChecks
+      - name: Shutdown SBT server
+        run: sbt --client shutdown
 
   build-website:
     runs-on: ubuntu-20.04
     if: ${{ ((github.event_name != 'repository_dispatch') && (github.event.action != 'update-docs')) }}
     steps:
       - name: Checkout Current Branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.2.2
         with:
-          fetch-depth: '0'
-          
+          fetch-depth: 0
       - name: Setup Scala and Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4.7.0
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          
+          distribution: temurin
+          java-version: 17
+          check-latest: true
+
       - name: Install NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Compile Docs
         run: |
           while true; do free -h; sleep 5; done &
-          sbt -mem 2048 docs/mdoc -verbose
-          sbt -mem 2048 docs/unidoc -verbose
+          sbt -v "docs/mdoc; docs/unidoc"
 
       - name: Build The Website
         working-directory: ./website
@@ -137,10 +105,11 @@ jobs:
           yarn build 
 
       - name: Cache Website's Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: website-artifact
           path: ./website/build
+          overwrite: true
 
       - name: Print All Generated Files
         run: find ./website/build -print
@@ -152,62 +121,57 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala: ['2.12.18', '2.13.12', '3.3.1']
+        scala: ['2.12.x', '2.13.x', '3.x']
         java: ['17']
         platform: ['JVM']
     steps:
     - name: Checkout current branch
-      uses: actions/checkout@v3.0.2
+      uses: actions/checkout@v4.2.2
     - name: Setup Java
-      uses: actions/setup-java@v2.5.0
+      uses: actions/setup-java@v4.7.0
       with:
         distribution: temurin
         java-version: ${{ matrix.java }}
         check-latest: true
     - name: Cache scala dependencies
       uses: coursier/cache-action@v6
-    - name: Mima Checks
-      if: ${{ !startsWith(matrix.scala, '3.') }}
-      run: ./sbt ++${{ matrix.scala }}! mimaChecks
-    - name: Test 2.12
-      if: ${{ startsWith(matrix.scala, '2.12.') }}
-      run: ./sbt ++${{ matrix.scala }}! test${{ matrix.platform }}
-    - name: Test 2.13
-      if: ${{ startsWith(matrix.scala, '2.13.') }}
-      run: ./sbt ++${{ matrix.scala }}! test${{ matrix.platform }}
-    - name: Test 3
-      if: ${{ startsWith(matrix.scala, '3.') }}
-      run: ./sbt ++${{ matrix.scala }}! test${{ matrix.platform }}3
+    - name: Run tests
+      run: sbt -v ++${{ matrix.scala }} test${{ matrix.platform }}
     - name: Upload Test Results 2.12
       if: ${{ startsWith(matrix.scala, '2.12.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-output-2.12
         path: ./**/test-reports-zio/output.json
+        overwrite: true
     - name: Upload Test Results 3
       if: ${{ startsWith(matrix.scala, '3.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-output-3
         path: ./**/test-reports-zio/output.json
+        overwrite: true
     - name: Report Test Death 2.12
       if: ${{ failure() &&  startsWith(matrix.scala, '2.12.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-2.12
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
     - name: Report Test Death 2.13
       if: ${{ failure() &&  startsWith(matrix.scala, '2.13.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-2.13
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
     - name: Report Test Death 3.x
       if: ${{ failure() &&  startsWith(matrix.scala, '3.') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: zio-test-debug-3.x
         path: ./**/test-reports-zio/**_debug.txt
+        overwrite: true
 
   testJvms:
     runs-on: ubuntu-20.04
@@ -216,13 +180,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ['11']
+        java: ['11', '21']
         platform: ['JVM']
     steps:
       - name: Checkout current branch
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.2.2
       - name: Setup Java
-        uses: actions/setup-java@v2.5.0
+        uses: actions/setup-java@v4.7.0
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
@@ -230,14 +194,15 @@ jobs:
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
       - name: Test on different JVM versions
-        run: ./sbt test${{ matrix.platform }}
+        run: sbt -v test${{ matrix.platform }}
 
       - name: Report Test Death JVM 11
         if: ${{ failure() &&  startsWith(matrix.java, '11') }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zio-test-debug-JVM-11
           path: ./**/test-reports-zio/**_debug.txt
+          overwrite: true
 
   testPlatforms:
     runs-on: ubuntu-20.04
@@ -250,30 +215,33 @@ jobs:
         platform: ['JS', 'Native']
     steps:
       - name: Checkout current branch
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.2.2
+      - name: Install Boehm GC
+        if: ${{ startsWith(matrix.platform, 'Native') }}
+        run: sudo apt-get update && sudo apt-get install -y libgc-dev
       - name: Setup Java
-        uses: actions/setup-java@v2.5.0
+        uses: actions/setup-java@v4.7.0
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
           check-latest: true
       - name: Cache scala dependencies
         uses: coursier/cache-action@v6
-      - name: Install libuv
-        run: sudo apt-get update && sudo apt-get install -y libuv1-dev
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 9
       - name: Test on different Scala target platforms
-        run: free --si -tmws 10 & ./sbt test${{ matrix.platform }}
+        run: free --si -tmws 10 & sbt -v test${{ matrix.platform }}
 
   ci:
+    if: always()
     runs-on: ubuntu-20.04
-    needs: [lint, compile, publishLocal, build-website, test, testJvms, testPlatforms]
+    needs: [lint, publishLocal, build-website, test, testJvms, testPlatforms]
     steps:
-      - name: Aggregate of lint, mdoc and all tests
-        run: echo "ci passed"
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
 
   publish:
     runs-on: ubuntu-20.04
@@ -282,55 +250,52 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - name: Checkout current branch
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
       - name: Setup Java
-        uses: actions/setup-java@v2.5.0
+        uses: actions/setup-java@v4.7.0
         with:
           distribution: temurin
-          java-version: 8
+          java-version: 11
           check-latest: true
-      - name: Install libuv
-        run: sudo apt-get update && sudo apt-get install -y libuv1-dev
       - name: Release
-        run: ./sbt ci-release
+        run: sbt -v ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          
+          CI_RELEASE_MODE: 1 # Needed to enable optimizers
+
   publish-website:
     needs: [ci]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
-
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: website-artifact
           path: website-artifact
 
       - name: Release to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        uses: JamesIves/github-pages-deploy-action@v4.7.2
         with:
           branch: gh-pages
           folder: ./website-artifact
-          
+
   update-docs:
     runs-on: ubuntu-latest
     if: ${{ ((github.event_name == 'repository_dispatch') && (github.event.action == 'update-docs')) }}
     steps:
       - name: Git Checkout
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v4.2.2
         with:
           ref: ${{ github.head_ref }}
-          fetch-depth: '0'
       - name: Commit Changes
         run: |
           cd website
@@ -342,10 +307,17 @@ jobs:
           git add package.json
           commit_message="Update $package_name to $package_version"
           git commit -m "$commit_message" || echo "No changes to commit"
-          
-      - name: Create Pull Request to Update Docs
-        uses: peter-evans/create-pull-request@v4.2.4
+      - name: Generate a token
+        id: generate-tokens
+        uses: actions/create-github-app-token@v1.11.2
         with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+      - name: Create Pull Request to Update Docs
+        uses: peter-evans/create-pull-request@v7.0.6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
           body: |-
             The new version of ${{ github.event.client_payload.package_name }} was released.
             Let's update the zio.dev to reflect the latest docs. 

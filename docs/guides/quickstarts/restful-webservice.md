@@ -5,17 +5,18 @@ sidebar_label: "RESTful Web Service"
 ---
 
 This quickstart shows how to build a RESTful web service using ZIO. It uses
+
 - [ZIO HTTP](https://zio.dev/zio-http/) for the HTTP server
-- [ZIO JSON](https://zio.dev/zio-json/) for the JSON serialization
+- [ZIO JSON](https://zio.dev/zio-schema/) for schema generation and JSON serialization
 - [ZIO Quill](https://zio.dev/zio-quill/) for type-safe queries on the JDBC database
 
 ## Running The Example
 
-First, open the console and clone the project using `git` (or you can simply download the project) and then change the directory:
+First, open the console and clone the [zio-quickstarts](https://github.com/zio/zio-quickstarts) project using `git` (or you can simply download the project) and then change the directory:
 
-```scala
-git clone git@github.com:zio/zio-quickstarts.git 
-cd zio-quickstarts/zio-quickstart-restful-webservice
+```bash
+$ git clone https://github.com/zio/zio-quickstarts.git
+$ cd zio-quickstarts/zio-quickstart-restful-webservice
 ```
 
 Once you are inside the project directory, run the application:
@@ -23,6 +24,18 @@ Once you are inside the project directory, run the application:
 ```bash
 sbt run
 ```
+
+Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
+
+```bash
+sbt reStart
+```
+
+:::note
+If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
+
+To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
+:::
 
 ## Testing The Quickstart
 
@@ -33,32 +46,29 @@ In this quickstart, we will build a RESTful web service that has the following H
 - **Counter App**— shows how to have a stateful web service and how to use the ZIO environment for Http Apps.
 - **User App**— shows how to have a stateful web service to register and manage users.
 
-The most important part of this quickstart is learning how to build an `Http` data type that is used to build the HTTP apps:
+The most important part of this quickstart is learning how to build an `Route` data type that is used to build the HTTP apps.
 
-```scala
-trait Http[-R, +E, -A, +B] extends (A => ZIO[R, Option[E], B])
-```
+It is a data type that models a route in an HTTP application, just like the `ZIO` data type that models ZIO workflows.
 
-It is a data type that models an HTTP application, just like the `ZIO` data type that models ZIO workflows.
+We can say that `Route[Env, Err]` is a function that takes a `Request` and returns a `ZIO[Env, Err, Response]` if it matches to the providing route pattern. To put it another way, `HTTP[R, E, A, B]` is an HTTP application that:
 
-We can say that `Http[R, E, A, B]` is a function that takes an `A` and returns a `ZIO[R, Option[E], B]`. To put it another way, `HTTP[R, E, A, B]` is an HTTP application that:
-- Accepts an `A` and returns `B`
-- Uses the `R` from the environment
-- Will fail with `E` if there is an error
+- Accepts an `Request` and returns `Response`
+- Uses the `Env` from the environment
+- Will fail with `Err` if there is an error
 
-Like the `ZIO` data type, it can be transformed and also composed with other `Http` data types to build complex and large HTTP applications.
+We can write many routes and then serve them using the `Server.serve` method.
 
 ### 1. Greeting App
 
 The Greeting App is a simple Http App that returns a greeting message. First, let's see how this app is defined:
 
 ```scala
-object GreetingApp {
-  def apply(): Http[Any, Nothing, Request, Response] = ???
+object GreetingRoutes {
+  def apply(): Routes[Any, Nothing] = ???
 }
 ```
 
-So this means that this app doesn't require any services from the environment (`Any`), it doesn't fail (`Nothing`), and it takes a request (`Request`) and returns a response (`Response`).
+Routes in the `GreetingRoutes` don't require any services from the environment (`Any`) and won't fail (`Nothing`).
 
 It has three routes, and we are going to test them one by one:
 
@@ -126,18 +136,15 @@ Hello Jane and John!⏎
 
 ### 2. Download App
 
-The next example shows how to download a file from the server. First, let's look at the type of the `downloadApp`:
+The next example shows how to download a file from the server. First, let's look at the type of the `DownloadRoutes`:
 
 ```scala
-object DownloadApp {
-  def apply(): Http[Any, Throwable, Request, Response] = ???
+object DownloadRoutes {
+  def apply(): Routes[Any, Nothing] = ???
 }
 ```
 
-It is an Http App that doesn't require any environment, it may fail with `Throwable` and it consumes a `Request` and produces a `Response` respectively.
-
-Let's try to access this endpoint using curl and see what we get:
-
+It is a `Routes` that doesn't require any environment, and won't fail. Let's try to access this endpoint using curl and see what we get:
 
 1. Our first endpoint is `/download` which downloads a file from the server:
 
@@ -188,14 +195,12 @@ We have scheduled some delays between each line to simulate downloading a big fi
 The next example shows how we can have a stateful web service. Let's look at the type of the `counterApp`:
 
 ```scala
-object CounterApp {
-  def apply(): Http[Ref[Int], Nothing, Request, Response] = ???
+object CounterRoutes {
+  def apply(): Routes[Ref[Int], Nothing] = ???
 }
 ```
 
-This is an Http app that requires a `Ref[Int]` as an environment, it cannot fail and it consumes a `Request` and produces a `Response` respectively.
-
-This counter increments every time we access the `/up` endpoint and decrements every time we access the `/down` endpoint:
+This is a `Routes` that requires a `Ref[Int]` as an environment, it cannot fail. This counter increments every time we access the `/up` endpoint and decrements every time we access the `/down` endpoint:
 
 ```bash
 GET http://localhost:8080/up
@@ -213,18 +218,21 @@ user@host ~> for i in {1..25}; do curl http://localhost:8080/down; echo -n ' '; 
 
 We can see that the state of the counter is maintained between requests. In this example, we used the ZIO environment to store the access and store the state of the counter.
 
-
 ### 4. User App
 
-The `UserApp()` is an Http app with the following definition:
+The `UserRoutes` is a `Routes` with the following definition:
 
 ```scala
-object UserApp {
-  def apply(): Http[UserRepo, Throwable, Request, Response] = ???
+object UserRoutes {
+  def apply(): Routes[UserRepo, Response] = ???
 }
 ```
 
-It requires a `UserRepo` service from the ZIO environment, it can fail with `Throwable` and it consumes a `Request` and produces a `Response` respectively. In this example, we use the in-memory version of the `UserRepo` service called `InmemoryUserRepo`.
+It requires a `UserRepo` service from the ZIO environment, it can fail with `Response`. In this example, we use the in-memory version of the `UserRepo` service called `InmemoryUserRepo`.
+
+:::note
+Please note that the `Routes` errors of type `Response` are handled with a proper response that displays an error message to the end user.
+:::
 
 This app has three endpoints:
 
@@ -260,7 +268,7 @@ While this app is stateful, it is not persistent. We just provided the in-memory
 
 ```scala
 Server.serve(
-  (GreetingApp() ++ DownloadApp() ++ CounterApp() ++ UserApp()).withDefaultErrorResponse
+  GreetingRoutes() ++ DownloadRoutes() ++ CounterRoutes() ++ UserRoutes()
 ).provide(
   Server.defaultWithPort(8080),
   ZLayer.fromZIO(Ref.make(0)),
@@ -272,7 +280,7 @@ To make it persistent, we can provide the `PersistentUserRepo` service instead:
 
 ```scala
 Server.serve(
-  (GreetingApp() ++ DownloadApp() ++ CounterApp() ++ UserApp()).withDefaultErrorResponse
+  GreetingRoutes() ++ DownloadRoutes() ++ CounterRoutes() ++ UserRoutes()
 ).provide(
   Server.defaultWithPort(8080),
   ZLayer.fromZIO(Ref.make(0)),

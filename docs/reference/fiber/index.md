@@ -16,11 +16,8 @@ A Fiber can be thought of as a virtual thread. A Fiber is the analog of a Java t
 There are some limitations with JVM threads:
 
 1. **Threads are scarce** — Threads on the JVM map to the operating system level threads which imposes an upper bound on the number of threads that we can have inside our application.
-
 2. **Expensive on creation** — The creation of threads is expensive in terms of time and memory complexity.
-
 3. **Much Overhead on Context Switching** — Switching between the execution of one thread to another thread is not cheap, it takes a lot of time.
-
 4. **Lack of Composability** — Threads are not typed. They don't have a meaningful return type. In Java, when we create a thread, we have to provide a `run` function that returns void. So threads cannot finish with any specific value. Due to this limitation, we cannot compose threads. Also, a thread has no type parameter for error. It is expected to throw any exception of type `Throwable` to signal errors.
 
 In the following sections, we are going to discuss the key features of fibers, and how fibers overcome the drawbacks of Java threads.

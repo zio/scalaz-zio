@@ -78,6 +78,52 @@ object SpecSpec extends ZIOBaseSpec {
         for {
           summary <- execute(spec)
         } yield assertTrue(summary.success == 1)
+      },
+      test("dependencies of shared service are scoped to lifetime of suite") {
+        trait Service {
+          def open: UIO[Boolean]
+        }
+        object Service {
+          val open: ZIO[Service, Nothing, Boolean] =
+            ZIO.serviceWithZIO(_.open)
+        }
+        val layer =
+          ZLayer {
+            for {
+              ref <- Ref.make(true)
+              _   <- ZIO.addFinalizer(ref.set(false))
+            } yield new Service {
+              def open: UIO[Boolean] =
+                ref.get
+            }
+          }
+        val spec = suite("suite")(
+          test("test1") {
+            assertZIO(Service.open)(isTrue)
+          },
+          test("test2") {
+            assertZIO(Service.open)(isTrue)
+          }
+        ).provideLayerShared(layer).provideLayer(Scope.default) @@ sequential
+        assertZIO(succeeded(spec))(isTrue)
+      },
+      test("propagates the scope to multiple tests") {
+        def assertion = ZIO.scoped {
+          for {
+            rnd <- ZIO.random
+          } yield assertTrue(rnd == Random.RandomLive)
+        }
+        val spec = suite("suite")(
+          test("test1") {
+            assertion
+          },
+          test("test2") {
+            assertion
+          }
+        ).provideLayerShared(ZLayer.scoped(ZIO.withRandomScoped(Random.RandomLive)))
+        for {
+          summary <- execute(spec)
+        } yield assertTrue(summary.success == 2)
       }
     ),
     suite("provideSomeLayerShared")(
@@ -199,6 +245,24 @@ object SpecSpec extends ZIOBaseSpec {
           }
         ).provideSomeLayerShared[Scope](layer).provideLayer(Scope.default) @@ sequential
         assertZIO(succeeded(spec))(isTrue)
+      },
+      test("propagates the scope to multiple tests") {
+        def assertion = ZIO.scoped {
+          for {
+            rnd <- ZIO.random
+          } yield assertTrue(rnd == Random.RandomLive)
+        }
+        val spec = suite("suite")(
+          test("test1") {
+            assertion
+          },
+          test("test2") {
+            assertion
+          }
+        ).provideSomeLayerShared(ZLayer.scoped(ZIO.withRandomScoped(Random.RandomLive)))
+        for {
+          summary <- execute(spec)
+        } yield assertTrue(summary.success == 2)
       }
     ),
     suite("iterable constructor") {
@@ -218,6 +282,14 @@ object SpecSpec extends ZIOBaseSpec {
       test("some other test") {
         assertCompletes
       }
-    ).provideLayerShared(neverFinalizerLayer)
+    ).provideLayerShared(neverFinalizerLayer) @@ shutdownTimeout(2.seconds)
   )
+
+  private def shutdownTimeout(d: Duration): TestAspectPoly =
+    new PerTest.Poly {
+      def perTest[R, E](
+        test: ZIO[R, TestFailure[E], TestSuccess]
+      )(implicit trace: Trace): ZIO[R, TestFailure[E], TestSuccess] =
+        TestExecutor.overrideShutdownTimeout.set(Some(d)) *> test
+    }
 }

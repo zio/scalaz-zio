@@ -13,7 +13,6 @@ object ZIOLazinessSpec extends ZIOBaseSpec {
   def spec = suite("ZIOLazinessSpec")(
     test("die")(assertLazy(ZIO.die)),
     test("dieMessage")(assertLazy(ZIO.dieMessage)),
-    test("done")(assertLazy(ZIO.done)),
     test("fail")(assertLazy(ZIO.fail)),
     test("failCause")(assertLazy(ZIO.failCause)),
     test("fromEither")(assertLazy(ZIO.fromEither)),

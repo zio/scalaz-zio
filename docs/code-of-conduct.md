@@ -27,7 +27,7 @@ The ZIO project is moderated by the Steering Committee team members:
 - Wiem Zine El Abidine [@wi101](https://github.com/wi101)
 
 The ZIO project requires that drastic moderation actions detailed in the code of 
-conduct - for example, removing a user from the Gitter channel - be agreed upon
+conduct - for example, removing a user from the Discord Server - be agreed upon
 a group of over 2/3rds of the steering committee.
 
 For any questions, concerns, or moderation requests please contact any member of

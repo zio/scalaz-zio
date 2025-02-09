@@ -2,6 +2,7 @@ package zio.test
 
 import zio.stream.ZStream
 import zio.test.Assertion._
+import zio.test.TestAspect.jvmOnly
 import zio.{UIO, ZIO}
 
 object SampleSpec extends ZIOBaseSpec {
@@ -24,7 +25,7 @@ object SampleSpec extends ZIOBaseSpec {
       def g(n: Int): Sample[Any, Int] = Sample.shrinkIntegral(0)(n + 5)
       val result                      = equalSamples(sample.flatMap(f).flatMap(g), sample.flatMap(a => f(a).flatMap(g)))
       assertZIO(result)(isTrue)
-    },
+    } @@ jvmOnly, // For some reason this takes 1-2 mins in Scala Native
     test("traverse fusion") {
       val sample              = Sample.shrinkIntegral(0)(5)
       def f(n: Int): UIO[Int] = ZIO.succeed(n + 2)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,14 @@ object TestServices {
       TestConfig.Test(100, 100, 200, 1000)
     )(Annotations.tag, Live.tag, Sized.tag, TestConfig.tag)
 
-  private[zio] val currentServices: FiberRef.WithPatch[ZEnvironment[
-    Annotations with Live with Sized with TestConfig
-  ], ZEnvironment.Patch[
-    Annotations with Live with Sized with TestConfig,
-    Annotations with Live with Sized with TestConfig
-  ]] =
+  private[zio] val currentServices: FiberRef.WithPatch[
+    ZEnvironment[
+      Annotations with Live with Sized with TestConfig
+    ],
+    ZEnvironment.Patch[
+      Annotations with Live with Sized with TestConfig,
+      Annotations with Live with Sized with TestConfig
+    ]
+  ] =
     FiberRef.unsafe.makeEnvironment(test)(Unsafe.unsafe)
 }

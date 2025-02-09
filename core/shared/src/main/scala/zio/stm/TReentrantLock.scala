@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -181,7 +181,7 @@ final class TReentrantLock private (data: TRef[LockState]) {
 
           newTotal
 
-        case _ => throw ZSTM.RetryException //another fiber is holding a write lock
+        case _ => throw ZSTM.RetryException // another fiber is holding a write lock
       }
     )
 }

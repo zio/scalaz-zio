@@ -168,6 +168,120 @@ object CauseSpec extends ZIOBaseSpec {
         val stripped = cause.stripSomeDefects { case _: NumberFormatException => }
         assert(stripped)(isNone)
       }
+    ),
+    suite("filter")(
+      test("fail.filter(false)") {
+        val f1 = Cause.fail(())
+        val f2 = f1.filter(_ => false)
+        assertTrue(f2.isEmpty)
+      },
+      test("fail.filter(true)") {
+        val f1 = Cause.fail(())
+        val f2 = f1.filter(_ => true)
+        assert(f2)(Assertion.equalTo(f1))
+      },
+      test("interrupt.filter(false)") {
+        val f1 = Cause.interrupt(FiberId.apply(0, 42, implicitly))
+        val f2 = f1.filter(_ => false)
+        assertTrue(f2.isEmpty)
+      },
+      test("interrupt.filter(true)") {
+        val f1 = Cause.interrupt(FiberId.apply(0, 42, implicitly))
+        val f2 = f1.filter(_ => true)
+        assert(f2)(Assertion.equalTo(f1))
+      },
+      test("die.filter(false)") {
+        val f1 = Cause.die(new RuntimeException())
+        val f2 = f1.filter(_ => false)
+        assertTrue(f2.isEmpty)
+      },
+      test("die.filter(true)") {
+        val f1 = Cause.die(new RuntimeException())
+        val f2 = f1.filter(_ => true)
+        assert(f2)(Assertion.equalTo(f1))
+      },
+      test("stackless.filter(false)") {
+        val f1 = Cause.Stackless(Cause.fail(()), true)
+        val f2 = f1.filter(_ => false)
+        assertTrue(f2.isEmpty)
+      },
+      test("stackless.filter(true)") {
+        val f1 = Cause.Stackless(Cause.fail(()), true)
+        val f2 = f1.filter(_ => true)
+        assert(f2)(Assertion.equalTo(f1))
+      }, {
+        val f1      = Cause.fail(())
+        val f2      = Cause.interrupt(FiberId.apply(0, 42, implicitly))
+        val andThen = Cause.Then(f1, f2)
+        suite("andThen")(
+          test("filter(false)") {
+            val filt = andThen.filter(_ => false)
+            assertTrue(filt.isEmpty)
+          },
+          test("filter(true)") {
+            val filt = andThen.filter(_ => true)
+            assert(filt)(Assertion.equalTo(andThen))
+          },
+          test("filter(isInterruped)") {
+            val filt = andThen.filter(_.isInterrupted)
+            assert(filt)(Assertion.equalTo(f2))
+          },
+          test("filter(isFailure)") {
+            val filt = andThen.filter(_.isFailure)
+            assert(filt)(Assertion.equalTo(f1))
+          }
+        )
+      }, {
+        val f1   = Cause.fail(())
+        val f2   = Cause.interrupt(FiberId.apply(0, 42, implicitly))
+        val both = Cause.Both(f1, f2)
+        suite("both")(
+          test("filter(false)") {
+            val filt = both.filter(_ => false)
+            assertTrue(filt.isEmpty)
+          },
+          test("filter(true)") {
+            val filt = both.filter(_ => true)
+            assert(filt)(Assertion.equalTo(both))
+          },
+          test("filter(isInterruped)") {
+            val filt = both.filter(_.isInterrupted)
+            assert(filt)(Assertion.equalTo(f2))
+          },
+          test("filter(isFailure)") {
+            val filt = both.filter(_.isFailure)
+            assert(filt)(Assertion.equalTo(f1))
+          }
+        )
+      },
+      test("traversal") {
+        val c1   = Cause.fail("foo")
+        val c2   = Cause.fail("bar")
+        val c3   = Cause.fail("baz")
+        val c23  = Cause.Both(c2, c3)
+        val c123 = Cause.Both(c1, c23)
+
+        val bldr = Seq.newBuilder[(Seq[String], Boolean)]
+        val c = c123.filter { c =>
+          val res = !c.isInstanceOf[Cause.Both[?]]
+          println(s"applying filter on: ${c.failures} -> $res")
+          bldr += (c.failures -> res)
+          res
+        }
+
+        println(s"\nfiltered cause: $c")
+        zio.test.assert(c)(Assertion.equalTo(c1)) &&
+        zio.test.assert(bldr.result()) {
+          equalTo {
+            Seq(
+              Seq("foo")        -> true,
+              Seq("bar")        -> true,
+              Seq("baz")        -> true,
+              Seq("bar", "baz") -> false
+            )
+          }
+        }
+      }
     )
   ) @@ samples(10)
 

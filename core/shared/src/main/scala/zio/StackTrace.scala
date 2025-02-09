@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,17 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import scala.annotation.tailrec
-
 final case class StackTrace(
   fiberId: FiberId,
   stackTrace: Chunk[Trace]
 ) { self =>
 
   def ++(that: StackTrace): StackTrace =
-    StackTrace(self.fiberId combine that.fiberId, self.stackTrace ++ that.stackTrace)
+    if ((self eq that) || self.isEmpty) that
+    else if (that.isEmpty) self
+    else StackTrace(self.fiberId combine that.fiberId, self.stackTrace ++ that.stackTrace)
+
+  def isEmpty: Boolean = (fiberId eq FiberId.None) && stackTrace.isEmpty
 
   def size: Int = stackTrace.length
 

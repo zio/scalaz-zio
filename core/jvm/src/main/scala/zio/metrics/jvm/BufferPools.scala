@@ -48,9 +48,11 @@ object BufferPools {
                                 })
 
         schedule <- ZIO.service[JvmMetricsSchedule]
-        _        <- bufferPoolUsedBytes.launch(schedule.updateMetrics)
-        _        <- bufferPoolCapacityBytes.launch(schedule.updateMetrics)
-        _        <- bufferPoolUsedBuffers.launch(schedule.updateMetrics)
+        // use interruptible to ensure the forked fibers can be interrupted
+        // (reloadableAutoFromConfig causes this layer to be in an uninterruptible region)
+        _ <- bufferPoolUsedBytes.launch(schedule.updateMetrics).interruptible
+        _ <- bufferPoolCapacityBytes.launch(schedule.updateMetrics).interruptible
+        _ <- bufferPoolUsedBuffers.launch(schedule.updateMetrics).interruptible
       } yield BufferPools(bufferPoolUsedBytes, bufferPoolCapacityBytes, bufferPoolUsedBuffers)
     }.reloadableAutoFromConfig[JvmMetricsSchedule](config => config.get.reloadDynamicMetrics)
 }

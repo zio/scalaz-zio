@@ -1,6 +1,7 @@
 package zio.internal.macros
 
 import zio.internal.macros.LayerTree.{ComposeH, ComposeV, Empty, Value}
+import scala.collection.mutable
 
 sealed abstract class LayerTree[+A] extends Product with Serializable { self =>
 
@@ -24,7 +25,8 @@ sealed abstract class LayerTree[+A] extends Product with Serializable { self =>
 
   def toSet[A1 >: A]: Set[A1] = fold[Set[A1]](Set.empty[A1], Set(_), _ ++ _, _ ++ _)
 
-  def toList: List[A] = toSet.toList
+  def toList: List[A] =
+    fold[mutable.LinkedHashSet[A]](mutable.LinkedHashSet.empty[A], mutable.LinkedHashSet(_), _ ++ _, _ ++ _).toList
 }
 
 object LayerTree {

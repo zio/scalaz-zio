@@ -2,7 +2,7 @@ package zio
 package stm
 
 import zio.test.Assertion._
-import zio.test.TestAspect.nonFlaky
+import zio.test.TestAspect.{exceptJS, nonFlaky}
 import zio.test._
 
 object ZSTMSpec extends ZIOBaseSpec {
@@ -450,6 +450,9 @@ object ZSTMSpec extends ZIOBaseSpec {
         test("falls back to the default value if None") {
           assertZIO(STM.succeed(None).someOrElse(42).commit)(equalTo(42))
         },
+        test("works when the default is an instance of a covariant type constructor applied to Nothing") {
+          assertZIO(STM.succeed(Option.empty[List[String]]).someOrElse(List.empty).commit)(equalTo(List.empty))
+        },
         test("does not change failed state") {
           assertZIO(STM.fail(ExampleError).someOrElse(42).commit.exit)(fails(equalTo(ExampleError)))
         } @@ zioTag(errors)
@@ -460,6 +463,10 @@ object ZSTMSpec extends ZIOBaseSpec {
         },
         test("falls back to the default value if None") {
           assertZIO(STM.succeed(None).someOrElseSTM(STM.succeed(42)).commit)(equalTo(42))
+        },
+        test("works when the output of the default is an instance of a covariant type constructor applied to Nothing") {
+          val stm = STM.succeed(Option.empty[List[String]]).someOrElseSTM(STM.succeed(List.empty))
+          assertZIO(stm.commit)(equalTo(List.empty))
         },
         test("does not change failed state") {
           assertZIO(STM.fail(ExampleError).someOrElseSTM(STM.succeed(42)).commit.exit)(fails(equalTo(ExampleError)))
@@ -560,7 +567,7 @@ object ZSTMSpec extends ZIOBaseSpec {
           value                <- tvar3.get.commit
         } yield assert(value)(equalTo(10000))
       }
-    ),
+    ) @@ exceptJS(nonFlaky),
     suite("Using `STM.atomically` perform concurrent computations that")(
       suite("have a simple condition lock should suspend the whole transaction and")(
         test("resume directly when the condition is already satisfied") {
@@ -718,7 +725,7 @@ object ZSTMSpec extends ZIOBaseSpec {
             _ <- tvar.set(-1).commit
             v <- liveClockSleep(10.millis) *> tvar.get.commit
           } yield assert(v)(equalTo(-1))
-        } @@ nonFlaky,
+        } @@ exceptJS(nonFlaky),
         test("interrupt the fiber and observe it, it should be resumed with Interrupted Cause") {
           for {
             selfId  <- ZIO.fiberId
@@ -763,7 +770,7 @@ object ZSTMSpec extends ZIOBaseSpec {
         v1    <- tvar1.get.commit
         v2    <- tvar2.get.commit
       } yield assert(v1)(equalTo(oldV1)) && assert(v2)(equalTo(oldV2))
-    },
+    } @@ exceptJS(nonFlaky),
     suite("collectAll")(
       test("collects a list of transactional effects to a single transaction that produces a list of values") {
         for {
@@ -873,6 +880,24 @@ object ZSTMSpec extends ZIOBaseSpec {
         val right = STM.fail("right")
 
         (left orElse right).commit.exit.map(assert(_)(fails(equalTo("right"))))
+      },
+      test("retries on LHS variable change") {
+        for {
+          ref1 <- TRef.makeCommit(0)
+          ref2 <- TRef.makeCommit(0)
+          txn1 = ref1.get.flatMap {
+                   case 0 => STM.retry
+                   case n => STM.succeed(n)
+                 } orElse ref2.get.flatMap {
+                   case 0 => STM.retry
+                   case n => STM.succeed(n)
+                 }
+          txn2    = ref1.set(1)
+          fib    <- txn1.commit.forkDaemon
+          _      <- liveClockSleep(1.second)
+          _      <- txn2.commit
+          result <- fib.join
+        } yield assert(result)(equalTo(1))
       }
     ) @@ zioTag(errors),
     test("orElseEither returns result of the first successful transaction wrapped in either") {
@@ -1076,7 +1101,7 @@ object ZSTMSpec extends ZIOBaseSpec {
           _        <- r0.update(_ + 1).flatMap(_ => r1.update(_ + 1)).commit
           sum      <- sumFiber.join
         } yield assert(sum)(equalTo(0) || equalTo(2))
-      } @@ nonFlaky(5000)
+      } @@ exceptJS(nonFlaky(5000))
     },
     suite("STM stack safety")(
       test("long alternative chains") {
@@ -1214,7 +1239,23 @@ object ZSTMSpec extends ZIOBaseSpec {
         _     <- transaction(ref).commit
         value <- ref.get
       } yield assertTrue(value == 9)
-    }
+    } @@ exceptJS(nonFlaky(10000)),
+    suite("STM issue 9264")(
+      test("transactions containing both reads and writes are consistent") {
+        for {
+          q1 <- TestQueue.make[String]
+          q2 <- TestQueue.make[String]
+          enq = (q1.enqueue("x") *> q2.enqueue("x")).commit.repeatN(8)
+          deq = (q1.tryDequeue <*> q2.tryDequeue).commit.flatMap {
+                  case (None, None)                     => ZIO.unit
+                  case (Some(v1), Some(v2)) if v1 == v2 => ZIO.unit
+                  case (x, y)                           => ZIO.dieMessage(s"Dequeued values are different: $x != $y")
+                }
+                  .repeatN(8)
+          _ <- ZIO.foreachParDiscard(List(enq, deq, deq))(t => t)
+        } yield assertCompletes
+      } @@ exceptJS(nonFlaky(10000))
+    )
   )
 
   val ExampleError = new Throwable("fail")
@@ -1301,4 +1342,45 @@ object ZSTMSpec extends ZIOBaseSpec {
 
     loop(depth, STM.succeed(0))
   }
+
+  final class TestQueue[A >: Null] private (head: TRef[TestQueue.Node[A]], tail: TRef[TestQueue.Node[A]]) {
+    import TestQueue._
+
+    def enqueue(a: A): USTM[Unit] =
+      for {
+        end <- TRef.make[Elem[A]](End[A]())
+        node = Node(a, end)
+        t   <- tail.get
+        tn  <- t.next.get
+        _ <- tn match {
+               case End() => t.next.set(node).flatMap(_ => tail.set(node))
+               case _     => ZSTM.dieMessage("this should never happen")
+             }
+      } yield ()
+
+    def tryDequeue: USTM[Option[A]] =
+      for {
+        h  <- head.get
+        hn <- h.next.get
+        r <- hn match {
+               case n @ Node(a, _) => head.set(n.copy(data = null)).as(Some(a))
+               case End()          => ZSTM.succeed(None)
+             }
+      } yield r
+  }
+
+  object TestQueue {
+
+    private sealed abstract class Elem[A]
+    private final case class Node[A](data: A, next: TRef[Elem[A]]) extends Elem[A]
+    private final case class End[A]()                              extends Elem[A]
+
+    def make[A >: Null]: UIO[TestQueue[A]] = for {
+      end     <- TRef.makeCommit[Elem[A]](End[A]())
+      sentinel = Node[A](null, end)
+      head    <- TRef.makeCommit[Node[A]](sentinel)
+      tail    <- TRef.makeCommit[Node[A]](sentinel)
+    } yield new TestQueue[A](head, tail)
+  }
+
 }

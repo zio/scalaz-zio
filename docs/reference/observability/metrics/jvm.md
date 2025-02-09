@@ -71,36 +71,8 @@ All of these services are available in the `zio.metrics.jvm` package. Each servi
 
 ZIO JVM metrics have built-in applications that collect the JVM metrics. They can be composed with other ZIO applications as a _sidecar_. By doing so, we are able to collect JVM metrics without modifying our main ZIO application. They will be executed as a daemon alongside the main app:
 
-```scala mdoc:compile-only
-import zio._
-import zio.http._
-import zio.http.model.Method
-import zio.metrics.connectors.prometheus.PrometheusPublisher
-import zio.metrics.connectors.{MetricsConfig, prometheus}
-import zio.metrics.jvm.DefaultJvmMetrics
+```scala mdoc:passthrough
+import utils._
 
-object SampleJvmMetricApp extends ZIOAppDefault {
-  private val httpApp =
-    Http
-      .collectZIO[Request] {
-        case Method.GET -> !! / "metrics" =>
-          ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text))
-      }
-
-  override def run = Server
-    .serve(httpApp)
-    .provide(
-      // ZIO Http default server layer, default port: 8080
-      Server.default,
-
-      // The prometheus reporting layer
-      prometheus.prometheusLayer,
-      prometheus.publisherLayer,
-      // Interval for polling metrics
-      ZLayer.succeed(MetricsConfig(5.seconds)),
-
-      // Default JVM Metrics
-      DefaultJvmMetrics.live.unit,
-    )
-}
+printSource("examples/jvm/src/main/scala/zio/examples/metrics/JvmMetricAppExample.scala")
 ```

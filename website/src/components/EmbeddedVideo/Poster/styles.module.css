@@ -1,0 +1,44 @@
+.poster {
+  height: auto;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.poster::before {
+  content: '';
+  width: 30px;
+  height: 30px;
+  background-color: #ffffff;
+  position: absolute;
+  z-index: 0;
+}
+
+.poster::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgb(0, 0, 0, 0.3) 0%,
+    transparent 25%,
+    transparent 75%,
+    rgb(0, 0, 0, 0.3) 100%
+  );
+}
+
+.posterYTButton {
+  color: #ff0100;
+  width: 88px;
+  height: 63px;
+  z-index: 1;
+}

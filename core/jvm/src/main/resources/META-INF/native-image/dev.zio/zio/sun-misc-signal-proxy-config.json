@@ -1,0 +1,7 @@
+[
+  {
+    "interfaces": [
+      "sun.misc.SignalHandler"
+    ]
+  }
+]

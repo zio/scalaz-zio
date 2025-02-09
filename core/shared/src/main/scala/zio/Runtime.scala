@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package zio
 
-import zio.internal.{FiberRuntime, FiberScope, IsFatal, Platform, StackTraceBuilder}
+import zio.internal.{FiberRuntime, FiberScope, IsFatal, Platform}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.concurrent.Future
-import java.lang.ref.WeakReference
 
 /**
  * A `Runtime[R]` is capable of executing tasks within an environment `R`.
@@ -48,10 +47,10 @@ trait Runtime[+R] { self =>
    * Runs the effect "purely" through an async boundary. Useful for testing.
    */
   final def run[E, A](zio: ZIO[R, E, A])(implicit trace: Trace): IO[E, A] =
-    ZIO.fiberId.flatMap { fiberId =>
+    ZIO.fiberIdWith { fiberId =>
       ZIO.asyncInterrupt[Any, E, A] { callback =>
         val fiber = unsafe.fork(zio)(trace, Unsafe.unsafe)
-        fiber.unsafe.addObserver(exit => callback(ZIO.done(exit)))(Unsafe.unsafe)
+        fiber.unsafe.addObserver(callback(_))(Unsafe.unsafe)
         Left(ZIO.blocking(fiber.interruptAs(fiberId)))
       }
     }
@@ -122,9 +121,11 @@ trait Runtime[+R] { self =>
 
   protected abstract class UnsafeAPIV1 extends UnsafeAPI with UnsafeAPI3 {
 
+    private val fiberIdGen = self.fiberRefs.getOrDefault(FiberRef.currentFiberIdGenerator)
+
     def fork[E, A](zio: ZIO[R, E, A])(implicit trace: Trace, unsafe: Unsafe): internal.FiberRuntime[E, A] = {
       val fiber = makeFiber(zio)
-      fiber.start[R](zio)
+      fiber.startConcurrently(zio)
       fiber
     }
 
@@ -133,9 +134,8 @@ trait Runtime[+R] { self =>
         case Left(fiber) =>
           import internal.{FiberMessage, OneShot}
           val result = OneShot.make[Exit[E, A]]
-          fiber.tell(
-            FiberMessage.Stateful((fiber, _) => fiber.addObserver(exit => result.set(exit.asInstanceOf[Exit[E, A]])))
-          )
+          fiber.unsafe.addObserver(result.set)
+          internal.Blocking.signalBlocking()
           result.get()
         case Right(exit) => exit
       }
@@ -145,21 +145,19 @@ trait Runtime[+R] { self =>
     )(implicit trace: Trace, unsafe: Unsafe): Either[internal.FiberRuntime[E, A], Exit[E, A]] = {
       import internal.FiberRuntime
 
-      val fiberId   = FiberId.make(trace)
+      val fiberId   = fiberIdGen.make(trace)
       val fiberRefs = self.fiberRefs.updatedAs(fiberId)(FiberRef.currentEnvironment, environment)
       val fiber     = FiberRuntime[E, A](fiberId, fiberRefs.forkAs(fiberId), runtimeFlags)
 
       val supervisor = fiber.getSupervisor()
 
-      if (supervisor != Supervisor.none) {
+      if (supervisor ne Supervisor.none) {
         supervisor.onStart(environment, zio, None, fiber)
-
-        fiber.addObserver(exit => supervisor.onEnd(exit, fiber))
       }
 
       val exit = fiber.start[R](zio)
 
-      if (exit != null) Right(exit)
+      if (exit ne null) Right(exit)
       else {
         FiberScope.global.add(null, runtimeFlags, fiber)
         Left(fiber)
@@ -175,7 +173,7 @@ trait Runtime[+R] { self =>
 
       fiber.addObserver(_.foldExit(cause => p.failure(cause.squashTraceWith(identity)), p.success))
 
-      fiber.start(zio)
+      fiber.startConcurrently(zio)
 
       new CancelableFuture[A](p.future) {
         def cancel(): Future[Exit[Throwable, A]] = {
@@ -191,7 +189,7 @@ trait Runtime[+R] { self =>
     private def makeFiber[E, A](
       zio: ZIO[R, E, A]
     )(implicit trace: Trace, unsafe: Unsafe): internal.FiberRuntime[E, A] = {
-      val fiberId   = FiberId.make(trace)
+      val fiberId   = fiberIdGen.make(trace)
       val fiberRefs = self.fiberRefs.updatedAs(fiberId)(FiberRef.currentEnvironment, environment)
       val fiber     = FiberRuntime[E, A](fiberId, fiberRefs.forkAs(fiberId), runtimeFlags)
 
@@ -201,8 +199,6 @@ trait Runtime[+R] { self =>
 
       if (supervisor ne Supervisor.none) {
         supervisor.onStart(environment, zio, None, fiber)
-
-        fiber.addObserver(exit => supervisor.onEnd(exit, fiber))
       }
 
       fiber
@@ -214,6 +210,9 @@ object Runtime extends RuntimePlatformSpecific {
 
   def addFatal(fatal: Class[_ <: Throwable])(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped(FiberRef.currentFatal.locallyScopedWith(_ | IsFatal(fatal)))
+
+  def addLogAnnotation(annotation: LogAnnotation)(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    ZLayer.scoped(FiberRef.currentLogAnnotations.locallyScopedWith(_ + (annotation.key -> annotation.value)))
 
   def addLogger(logger: ZLogger[String, Any])(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped(ZIO.withLoggerScoped(logger))
@@ -243,25 +242,36 @@ object Runtime extends RuntimePlatformSpecific {
   val default: Runtime[Any] =
     Runtime(ZEnvironment.empty, FiberRefs.empty, RuntimeFlags.default)
 
-  def enableCooperativeYielding(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+  def disableFlags(flags: RuntimeFlag*)(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.CooperativeYielding))
+      ZIO.foreachDiscard(flags)(f => ZIO.withRuntimeFlagsScoped(RuntimeFlags.disable(f)))
     }
 
+  def enableCooperativeYielding(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    enableFlags(RuntimeFlag.CooperativeYielding)
+
   def enableCurrentFiber(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    enableFlags(RuntimeFlag.CurrentFiber)
+
+  def enableFlags(flags: RuntimeFlag*)(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.CurrentFiber))
+      ZIO.foreachDiscard(flags)(f => ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(f)))
     }
 
   def enableFiberRoots(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
-    ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.FiberRoots))
-    }
+    enableFlags(RuntimeFlag.FiberRoots)
 
   def enableOpLog(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
-    ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.OpLog))
-    }
+    enableFlags(RuntimeFlag.OpLog)
+
+  def enableOpSupervision(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    enableFlags(RuntimeFlag.OpSupervision)
+
+  def enableRuntimeMetrics(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    enableFlags(RuntimeFlag.RuntimeMetrics)
+
+  def enableWorkStealing(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    enableFlags(RuntimeFlag.WorkStealing)
 
   val removeDefaultLoggers: ZLayer[Any, Nothing, Unit] = {
     implicit val trace = Trace.empty
@@ -282,21 +292,6 @@ object Runtime extends RuntimePlatformSpecific {
 
   def setReportFatal(reportFatal: Throwable => Nothing)(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
     ZLayer.scoped(FiberRef.currentReportFatal.locallyScoped(reportFatal))
-
-  def enableOpSupervision(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
-    ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.OpSupervision))
-    }
-
-  def enableRuntimeMetrics(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
-    ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.RuntimeMetrics))
-    }
-
-  def enableWorkStealing(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
-    ZLayer.scoped {
-      ZIO.withRuntimeFlagsScoped(RuntimeFlags.enable(RuntimeFlag.WorkStealing))
-    }
 
   object unsafe {
 

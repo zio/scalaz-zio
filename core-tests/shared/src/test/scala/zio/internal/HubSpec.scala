@@ -182,23 +182,23 @@ object HubSpec extends ZIOBaseSpec {
 
   def publishPoll(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("concurrent publish and poll")(
-      publishPoll1To1(makeHub, false),
-      publishPoll1ToN(makeHub, false),
-      publishPollNToN(makeHub, false)
+      publishPoll1To1(makeHub, dynamic = false),
+      publishPoll1ToN(makeHub, dynamic = false),
+      publishPollNToN(makeHub, dynamic = false)
     )
 
   def publishPollLimitedCapacity(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("with limited capacity")(
-      publishPoll1To1(_ => makeHub(1), false),
-      publishPoll1ToN(_ => makeHub(1), false),
-      publishPollNToN(_ => makeHub(1), false)
+      publishPoll1To1(_ => makeHub(1), dynamic = false),
+      publishPoll1ToN(_ => makeHub(1), dynamic = false),
+      publishPollNToN(_ => makeHub(1), dynamic = false)
     )
 
   def publishPollDynamic(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("with concurrent subscribes and unsubscribes")(
-      publishPoll1To1(_ => makeHub(1), true),
-      publishPoll1ToN(_ => makeHub(1), true),
-      publishPollNToN(_ => makeHub(1), true)
+      publishPoll1To1(_ => makeHub(1), dynamic = true),
+      publishPoll1ToN(_ => makeHub(1), dynamic = true),
+      publishPollNToN(_ => makeHub(1), dynamic = true)
     )
 
   def emptyFull(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
@@ -217,23 +217,23 @@ object HubSpec extends ZIOBaseSpec {
 
   def slidingPublishPoll(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("concurrent sliding publish and poll")(
-      slidingPublishPoll1To1(makeHub, false),
-      slidingPublishPoll1ToN(makeHub, false),
-      slidingPublishPollNToN(makeHub, false)
+      slidingPublishPoll1To1(makeHub, dynamic = false),
+      slidingPublishPoll1ToN(makeHub, dynamic = false),
+      slidingPublishPollNToN(makeHub, dynamic = false)
     )
 
   def slidingPublishPollLimitedCapacity(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("with limited capacity")(
-      slidingPublishPoll1To1(_ => makeHub(1), false),
-      slidingPublishPoll1ToN(_ => makeHub(1), false),
-      slidingPublishPollNToN(_ => makeHub(1), false)
+      slidingPublishPoll1To1(_ => makeHub(1), dynamic = false),
+      slidingPublishPoll1ToN(_ => makeHub(1), dynamic = false),
+      slidingPublishPollNToN(_ => makeHub(1), dynamic = false)
     )
 
   def slidingPublishPollDynamic(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =
     suite("with concurrent subscribes and unsubscribes")(
-      slidingPublishPoll1To1(_ => makeHub(1), true),
-      slidingPublishPoll1ToN(_ => makeHub(1), true),
-      slidingPublishPollNToN(_ => makeHub(1), true)
+      slidingPublishPoll1To1(_ => makeHub(1), dynamic = true),
+      slidingPublishPoll1ToN(_ => makeHub(1), dynamic = true),
+      slidingPublishPollNToN(_ => makeHub(1), dynamic = true)
     )
 
   def slidingPublishAllPollUpTo(makeHub: Int => Hub[Int]): Spec[TestEnvironment, Nothing] =

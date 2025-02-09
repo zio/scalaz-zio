@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,15 +138,19 @@ trait TestRenderer {
     )
   }
 
-  def renderAssertionResult(assertionResult: TestTrace[Boolean], offset: Int): Message = {
-    val failures = FailureCase.fromTrace(assertionResult, Chunk.empty)
-    failures
-      .map(fc =>
-        renderGenFailureDetails(assertionResult.getGenFailureDetails, offset) ++
-          Message(renderFailureCase(fc, offset, None))
-      )
-      .foldLeft(Message.empty)(_ ++ _)
-  }
+  def renderAssertionResult(assertionResult: TestTrace[Boolean], offset: Int): Message =
+    try {
+      val failures = FailureCase.fromTrace(assertionResult, Chunk.empty)
+      failures
+        .map(fc =>
+          renderGenFailureDetails(assertionResult.getGenFailureDetails, offset) ++
+            Message(renderFailureCase(fc, offset, None))
+        )
+        .foldLeft(Message.empty)(_ ++ _)
+    } catch {
+      case e: VirtualMachineError => throw e
+      case e: Throwable           => renderCause(Cause.die(e), offset)(Trace.empty)
+    }
 
   def renderFailureCase(failureCase: FailureCase, offset: Int, testLabel: Option[String]): Chunk[Line] =
     failureCase match {

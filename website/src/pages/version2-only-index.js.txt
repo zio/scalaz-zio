@@ -12,7 +12,7 @@ const baseUrl = '/';
 const features = [
   {
     title: 'High-performance',
-    content: 'Build scalable applications with 100x the performance of Scala’s Future',
+    content: 'Build scalable applications with minimal runtime overhead',
   },
   {
     title: 'Type-safe',
@@ -50,12 +50,6 @@ const sponsors = [
     imageAlt: 'Ziverge',
     imageLink: 'https://ziverge.com',
     content: 'Brilliant solutions for innovative companies'
-  },
-  {
-    image: `${baseUrl}img/scalac.svg`,
-    imageAlt: 'Scalac',
-    imageLink: 'https://scalac.io/',
-    content: 'Scale fast with Scala'
   },
   {
     image: `${baseUrl}img/septimal_mind.svg`,

@@ -491,7 +491,7 @@ object RefExample extends ZIOAppDefault {
       left = ref.updateAndGet(_ + 1).debug("left1") *>
         ref.updateAndGet(_ + 1).debug("left2")
       right = ref.updateAndGet(_ + 1).debug("right1") *>
-        ref.updateAndGet(_ + 1).debug("right2")
+        ref.updateAndGet(_ + 3).debug("right2")
       _ <- left <&> right
     } yield ()
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2021-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package zio.test
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.{Duration, Scheduler, Trace, UIO, Unsafe, ZIO}
 
-trait TestClockPlatformSpecific { self: TestClock.Test =>
+private[test] trait TestClockPlatformSpecific { self: TestClock.Test =>
 
   def scheduler(implicit trace: Trace): UIO[Scheduler] =
     ZIO.runtime[Any].map { runtime =>

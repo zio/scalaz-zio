@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.nio._
 import java.nio.charset.Charset
 import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.Builder
 import scala.math.log
 import scala.reflect.{ClassTag, classTag}
@@ -143,6 +144,21 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
       arr(fullBytes) = byte.asInstanceOf[Byte]
     }
     Chunk.BitChunkByte(Chunk.fromArray(arr), 0, bits)
+  }
+
+  /**
+   * Crates a base64 encoded string based on the chunk's data.
+   */
+  def asBase64String(implicit ev: Chunk.IsText[A]): String = {
+    val encoder = java.util.Base64.getEncoder
+    ev match {
+      case Chunk.IsText.byteIsText =>
+        encoder.encodeToString(self.asInstanceOf[Chunk[Byte]].toArray)
+      case Chunk.IsText.charIsText =>
+        encoder.encodeToString(self.asInstanceOf[Chunk[Char]].toArray.map(_.toByte))
+      case Chunk.IsText.strIsText =>
+        encoder.encodeToString(ev.convert(self).getBytes)
+    }
   }
 
   /**
@@ -337,7 +353,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
         if (iterator.hasNextAt(index))
           p(iterator.nextAt(index)).flatMap(b => if (b) ZIO.succeed(drop(index + 1)) else loop(index + 1))
         else
-          ZIO.succeed(Chunk.empty)
+          Exit.emptyChunk
 
       loop(0)
     }
@@ -371,7 +387,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
         if (iterator.hasNextAt(index))
           p(iterator.nextAt(index)).flatMap(b => if (b) loop(index + 1) else ZIO.succeed(drop(index)))
         else
-          ZIO.succeed(Chunk.empty)
+          Exit.emptyChunk
 
       loop(0)
     }
@@ -870,9 +886,15 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
   override def toArray[A1 >: A: ClassTag]: Array[A1] = {
     val dest = Array.ofDim[A1](self.length)
 
-    self.toArray(0, dest)
-
-    dest
+    try {
+      self.toArray(0, dest)
+      dest
+    } catch {
+      case _: ClassCastException =>
+        val dest = Array.ofDim[AnyRef](self.length).asInstanceOf[Array[A1]]
+        self.toArray(0, dest)
+        dest
+    }
   }
 
   /**
@@ -997,7 +1019,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
     builder.result()
   }
 
-  //noinspection AccessorLikeMethodIsUnit
+  // noinspection AccessorLikeMethodIsUnit
   protected[zio] final def toArray[A1 >: A](n: Int, dest: Array[A1]): Unit =
     toArray(0, dest, n, length)
 
@@ -1033,17 +1055,14 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
    * Returns a chunk with the elements mapped by the specified function.
    */
   protected def mapChunk[B](f: A => B): Chunk[B] = {
-    val iterator = self.chunkIterator
-    var index    = 0
-    val builder  = ChunkBuilder.make[B]()
-    builder.sizeHint(length)
-    while (iterator.hasNextAt(index)) {
-      val a = iterator.nextAt(index)
-      index += 1
-      val b = f(a)
-      builder += b
+    val iter   = self.chunkIterator
+    val newArr = Array.ofDim[AnyRef](self.length).asInstanceOf[Array[B]]
+    var i      = 0
+    while (iter.hasNextAt(i)) {
+      newArr(i) = f(iter.nextAt(i))
+      i += 1
     }
-    builder.result()
+    Chunk.fromArray(newArr)
   }
 
   /**
@@ -1102,7 +1121,7 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
    * Returns a chunk from a number of values.
    */
   override def apply[A](as: A*): Chunk[A] =
-    fromIterable(as)
+    if (as.size == 1) single(as.head) else fromIterable(as)
 
   /*
    * Performs bitwise operations on boolean chunks returning a Chunk.BitChunk
@@ -1254,6 +1273,7 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
       case chunk: Chunk[A]              => chunk
       case iterable if iterable.isEmpty => Empty
       case vector: Vector[A]            => VectorChunk(vector)
+      case arrSeq: mutable.ArraySeq[A]  => fromArraySeq(arrSeq)
       case iterable =>
         val builder = ChunkBuilder.make[A]()
         builder.sizeHint(iterable)
@@ -1264,11 +1284,12 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
   /**
    * Creates a chunk from an iterator.
    */
-  def fromIterator[A](iterator: Iterator[A]): Chunk[A] = {
-    val builder = ChunkBuilder.make[A]()
-    builder ++= iterator
-    builder.result()
-  }
+  def fromIterator[A](iterator: Iterator[A]): Chunk[A] =
+    if (iterator.hasNext) {
+      val builder = ChunkBuilder.make[A]()
+      builder ++= iterator
+      builder.result()
+    } else Empty
 
   /**
    * Returns a chunk backed by a Java iterable.
@@ -1744,17 +1765,8 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     }
 
     override protected def mapChunk[B](f: A => B): Chunk[B] = {
-      val len     = self.length
-      val builder = ChunkBuilder.make[B]()
-      builder.sizeHint(len)
-
-      var i = 0
-      while (i < len) {
-        builder += f(self(i))
-        i += 1
-      }
-
-      builder.result()
+      implicit val ct: ClassTag[B] = ClassTag.AnyRef.asInstanceOf[ClassTag[B]]
+      Chunk.fromArray(self.array.map(f))
     }
   }
 
@@ -1765,11 +1777,15 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def chunkIterator: ChunkIterator[A] =
       left.chunkIterator ++ right.chunkIterator
 
-    implicit val classTag: ClassTag[A] =
-      left match {
-        case Empty => classTagOf(right)
-        case _     => classTagOf(left)
-      }
+    implicit val classTag: ClassTag[A] = {
+      val lct = classTagOf(left)
+      val rct = classTagOf(right)
+
+      if (left eq Empty) lct
+      else if (right eq Empty) rct
+      else if (lct == rct) lct
+      else ClassTag.AnyRef.asInstanceOf[ClassTag[A]]
+    }
 
     override val concatDepth: Int =
       1 + math.max(left.concatDepth, right.concatDepth)
@@ -2496,16 +2512,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Byte => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Byte =
       array(index + offset)
@@ -2556,16 +2589,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Char => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Char =
       array(index + offset)
@@ -2616,16 +2666,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     override def int(index: Int)(implicit ev: Int <:< Int): Int =
       array(index + offset)
     override protected def mapChunk[B](f: Int => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Int =
       array(index + offset)
@@ -2676,16 +2743,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     override def long(index: Int)(implicit ev: Long <:< Long): Long =
       array(index + offset)
     override protected def mapChunk[B](f: Long => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Long =
       array(index + offset)
@@ -2736,16 +2820,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Double => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Double =
       array(index + offset)
@@ -2796,16 +2897,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Float => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Float =
       array(index + offset)
@@ -2854,16 +2972,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Short => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Short =
       array(index + offset)
@@ -2916,16 +3051,33 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
     def hasNextAt(index: Int): Boolean =
       index < length
     override protected def mapChunk[B](f: Boolean => B): Chunk[B] = {
-      val len   = self.length
-      val array = Array.ofDim[AnyRef](len).asInstanceOf[Array[B]]
-
-      var i = 0
-      while (i < len) {
-        array(i) = f(self(i))
-        i += 1
+      val len = self.length
+      if (len == 0) Empty
+      else {
+        val oldArr = array
+        val head   = f(oldArr(0))
+        var newArr = Array.ofDim[B](len)(Chunk.Tags.fromValue(head))
+        var i      = 1
+        newArr(0) = head
+        while (i < len) {
+          val newVal = f(oldArr(i))
+          try {
+            newArr(i) = newVal
+          } catch {
+            case _: ClassCastException =>
+              val newArr2 = Array.ofDim[AnyRef](len)
+              var ii      = 0
+              while (ii < i) {
+                newArr2(ii) = newArr(ii).asInstanceOf[AnyRef]
+                ii += 1
+              }
+              newArr = newArr2.asInstanceOf[Array[B]]
+              newArr(i) = newVal
+          }
+          i += 1
+        }
+        Chunk.fromArray(newArr)
       }
-
-      Chunk.fromArray(array)
     }
     def nextAt(index: Int): Boolean =
       array(index + offset)

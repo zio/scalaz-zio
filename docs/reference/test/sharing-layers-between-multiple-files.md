@@ -9,6 +9,10 @@ So in such situations, we can't use the previous pattern here, because specs are
 
 The `bootstrap` layer is responsible for creating and managing any services that our ZIO tests need. Using `boostrap` we can have one shared layer across multiple test specs.
 
+:::note
+When layers of the same type are defined at the class level within different test suites, they will be initialized separately for each test suite. This can lead to resource exhaustion especially with limited resources like database connections or connection pools. To avoid this, we need to ensure that such layers are defined centrally such as in the companion object to be shared properly across multiple test suites.
+:::
+
 Before we start, let's remember the `Counter` service in the previous [section](sharing-layers-within-the-same-file.md):
 
 ```scala mdoc:silent

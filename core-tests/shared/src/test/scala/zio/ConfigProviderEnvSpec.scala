@@ -13,7 +13,7 @@ object ConfigProviderEnvSpec extends ZIOBaseSpec {
 
   final case class ServiceConfig(hostPort: HostPort, timeout: Int)
   object ServiceConfig {
-    val config: Config[ServiceConfig] =
+    implicit val config: Config[ServiceConfig] =
       (HostPort.config.nested("hostPort") ++ Config.int("timeout")).map { case (a, b) => ServiceConfig(a, b) }
   }
 
@@ -35,7 +35,7 @@ object ConfigProviderEnvSpec extends ZIOBaseSpec {
           _      <- TestSystem.putEnv("HOSTPORT_HOST", "localhost")
           _      <- TestSystem.putEnv("HOSTPORT_PORT", "8080")
           _      <- TestSystem.putEnv("TIMEOUT", "1000")
-          config <- ConfigProvider.envProvider.load(ServiceConfig.config)
+          config <- ConfigProvider.envProvider.load[ServiceConfig]
         } yield assertTrue(config == ServiceConfig(HostPort("localhost", 8080), 1000))
       } +
       test("top-level list env") {
@@ -62,6 +62,12 @@ object ConfigProviderEnvSpec extends ZIOBaseSpec {
           _      <- TestSystem.putEnv("MAPPINGS_ABC", "ERROR")
           config <- ConfigProvider.envProvider.load(Config.table("mappings", Config.string))
         } yield assertTrue(config == Map("ABC" -> "ERROR"))
+      } +
+      test("envProvider should replace dashes with underscores") {
+        for {
+          _      <- TestSystem.putEnv("SNAKE_CASE", "TRUE")
+          config <- ConfigProvider.envProvider.load(Config.string("snake-case"))
+        } yield assertTrue(config == "TRUE")
       }
   }
 }

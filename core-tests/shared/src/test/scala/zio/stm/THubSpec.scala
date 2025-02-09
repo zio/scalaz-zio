@@ -2,7 +2,8 @@ package zio.stm
 
 import zio._
 import zio.test.Assertion._
-import zio.test.{assert, Gen, check}
+import zio.test.TestAspect.{exceptJS, nonFlaky}
+import zio.test.{Gen, assert, check}
 
 object THubSpec extends ZIOBaseSpec {
 
@@ -443,5 +444,5 @@ object THubSpec extends ZIOBaseSpec {
           }
         }
       )
-    )
+    ) @@ exceptJS(nonFlaky(20))
 }

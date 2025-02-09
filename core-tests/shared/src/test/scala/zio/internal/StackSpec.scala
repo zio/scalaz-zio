@@ -42,7 +42,7 @@ object StackSpec extends ZIOBaseSpec {
       import zio._
 
       def makeWriter(stack: Stack[String]) = ZIO.succeed {
-        var goUp   = 90
+        var goUp   = 82
         var goDown = 80
         stack.push("1")
         while (!stack.isEmpty) {

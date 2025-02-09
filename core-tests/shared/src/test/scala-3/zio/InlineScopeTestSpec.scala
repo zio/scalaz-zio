@@ -11,13 +11,13 @@ object AnObject {
 
 object AnotherObject {
   opaque type ATypeIsNeeded = Unit
-  val AnAlias = AnObject
+  val AnAlias           = AnObject
   inline def foo(): Int = AnAlias.bar
 }
 
 object InlineScopeTestSpec extends ZIOBaseSpec {
 
-  def spec = 
+  def spec =
     suite("Inline Scope Spec")(
       test("Inline scope is captured") {
         assertTrue(AnotherObject.foo() == 1)

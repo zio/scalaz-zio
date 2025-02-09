@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ case class Take[+E, +A](exit: Exit[Option[E], Chunk[A]]) extends AnyVal {
   /**
    * Transforms `Take[E, A]` to `ZIO[R, E, B]`.
    */
+  @deprecated("use `exit` instead", "2.1.14")
   def done[R](implicit trace: Trace): ZIO[R, Option[E], Chunk[A]] =
     ZIO.done(exit)
 
@@ -148,5 +149,5 @@ object Take {
    * End-of-stream marker
    */
   val end: Take[Nothing, Nothing] =
-    Take(Exit.fail(None))
+    Take(Exit.failNone)
 }

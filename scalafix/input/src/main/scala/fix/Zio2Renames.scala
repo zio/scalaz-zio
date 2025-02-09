@@ -13,6 +13,7 @@ import zio.internal.Platform
 import zio.stream.ZStream
 import zio.test.Gen
 
+@annotation.nowarn("msg=pure expression does nothing")
 object Zio2Renames {
 
   val flatMap1 = ZIO(1).>>=((x: Int) => ZIO(x + 1))

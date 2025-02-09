@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,12 @@ object DefaultServices {
       ConfigProvider.defaultProvider
     )(Clock.tag, Console.tag, System.tag, Random.tag, ConfigProvider.tag)
 
-  private[zio] val currentServices: FiberRef.WithPatch[ZEnvironment[
-    Clock with Console with System with Random with ConfigProvider
-  ], ZEnvironment.Patch[
-    Clock with Console with System with Random with ConfigProvider,
-    Clock with Console with System with Random with ConfigProvider
-  ]] =
+  private[zio] val currentServices: FiberRef.WithPatch[
+    ZEnvironment[Clock with Console with System with Random with ConfigProvider],
+    ZEnvironment.Patch[
+      Clock with Console with System with Random with ConfigProvider,
+      Clock with Console with System with Random with ConfigProvider
+    ]
+  ] =
     FiberRef.unsafe.makeEnvironment(live)(Unsafe.unsafe)
 }

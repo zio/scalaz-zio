@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,30 @@ final class NonEmptyChunk[+A] private (private val chunk: Chunk[A]) extends Seri
    */
   def flatten[B](implicit ev: A <:< NonEmptyChunk[B]): NonEmptyChunk[B] =
     flatMap(ev)
+
+  /**
+   * Groups the values in this `NonEmptyChunk` using the specified function.
+   */
+  def groupBy[K](f: A => K): Map[K, NonEmptyChunk[A]] =
+    groupMap(f)(identity)
+
+  /**
+   * Groups and transformers the values in this `NonEmptyChunk` using the
+   * specified function.
+   */
+  def groupMap[K, V](key: A => K)(f: A => V): Map[K, NonEmptyChunk[V]] = {
+    val m = collection.mutable.Map.empty[K, ChunkBuilder[V]]
+    for (elem <- chunk) {
+      val k       = key(elem)
+      val builder = m.getOrElseUpdate(k, ChunkBuilder.make[V]())
+      builder += f(elem)
+    }
+    var result = collection.immutable.Map.empty[K, NonEmptyChunk[V]]
+    m.foreach { case (k, v) =>
+      result = result + ((k, nonEmpty(v.result())))
+    }
+    result
+  }
 
   /**
    * Returns the hashcode of this `NonEmptyChunk`.
@@ -262,7 +286,7 @@ object NonEmptyChunk {
    * Constructs a `NonEmptyChunk` from one or more values.
    */
   def apply[A](a: A, as: A*): NonEmptyChunk[A] =
-    nonEmpty(Chunk(a) ++ Chunk.fromIterable(as))
+    fromIterable(a, as)
 
   /**
    * Checks if a `chunk` is not empty and constructs a `NonEmptyChunk` from it.
@@ -280,7 +304,15 @@ object NonEmptyChunk {
    * Constructs a `NonEmptyChunk` from an `Iterable`.
    */
   def fromIterable[A](a: A, as: Iterable[A]): NonEmptyChunk[A] =
-    nonEmpty(Chunk.single(a) ++ Chunk.fromIterable(as))
+    if (as.isEmpty) single(a)
+    else
+      nonEmpty {
+        val builder = ChunkBuilder.make[A]()
+        builder.sizeHint(as, 1)
+        builder += a
+        builder ++= as
+        builder.result()
+      }
 
   /**
    * Constructs a `NonEmptyChunk` from an `Iterable` or `None` otherwise.
@@ -292,7 +324,7 @@ object NonEmptyChunk {
    * Constructs a `NonEmptyChunk` from a single value.
    */
   def single[A](a: A): NonEmptyChunk[A] =
-    NonEmptyChunk(a)
+    nonEmpty(Chunk.single(a))
 
   /**
    * Extracts the elements from a `Chunk`.

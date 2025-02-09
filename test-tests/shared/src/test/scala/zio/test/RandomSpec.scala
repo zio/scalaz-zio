@@ -76,7 +76,7 @@ object RandomSpec extends ZIOBaseSpec {
         value2 <- Random.nextInt
         _      <- TestRandom.feedInts(1, 2)
       } yield assert(value)(equalTo(-1157408321)) && assert(value2)(equalTo(758500184))
-    } @@ nonFlaky,
+    } @@ exceptJS(nonFlaky),
     test("getting the seed and setting the seed is an identity") {
       check(Gen.long) { seed =>
         for {

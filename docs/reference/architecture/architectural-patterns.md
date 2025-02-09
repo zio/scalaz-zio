@@ -40,25 +40,24 @@ In the following example, as we have multiple applications (`UserApp` and `Docum
 
 ```scala mdoc:invisible
 import zio._
-import zhttp.http._
+import zio.http._
 
-val userHttpApp: Http[Any, Nothing, Request, Response]     = Http.empty
-val documentHttpApp: Http[Any, Nothing, Request, Response] = Http.empty
+val userHttpApp: Routes[Any, Nothing]     = Routes.empty
+val documentHttpApp: Routes[Any, Nothing] = Routes.empty
 ```
 
 ```scala mdoc:compile-only
 import zio._
-import zhttp.http._
-import zhttp.service.Server
+import zio.http._
 import zio.metrics.connectors.prometheus.PrometheusPublisher
 import zio.metrics.connectors.{MetricsConfig, prometheus}
 
 object UserApp extends ZIOAppDefault {
-  def run = Server.start(port = 8080, http = userHttpApp)
+  def run = Server.serve(userHttpApp).provide(Server.defaultWithPort(8080))
 }
 
 object DocumentApp extends ZIOAppDefault {
-  def run = Server.start(port = 8081, http = documentHttpApp)
+  def run = Server.serve(documentHttpApp).provide(Server.defaultWithPort(8081))
 }
 
 object Metrics extends ZIOAppDefault {
@@ -66,13 +65,13 @@ object Metrics extends ZIOAppDefault {
 
   def run =
     Server
-      .start(
-        port = 8082,
-        http = Http.collectZIO[Request] { case Method.GET -> !! / "metrics" =>
-          ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text))
-        }
+      .serve(
+        Routes(Method.GET / "metrics" ->
+          handler(ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text)))
+        )
       )
       .provide(
+        Server.defaultWithPort(8082),
         metricsConfig,
         prometheus.publisherLayer,
         prometheus.prometheusLayer
@@ -88,8 +87,7 @@ If we had only one application, we could use the `bootstrap` layer to implement 
 
 ```scala mdoc:compile-only
 import zio._
-import zhttp.http._
-import zhttp.service.Server
+import zio.http._
 import zio.metrics.connectors.prometheus.PrometheusPublisher
 import zio.metrics.connectors.{MetricsConfig, prometheus}
 
@@ -99,12 +97,12 @@ object MetricsService {
   private val exporter: ZLayer[PrometheusPublisher, Nothing, Unit] =
     ZLayer.fromZIO {
       Server
-        .start(
-          port = 8081,
-          http = Http.collectZIO[Request] { case Method.GET -> !! / "metrics" =>
-            ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text))
-          }
+        .serve(
+          Routes(Method.GET / "metrics" ->
+            handler(ZIO.serviceWithZIO[PrometheusPublisher](_.get.map(Response.text)))
+          )
         )
+        .provideSome[PrometheusPublisher](Server.defaultWithPort(8081))
         .forkDaemon
         .unit
     }
@@ -122,6 +120,6 @@ object MetricsService {
 object UserAoo extends ZIOAppDefault {
   override val bootstrap = MetricsService.layer
 
-  def run = Server.start(port = 8080, http = userHttpApp)
+  def run = Server.serve(userHttpApp).provideSome(Server.defaultWithPort(8080))
 }
 ```

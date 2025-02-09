@@ -1,5 +1,6 @@
 package zio
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Keep, Sink => AkkaSink, Source => AkkaSource}
 import cats.effect.unsafe.implicits.global
@@ -110,4 +111,139 @@ class StreamParBenchmark {
     unsafeRun(result)
   }
 
+  @Benchmark
+  def zioFlatMapPar: Long = {
+    val result = ZStream
+      .fromChunks(zioChunks: _*)
+      .flatMapPar(4)(i => ZStream(i, i + 1))
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioFlatMapParChunks: Long = {
+    val result = ZStream
+      .fromIterable(zioChunks)
+      .flatMapPar(4) { c =>
+        val cc = c.flatMap(i => Chunk(i, i + 1))
+        ZStream.fromChunk(cc)
+      }
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioFlatMapParChunksFair: Long = {
+    val result = ZStream
+      .fromIterable(zioChunks)
+      .flatMapPar(4) { c =>
+        ZStream
+          .fromChunk(c)
+          .flatMap(i => ZStream(i, i + 1))
+      }
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def akkaFlatMapPar: Long = {
+    val program = AkkaSource
+      .fromIterator(() => akkaChunks.iterator.flatten)
+      .flatMapMerge(
+        4,
+        i => {
+          val ints: scala.collection.immutable.Iterable[Int] = Vector(i, i + 1)
+          val akkaSrc: AkkaSource[Int, NotUsed]              = AkkaSource(ints)
+          akkaSrc
+        }
+      )
+      .toMat(AkkaSink.fold(0L)((c, ignored) => c + 1L))(Keep.right)
+
+    Await.result(program.run(), ScalaDuration.Inf)
+  }
+
+  @Benchmark
+  def fs2FlatMapPar: Long =
+    FS2Stream(fs2Chunks: _*)
+      .flatMap(FS2Stream.chunk(_))
+      .map { i =>
+        FS2Stream(i, i + 1)
+      }
+      .covary[CatsIO]
+      .parJoin(4)
+      .compile
+      .fold(0L)((c, _) => c + 1L)
+      .unsafeRunSync()
+
+  @Benchmark
+  def akkaMerge: Long = {
+    val src = AkkaSource
+      .fromIterator(() => akkaChunks.iterator.flatten)
+    val program = src
+      .merge(src)
+      .toMat(AkkaSink.fold(0L)((c, ignored) => c + 1L))(Keep.right)
+    Await.result(program.run(), ScalaDuration.Inf)
+  }
+
+  @Benchmark
+  def akkaMergeChunks: Long = {
+    val src = AkkaSource
+      .fromIterator(() => akkaChunks.iterator)
+    val program = src
+      .merge(src)
+      .toMat(AkkaSink.fold(0L)((c, arr) => c + arr.length))(Keep.right)
+    Await.result(program.run(), ScalaDuration.Inf)
+  }
+
+  @Benchmark
+  def zioMerge: Long = {
+    val strm = ZStream
+      .fromIterable(zioChunks)
+
+    val result = strm
+      .merge(strm)
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioMerge2: Long = {
+    val strm = ZStream
+      .fromIterable(zioChunks)
+
+    val result = ZStream(strm, strm)
+      .flatMapPar(2)(identity)
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  @Benchmark
+  def zioMergeWithIdentity: Long = {
+    val strm = ZStream
+      .fromIterable(zioChunks)
+
+    val result = strm
+      .mergeWith(strm)(
+        identity,
+        identity
+      )
+      .runCount
+
+    unsafeRun(result)
+  }
+
+  /*@Benchmark
+  def fs2Merge: Long = {
+    val strm = FS2Stream(fs2Chunks: _*)
+    strm
+      .merge(strm)
+      .fold(0L)((c, _) => c + 1L)
+      .covary[CatsIO]
+      .unsafeRunSync()
+  }*/
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,5 +19,15 @@ package zio
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.collection.generic.IndexedSeqFactory
+import scala.collection.mutable
 
-private[zio] trait ChunkFactory extends IndexedSeqFactory[Chunk]
+private[zio] trait ChunkFactory extends IndexedSeqFactory[Chunk] {
+
+  final protected def fromArraySeq[A](seq: mutable.ArraySeq[A]): Chunk[A] = {
+    val builder = ChunkBuilder.make[A]()
+    builder.sizeHint(seq)
+    builder ++= seq
+    builder.result()
+  }
+
+}

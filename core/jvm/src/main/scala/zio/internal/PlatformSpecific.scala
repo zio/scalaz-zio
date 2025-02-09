@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,28 +38,8 @@ private[zio] trait PlatformSpecific {
    * Adds a signal handler for the specified signal (e.g. "INFO"). This method
    * never fails even if adding the handler fails.
    */
-  final def addSignalHandler(signal: String, action: () => Unit)(implicit unsafe: zio.Unsafe): Unit = {
-    import sun.misc.Signal
-    import sun.misc.SignalHandler
-
-    final case class ZIOSignalHandler(action: () => Unit) extends SignalHandler {
-      private[zio] var signalHandler: SignalHandler = null
-      override def handle(signal: Signal): Unit = {
-        action()
-        if (signalHandler != SignalHandler.SIG_DFL && signalHandler != SignalHandler.SIG_IGN) {
-          signalHandler.handle(signal)
-        }
-      }
-    }
-
-    try {
-      val zioSignal        = new Signal(signal)
-      val zioSignalHandler = ZIOSignalHandler(action)
-      zioSignalHandler.signalHandler = Signal.handle(zioSignal, zioSignalHandler)
-    } catch {
-      case _: Throwable => ()
-    }
-  }
+  final def addSignalHandler(signal: String, action: () => Unit)(implicit unsafe: zio.Unsafe): Unit =
+    Signal.handle(signal, _ => action())
 
   // Check the classpath to see if we're running in an unforked sbt environment.
   private val isUnforkedInSbt =
@@ -111,7 +91,11 @@ private[zio] trait PlatformSpecific {
   final def newWeakSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
     Collections.newSetFromMap(new WeakHashMap[A, java.lang.Boolean]())
 
-  final def newConcurrentSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] = ConcurrentHashMap.newKeySet[A]()
+  final def newConcurrentSet[A]()(implicit unsafe: zio.Unsafe): JSet[A] =
+    ConcurrentHashMap.newKeySet[A]()
+
+  final def newConcurrentSet[A](initialCapacity: Int)(implicit unsafe: zio.Unsafe): JSet[A] =
+    ConcurrentHashMap.newKeySet[A](initialCapacity)
 
   final def newWeakReference[A](value: A)(implicit unsafe: zio.Unsafe): () => A = {
     val ref = new WeakReference[A](value)

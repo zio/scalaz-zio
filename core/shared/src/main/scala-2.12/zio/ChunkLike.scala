@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -174,14 +174,14 @@ private[zio] trait ChunkLike[+A]
       val bs    = f(a)
       val chunk = ChunkLike.fromGenTraversableOnce(bs)
       if (chunk.length > 0) {
-        if (B0 == null) {
+        if (B0 eq null) {
           B0 = Chunk.classTagOf(chunk)
         }
         chunks ::= chunk
         total += chunk.length
       }
     }
-    if (B0 == null) Chunk.empty
+    if (B0 eq null) Chunk.empty
     else {
       implicit val B: ClassTag[B] = B0
       val dest: Array[B]          = Array.ofDim(total)

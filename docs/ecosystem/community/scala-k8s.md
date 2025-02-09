@@ -92,7 +92,7 @@ val config2 = ConfigMap(
 
 And we can connect to our cluster and send requests:
 
-```scala
+```scala mdoc:silent
 import dev.hnaderi.k8s.client.APIs
 import dev.hnaderi.k8s.client.ZIOKubernetesClient
 
@@ -101,32 +101,28 @@ val client = ZIOKubernetesClient.make("http://localhost:8001")
 val nodes = ZIOKubernetesClient.send(APIs.nodes.list())
 ```
 
-Runnable example:  
-```scala
-import dev.hnaderi.k8s.client.APIs
-import dev.hnaderi.k8s.client.ZIOKubernetesClient
-import zhttp.service.ChannelFactory
-import zhttp.service.EventLoopGroup
+Runnable example:
+```scala mdoc:silent:reset
+import dev.hnaderi.k8s.client._
+import zio.http.Client
 import zio._
 
 //NOTE run `kubectl proxy` before running this example
 object ZIOExample extends ZIOAppDefault {
-  private val env =
-    (ChannelFactory.auto ++ EventLoopGroup.auto()) >>> ZIOKubernetesClient.make(
-      "http://localhost:8001"
-    )
-
-  private val app =
+  private val app = ZIO.scoped {
     for {
       n <- ZIOKubernetesClient.send(APIs.nodes.list())
-      _ <- ZIO
-        .foreach(n.items.map(_.metadata.flatMap(_.name)))(Console.printLine(_))
+      _ <- ZIO.foreach(n.items.map(_.metadata.flatMap(_.name)))(Console.printLine(_))
     } yield ()
+  }
 
-  override def run: ZIO[Environment with ZIOAppArgs with Scope, Any, Any] =
-    app.provide(env)
+  override def run =
+    app.provide(
+      Client.default,
+      ZIOBackend.make,
+      ZIOKubernetesClient.make("http://localhost:8001")
+    )
 
 }
-
 ```
 

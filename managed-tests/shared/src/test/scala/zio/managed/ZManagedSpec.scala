@@ -3,7 +3,7 @@ package zio.managed
 import zio._
 import zio.managed.ZManaged.ReleaseMap
 import zio.test.Assertion._
-import zio.test.TestAspect.{nonFlaky, scala2Only}
+import zio.test.TestAspect.{exceptJS, nonFlaky, scala2Only}
 import zio.test._
 
 import scala.concurrent.ExecutionContext
@@ -143,9 +143,9 @@ object ZManagedSpec extends ZIOBaseSpec {
           l.get <*> r.get
         }.map { case (l, r) =>
           assert(l)(equalTo(List(1, 2, 3))) &&
-            assert(r)(equalTo(List(1, 2, 3)))
+          assert(r)(equalTo(List(1, 2, 3)))
         }
-      } @@ TestAspect.nonFlaky
+      } @@ exceptJS(nonFlaky)
     ),
     suite("fromZIO")(
       test("Performed interruptibly") {
@@ -460,6 +460,17 @@ object ZManagedSpec extends ZIOBaseSpec {
           _      <- ZManaged.fromAutoCloseable(closeable).useDiscard(ZIO.unit)
           result <- effects.get
         } yield assert(result)(equalTo(List("Closed")))
+      },
+      test("is null-safe") {
+        // Will be `null` because the file doesn't exist
+        def loadNonExistingFile = ZIO.attempt(this.getClass.getResourceAsStream(s"this_file_doesnt_exist.json"))
+
+        for {
+          shouldBeNull <- loadNonExistingFile
+          // Should not fail when closing a null resource
+          // The test will fail if the resource is not closed properly
+          _ <- ZManaged.fromAutoCloseable(loadNonExistingFile).useDiscard(ZIO.unit)
+        } yield assert(shouldBeNull)(isNull)
       }
     ),
     suite("ifManaged")(
@@ -858,6 +869,11 @@ object ZManagedSpec extends ZIOBaseSpec {
         val managed: TaskManaged[Int] = ZManaged.succeed(None).someOrElse(42)
         assertZIO(managed.useNow)(equalTo(42))
       },
+      test("works when the output of the default is an instance of a covariant type constructor applied to Nothing") {
+        val managed: TaskManaged[List[String]] =
+          ZManaged.succeed(Option.empty[List[String]]).someOrElseManaged(ZManaged.succeed(List.empty))
+        assertZIO(managed.useNow)(equalTo(List.empty))
+      },
       test("does not change failed state") {
         val managed: TaskManaged[Int] = ZManaged.fail(ExampleError).someOrElse(42)
         managed.exit.use(res => ZIO.succeed(assert(res)(fails(equalTo(ExampleError)))))
@@ -871,6 +887,10 @@ object ZManagedSpec extends ZIOBaseSpec {
       test("falls back to the default value if None") {
         val managed: TaskManaged[Int] = ZManaged.succeed(None).someOrElseManaged(ZManaged.succeed(42))
         assertZIO(managed.useNow)(equalTo(42))
+      },
+      test("works when the default contains an instance of a covariant type constructor applied to Nothing") {
+        val managed: TaskManaged[List[String]] = ZManaged.succeed(Option.empty[List[String]]).someOrElse(List.empty)
+        assertZIO(managed.useNow)(equalTo(List.empty))
       },
       test("does not change failed state") {
         val managed: TaskManaged[Int] = ZManaged.fail(ExampleError).someOrElseManaged(ZManaged.succeed(42))
@@ -1077,7 +1097,7 @@ object ZManagedSpec extends ZIOBaseSpec {
           _      <- fiber.interrupt
           result <- ref.get
         } yield assert(result)(equalTo(0))
-      } @@ zioTag(interruption) @@ nonFlaky,
+      } @@ zioTag(interruption) @@ exceptJS(nonFlaky),
       test("runs finalizer when close is called") {
         ZManaged.scope.use { scope =>
           for {
@@ -1392,7 +1412,7 @@ object ZManagedSpec extends ZIOBaseSpec {
           result1 <- ref1.get
           result2 <- ref2.get
         } yield assert(result1)(equalTo(0)) && assert(result2)(equalTo(0))
-      } @@ zioTag(interruption) @@ nonFlaky
+      } @@ zioTag(interruption) @@ exceptJS(nonFlaky)
     ),
     suite("flatten")(
       test("Returns the same as ZManaged.flatten") {

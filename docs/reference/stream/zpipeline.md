@@ -201,11 +201,11 @@ ZIO stream has a wide variety of pipelines to decode chunks of bytes into string
 
 ## Operations
 
-### Input Transformation (Mapping)
+### Output Transformation (Mapping)
 
 To transform the _outputs_ of the pipeline, we can use the `ZPipeline#map` combinator for the success channel, and the `ZPipeline#mapError` combinator for the failure channel. Also, the `ZPipeline.mapChunks` takes a function of type `Chunk[O] => Chunk[O2]` and transforms chunks emitted by the pipeline.
 
-### Output Transformation (Contramap)
+### Input Transformation (Contramap)
 
 To transform the _inputs_ of the pipeline, we can use the `ZPipeline#contramap` combinator. It takes a map function of type `J => I` and convert a `ZPipeline[R, E, I, O]` to `ZPipeline[R, E, J, O]`:
 

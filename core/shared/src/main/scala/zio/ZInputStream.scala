@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2020-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ object ZInputStream {
         ZIO.attemptBlockingIO {
           val b: Array[Byte] = new Array[Byte](n)
           val count          = is.read(b)
-          if (count == -1) ZIO.fail(None) else ZIO.succeed(Chunk.fromArray(b).take(count))
+          if (count == -1) Exit.failNone else ZIO.succeed(Chunk.fromArray(b).take(count))
         }.mapError { case e: IOException =>
           Some(e)
         }.flatten
@@ -49,7 +49,7 @@ object ZInputStream {
           val idata  = new Array[Byte](bufferSize);
           var count  = is.read(idata, 0, idata.length)
 
-          if (count == -1) ZIO.fail(None)
+          if (count == -1) Exit.failNone
           else {
             var countTotalBytes = 0
             var data            = idata

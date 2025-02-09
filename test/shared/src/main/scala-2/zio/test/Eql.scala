@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,12 @@ import scala.annotation.implicitNotFound
     "they cannot be equal."
 )
 sealed abstract class Eql[A, B]
-
 object Eql extends EqlLowPriority {
-  implicit final def eqlSubtype1[A <: B, B]: Eql[A, B] = new Eql[A, B] {}
+  implicit final def eqlSubtype1[A <: B, B]: Eql[A, B] = instance.asInstanceOf[Eql[A, B]]
 }
 
 private[test] sealed abstract class EqlLowPriority {
-  implicit final def eqlSubtype2[A, B <: A]: Eql[A, B] = new Eql[A, B] {}
+  protected val instance: Eql[Any, Any] = new Eql[Any, Any] {}
+
+  implicit final def eqlSubtype2[A, B <: A]: Eql[A, B] = instance.asInstanceOf[Eql[A, B]]
 }

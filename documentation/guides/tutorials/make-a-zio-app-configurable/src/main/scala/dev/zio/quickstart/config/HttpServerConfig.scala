@@ -1,7 +1,7 @@
 package dev.zio.quickstart.config
 
 import zio.Config
-import zio.config.magnolia.deriveConfig
+import zio.config.magnolia._
 
 case class HttpServerConfig(host: String, port: Int, nThreads: Int)
 

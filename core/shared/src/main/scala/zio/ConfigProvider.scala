@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2022-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,12 @@ trait ConfigProvider {
    * Loads the specified configuration, or fails with a config error.
    */
   def load[A](config: Config[A])(implicit trace: Trace): IO[Config.Error, A]
+
+  /**
+   * Loads the configuration of type `A` using implicit Config[A], or fails with
+   * a config error.
+   */
+  def load[A](implicit trace: Trace, config: Config[A]): IO[Config.Error, A] = load(config)
 
   /**
    * Returns a new config provider that will automatically tranform all path
@@ -209,7 +215,7 @@ object ConfigProvider {
                         case (Left(e1), Left(e2)) => ZIO.fail(e1 && e2)
                         case (Left(_), Right(r))  => ZIO.succeed(r)
                         case (Right(l), Left(_))  => ZIO.succeed(l)
-                        case (Right(l), Right(r)) => ZIO.succeed(l ++ r)
+                        case (Right(l), Right(r)) => ZIO.succeed(if (l.nonEmpty) l else r)
                       }
           } yield result
 
@@ -395,6 +401,144 @@ object ConfigProvider {
     fromEnv()
 
   /**
+   * A config provider that loads configuration from command-line arguments.
+   * Keys should start with "-" or "--". Boolean flags can be specified as
+   * "-flag" or "--flag". Key Value pairs can be specified as "--key=value" or
+   * "--key value". Sequences can be specified as "--key value1 value2 ..." or
+   * "--key=value1 --key=value2"
+   */
+  def fromAppArgs(args: ZIOAppArgs, pathDelim: String = ".", seqDelim: Option[String] = None): ConfigProvider = {
+    val escapedPathDelim = java.util.regex.Pattern.quote(pathDelim)
+    val escapedSeqDelim  = java.util.regex.Pattern.quote(seqDelim.getOrElse(","))
+
+    def makePathString(path: Chunk[String]): String = path.mkString(pathDelim)
+
+    def unmakePathString(pathString: String): Chunk[String] =
+      Chunk.fromArray(pathString.split(escapedPathDelim))
+
+    def isKeyValue(s: String): Boolean = s.startsWith("-")
+
+    def splitAtEquals(text: String): (Option[String], Option[String]) = {
+      val splitted = text.split("=", 2)
+      splitted.headOption.filterNot(_.isEmpty) -> splitted.lift(1)
+    }
+
+    def stripKey(s: String): String = {
+      val toRemove = '-'
+      s.headOption match {
+        case Some(c) if c == toRemove => stripKey(s.tail)
+        case _                        => s
+      }
+    }
+
+    sealed trait State
+    object State {
+      case object Initial                    extends State
+      case class KeyOrSequence(key: String)  extends State
+      case class ExpectingValue(key: String) extends State
+    }
+
+    def loop(args: List[String], state: State): List[(String, String)] =
+      args match {
+        case h :: t =>
+          state match {
+            case State.Initial =>
+              if (isKeyValue(h))
+                splitAtEquals(stripKey(h)) match {
+                  case (Some(key), Some(value)) =>
+                    (key, value) :: loop(t, State.KeyOrSequence(key))
+                  case (Some(key), None) =>
+                    loop(t, State.ExpectingValue(key))
+                  case (None, _) =>
+                    // First argument must be a valid key, dropping until a valid key is found
+                    loop(t, State.Initial)
+                }
+              else
+                // First argument is not a key, dropping until a valid key is found
+                loop(t, State.Initial)
+            case State.KeyOrSequence(previousKey) =>
+              if (isKeyValue(h))
+                splitAtEquals(stripKey(h)) match {
+                  case (Some(key), Some(value)) =>
+                    (key, value) :: loop(t, State.KeyOrSequence(key))
+                  case (Some(key), None) =>
+                    loop(t, State.ExpectingValue(key))
+                  case (None, Some(value)) =>
+                    (previousKey, value) :: loop(t, State.KeyOrSequence(previousKey))
+                  case (None, None) =>
+                    // no key or value, dropping
+                    loop(t, State.KeyOrSequence(previousKey))
+                }
+              else
+                (previousKey, h) :: loop(t, State.KeyOrSequence(previousKey))
+            case State.ExpectingValue(key) =>
+              if (isKeyValue(h))
+                // a key is found, so no value for previous key
+                // we add the previous with "true" value, assuming it's a boolean and continue with argument list.
+                // This is to support boolean flags like -v, -h, etc.
+                // Using state.Initial as adding multiple boolean values is not allowed.
+                (key, "true") :: loop(args, State.Initial)
+              else
+                (key, h) :: loop(t, State.KeyOrSequence(key))
+
+          }
+        case Nil =>
+          state match {
+            case State.Initial             => Nil
+            case State.KeyOrSequence(key)  => Nil
+            case State.ExpectingValue(key) =>
+              // we expected a value for the key, but no more arguments are left
+              // so we add the key with "true" value, assuming it's a boolean
+              // This is to support boolean flags like -v, -h, etc.
+              List((key, "true"))
+          }
+      }
+
+    lazy val map =
+      loop(args.getArgs.toList, State.Initial)
+        .groupBy(_._1)
+        .mapValues(values => Chunk.fromIterable(values.map(_._2)))
+        .toMap
+
+    fromFlat(new Flat {
+      val mapWithIndexSplit = splitIndexInKeys(map, unmakePathString, makePathString)
+
+      override def load[A](path: Chunk[String], primitive: Config.Primitive[A], split: Boolean)(implicit
+        trace: Trace
+      ): IO[Config.Error, Chunk[A]] = {
+        val pathString = makePathString(path)
+        val name       = path.lastOption.getOrElse("<unnamed>")
+        val valueOpt   = mapWithIndexSplit.get(pathString)
+
+        for {
+          values <- ZIO
+                      .fromOption(valueOpt)
+                      .mapError(_ => Config.Error.MissingData(path, s"Expected ${pathString} to be set in arguments"))
+          results <-
+            ZIO.foreach(values)(value => Flat.util.parsePrimitive(value, path, name, primitive, escapedSeqDelim, split))
+        } yield results.flatten
+      }
+
+      lazy val keyPaths = TreeSet.empty[String] ++ mapWithIndexSplit.keySet
+
+      def enumerateChildren(path: Chunk[String])(implicit trace: Trace): IO[Config.Error, Set[String]] =
+        ZIO.succeed {
+          val pathString = if (path.nonEmpty) path.mkString("", pathDelim, pathDelim) else ""
+          keyPaths
+            .iteratorFrom(pathString)
+            .takeWhile(_.startsWith(pathString))
+            .flatMap(s => unmakePathString(s).slice(path.length, path.length + 1))
+            .toSet
+        }
+
+      def load[A](path: Chunk[String], primitive: Config.Primitive[A])(implicit
+        trace: Trace
+      ): IO[Config.Error, Chunk[A]] =
+        load(path, primitive, seqDelim.isDefined)
+    })
+  }
+
+  /**
    * Constructs a ConfigProvider that loads configuration information from
    * environment variables, using the default System service and the specified
    * delimiter strings.
@@ -416,9 +560,8 @@ object ConfigProvider {
       override def load[A](path: Chunk[String], primitive: Config.Primitive[A], split: Boolean)(implicit
         trace: Trace
       ): IO[Config.Error, Chunk[A]] = {
-        val pathString  = makePathString(path)
-        val name        = path.lastOption.getOrElse("<unnamed>")
-        val description = primitive.description
+        val pathString = makePathString(path)
+        val name       = path.lastOption.getOrElse("<unnamed>")
 
         for {
           valueOpt <- zio.System.env(pathString).mapError(sourceUnavailable(path))
@@ -442,7 +585,7 @@ object ConfigProvider {
         trace: Trace
       ): IO[Config.Error, Chunk[A]] =
         load(path, primitive, true)
-    })
+    }).contramapPath(_.replaceAll("-", "_"))
 
   /**
    * Constructs a new ConfigProvider from a key/value (flat) provider, where
@@ -469,16 +612,16 @@ object ConfigProvider {
 
       def returnEmptyListIfValueIsNil[A](
         prefix: Chunk[String],
-        continue: Chunk[String] => ZIO[Any, Error, Chunk[Chunk[A]]]
+        continue: ZIO[Any, Error, Chunk[Chunk[A]]]
       ): ZIO[Any, Error, Chunk[Chunk[A]]] =
         (for {
           possibleNil <- flat.load(prefix, Config.Text, split = false)
           result <- if (possibleNil.headOption.exists(string => string.toLowerCase().trim == "<nil>"))
                       ZIO.succeed(Chunk(Chunk.empty))
-                    else continue(prefix)
-        } yield result).orElse(continue(prefix))
+                    else continue
+        } yield result).orElse(continue)
 
-      def loop[A](prefix: Chunk[String], config: Config[A], split: Boolean)(implicit
+      def loop[A](prefix: Chunk[String], config: Config[A], split: Boolean, patchTail: Boolean = true)(implicit
         trace: Trace
       ): IO[Config.Error, Chunk[A]] =
         config match {
@@ -508,7 +651,7 @@ object ConfigProvider {
                 if (indices.isEmpty) {
                   returnEmptyListIfValueIsNil(
                     prefix = patchedPrefix,
-                    continue = loop(_, config, split = true).map(Chunk(_))
+                    continue = loop(prefix, config, split = true).map(Chunk(_))
                   )
                 } else
                   ZIO
@@ -523,7 +666,7 @@ object ConfigProvider {
             } yield values
 
           case Nested(name, config) =>
-            loop(prefix ++ Chunk(name), config, split)
+            loop(prefix :+ name, config, split)
 
           case Switch(config, map) =>
             loop(prefix, config, split).flatMap { as =>
@@ -540,9 +683,11 @@ object ConfigProvider {
           case table: Table[valueType] =>
             import table.valueConfig
             for {
-              prefix <- ZIO.fromEither(flat.patch(prefix))
-              keys   <- flat.enumerateChildren(prefix)
-              values <- ZIO.foreach(Chunk.fromIterable(keys))(key => loop(prefix ++ Chunk(key), valueConfig, split))
+              patchedPrefix <- ZIO.fromEither(flat.patch(prefix))
+              keys          <- flat.enumerateChildren(patchedPrefix)
+              values <- ZIO.foreach(Chunk.fromIterable(keys))(key =>
+                          loop(prefix ++ Chunk(key), valueConfig, split, patchTail = false)
+                        )
             } yield
               if (values.isEmpty) Chunk(Map.empty[String, valueType])
               else values.transpose.map(values => keys.zip(values).toMap)
@@ -591,8 +736,9 @@ object ConfigProvider {
 
           case primitive: Primitive[A] =>
             for {
-              prefix <- ZIO.fromEither(flat.patch(prefix))
-              vs     <- flat.load(prefix, primitive, split)
+              prefix <- if (patchTail) ZIO.fromEither(flat.patch(prefix))
+                        else ZIO.fromEither(flat.patch(prefix.dropRight(1))).map(_ :+ prefix.last)
+              vs <- flat.load(prefix, primitive, split)
               result <- if (vs.isEmpty)
                           ZIO.fail(primitive.missingError(prefix.lastOption.getOrElse("<n/a>")))
                         else ZIO.succeed(vs)
@@ -629,10 +775,9 @@ object ConfigProvider {
       override def load[A](path: Chunk[String], primitive: Config.Primitive[A], split: Boolean)(implicit
         trace: Trace
       ): IO[Config.Error, Chunk[A]] = {
-        val pathString  = makePathString(path)
-        val name        = path.lastOption.getOrElse("<unnamed>")
-        val description = primitive.description
-        val valueOpt    = mapWithIndexSplit.get(pathString)
+        val pathString = makePathString(path)
+        val name       = path.lastOption.getOrElse("<unnamed>")
+        val valueOpt   = mapWithIndexSplit.get(pathString)
 
         for {
           value <- ZIO
@@ -681,9 +826,8 @@ object ConfigProvider {
       override def load[A](path: Chunk[String], primitive: Config.Primitive[A], split: Boolean)(implicit
         trace: Trace
       ): IO[Config.Error, Chunk[A]] = {
-        val pathString  = makePathString(path)
-        val name        = path.lastOption.getOrElse("<unnamed>")
-        val description = primitive.description
+        val pathString = makePathString(path)
+        val name       = path.lastOption.getOrElse("<unnamed>")
 
         for {
           valueOpt <- zio.System.property(pathString).mapError(sourceUnavailable(path))
@@ -751,11 +895,11 @@ object ConfigProvider {
       } yield index
   }
 
-  private def splitIndexInKeys(
-    map: Map[String, String],
+  private def splitIndexInKeys[V](
+    map: Map[String, V],
     unmakePathString: String => Chunk[String],
     makePathString: Chunk[String] => String
-  ): Map[String, String] =
+  ): Map[String, V] =
     map.map { case (pathString, value) =>
       val keyWithIndex =
         for {

@@ -153,6 +153,18 @@ object ZPipelineSpec extends ZIOBaseSpec {
             .exit
         )(fails(equalTo("failed!!!")))
       ),
+      test("mapErrorZIO")(
+        assertZIO(
+          ZStream(1, 2, 3)
+            .via(
+              ZPipeline
+                .fromChannel(ZChannel.fail("failed"))
+                .mapErrorZIO(v => ZIO.succeed(v + "!!!"))
+            )
+            .runCollect
+            .exit
+        )(fails(equalTo("failed!!!")))
+      ),
       suite("sample")(
         test("Works with empty input") {
           for {
@@ -271,7 +283,18 @@ object ZPipelineSpec extends ZIOBaseSpec {
                 .exit
           } yield assert(result)(fails(equalTo(EncodingException("Not a valid hex digit: 'g'"))))
         }
-      )
+      ),
+      test("fromFunction") {
+        ZStream
+          .range(0, 20, 5)
+          .via {
+            ZPipeline.fromFunction { (strm: ZStream[Any, Any, Int]) =>
+              strm.map(_ + 1)
+            }
+          }
+          .runCollect
+          .map(assert(_)(equalTo(Chunk.range(1, 21))))
+      }
     )
 
   val weirdStringGenForSplitLines: Gen[Any, Chunk[String]] = Gen

@@ -70,6 +70,24 @@ object JSSpec extends ZIOBaseSpec {
         val resolvedPromise: Task[Int] = zio.toPromiseJS.flatMap(p => ZIO.fromFuture(_ => p.toFuture))
         assertZIO(resolvedPromise)(equalTo(42))
       }
+    ),
+    suite("ZIO#readFile")(
+      test("readFile") {
+        def getTempDir: String = {
+          import scalajs.js.Dynamic.{global => g}
+          val os = g.require("os")
+          os.tmpdir().toString
+        }
+
+        val content = "Hello World"
+        for {
+          randomFileName <- Random.nextUUID.map(_.toString)
+          tempDir        <- ZIO.attempt(getTempDir)
+          file            = tempDir + "/" + randomFileName + ".txt"
+          _              <- ZIO.writeFile(file, content)
+          fileContent    <- ZIO.readFile(file)
+        } yield assertTrue(fileContent == content)
+      }
     )
   )
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2019-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package zio.stm
 
-import zio.{Trace, UIO, Unsafe}
+import zio._
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stm.ZSTM.internal._
 
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
 /**
  * A `TRef` is a purely functional description of a mutable reference that can
@@ -35,9 +35,21 @@ import java.util.concurrent.atomic.AtomicReference
  * do not support concurrent access.
  */
 final class TRef[A] private (
-  @volatile private[stm] var versioned: Versioned[A],
-  private[stm] val todo: AtomicReference[Map[TxnId, Todo]]
+  private[stm] val versioned: AtomicReference[A],
+  @volatile private[stm] var todo: Map[TxnId, Todo] = Map.empty
 ) extends Serializable { self =>
+
+  @deprecated("kept for binary compatibility only", "2.1.8")
+  def this(versioned: Versioned[A], todo: AtomicReference[Map[TxnId, Todo]]) =
+    this(new AtomicReference(versioned.value), todo.get())
+
+  private[stm] val lock: ZSTMLockSupport.Lock = ZSTMLockSupport.Lock(true)
+
+  private val id = TRef.idCounter.incrementAndGet()
+
+  private[this] val hc = super.hashCode()
+
+  override def hashCode(): Int = hc
 
   /**
    * Retrieves the value of the `TRef`.
@@ -104,16 +116,15 @@ final class TRef[A] private (
     }
 
   override def toString: String =
-    s"TRef(id = ${self.hashCode()}, versioned.value = ${versioned.value}, todo = ${todo.get})"
+    s"TRef(id = ${self.hashCode()}, versioned.value = ${versioned})"
 
   /**
    * Updates the value of the variable.
    */
   def update(f: A => A): USTM[Unit] =
     ZSTM.Effect { (journal, _, _) =>
-      val entry    = getOrMakeEntry(journal)
-      val newValue = f(entry.unsafeGet[A])
-      entry.unsafeSet(newValue)
+      val entry = journal.getOrElseUpdate(self, newEntry())
+      entry.unsafeUpdate(f.asInstanceOf[Any => Any])
       ()
     }
 
@@ -142,21 +153,23 @@ final class TRef[A] private (
     updateAndGet(f orElse { case a => a })
 
   private[stm] def getOrMakeEntry(journal: Journal): Entry =
-    if (journal.containsKey(self)) journal.get(self)
-    else {
-      val entry = Entry(self, false)
-      journal.put(self, entry)
-      entry
-    }
+    journal.getOrElseUpdate(self, newEntry())
 
   private[stm] def unsafeGet(journal: Journal): A =
     getOrMakeEntry(journal).unsafeGet
 
   private[stm] def unsafeSet(journal: Journal, a: A): Unit =
     getOrMakeEntry(journal).unsafeSet(a)
+
+  private[this] val newEntry = () => Entry(self.asInstanceOf[TRef[A & AnyRef]])
 }
 
 object TRef {
+  private val idCounter: AtomicLong = new AtomicLong(0L)
+
+  implicit val ordering: Ordering[TRef[?]] = new Ordering[TRef[?]] {
+    def compare(x: TRef[?], y: TRef[?]): Int = java.lang.Long.compare(x.id, y.id)
+  }
 
   /**
    * Makes a new `TRef` that is initialized to the specified value.
@@ -176,10 +189,6 @@ object TRef {
       TRef.unsafeMake(a)
   }
 
-  private[stm] def unsafeMake[A](a: A): TRef[A] = {
-    val value     = a
-    val versioned = new Versioned(value)
-    val todo      = new AtomicReference[Map[TxnId, Todo]](Map())
-    new TRef(versioned, todo)
-  }
+  private[stm] def unsafeMake[A](a: A): TRef[A] =
+    new TRef(new AtomicReference[A](a))
 }

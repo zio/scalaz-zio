@@ -55,7 +55,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
                          global.execute { () =>
                            // 1st consumed by sink, 2-6 – in queue, 7th – back pressured
                            (1 to 7).foreach(i => cb(refCnt.set(i) *> ZIO.succeed(Chunk.single(1))))
-                           cb(refDone.set(true) *> ZIO.fail(None))
+                           cb(refDone.set(true) *> Exit.failNone)
                          }
                          None
                        },
@@ -89,7 +89,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
           for {
             result <- ZStream
                         .asyncZIO[Any, Nothing, Int] { k =>
-                          global.execute(() => k(ZIO.fail(None)))
+                          global.execute(() => k(Exit.failNone))
                           ZIO.unit
                         }
                         .runCollect
@@ -104,7 +104,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
                          global.execute { () =>
                            // 1st consumed by sink, 2-6 – in queue, 7th – back pressured
                            (1 to 7).foreach(i => cb(refCnt.set(i) *> ZIO.succeed(Chunk.single(1))))
-                           cb(refDone.set(true) *> ZIO.fail(None))
+                           cb(refDone.set(true) *> Exit.failNone)
                          }
                          ZIO.unit
                        },
@@ -138,7 +138,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
           for {
             result <- ZStream
                         .asyncScoped[Any, Nothing, Int] { k =>
-                          global.execute(() => k(ZIO.fail(None)))
+                          global.execute(() => k(Exit.failNone))
                           ZIO.unit
                         }
                         .runCollect
@@ -153,7 +153,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
                          global.execute { () =>
                            // 1st consumed by sink, 2-6 – in queue, 7th – back pressured
                            (1 to 7).foreach(i => cb(refCnt.set(i) *> ZIO.succeed(Chunk.single(1))))
-                           cb(refDone.set(true) *> ZIO.fail(None))
+                           cb(refDone.set(true) *> Exit.failNone)
                          }
                          ZIO.unit
                        },
@@ -193,7 +193,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
           for {
             result <- ZStream
                         .asyncInterrupt[Any, Nothing, Int] { k =>
-                          global.execute(() => k(ZIO.fail(None)))
+                          global.execute(() => k(Exit.failNone))
                           Left(ZIO.succeed(()))
                         }
                         .runCollect
@@ -209,7 +209,7 @@ object ZStreamPlatformSpecificSpec extends ZIOBaseSpec {
                          global.execute { () =>
                            // 1st consumed by sink, 2-6 – in queue, 7th – back pressured
                            (1 to 7).foreach(i => cb(refCnt.set(i) *> ZIO.succeed(Chunk.single(1))))
-                           cb(refDone.set(true) *> ZIO.fail(None))
+                           cb(refDone.set(true) *> Exit.failNone)
                          }
                          Left(ZIO.unit)
                        },

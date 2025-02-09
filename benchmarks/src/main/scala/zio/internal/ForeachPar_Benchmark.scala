@@ -9,18 +9,25 @@ import java.util.concurrent.TimeUnit
 @State(JScope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-@Fork(value = 1)
-private[this] class ForeachParDiscardBenchmark {
+@Fork(1)
+@Threads(12)
+@Warmup(iterations = 5, time = 1)
+@Measurement(iterations = 5, time = 1)
+class ForeachParDiscardBenchmark {
 
   private val as = 1 to 10000
 
   @Benchmark
   def foreachParDiscard(): Unit =
-    unsafeRun(ZIO.foreachParDiscard(as)(_ => ZIO.unit))
+    unsafeRun(ZIO.yieldNow *> ZIO.foreachParDiscard(as)(_ => ZIO.unit))
+
+  @Benchmark
+  def foreachForkJoinDiscard(): Unit =
+    unsafeRun(ZIO.yieldNow *> ZIO.foreach(as)(_ => ZIO.unit.forkDaemon).flatMap(ZIO.foreach(_)(_.join)))
 
   @Benchmark
   def naiveForeachParDiscard(): Unit =
-    unsafeRun(naiveForeachParDiscard(as)(_ => ZIO.unit))
+    unsafeRun(ZIO.yieldNow *> naiveForeachParDiscard(as)(_ => ZIO.unit))
 
   private def naiveForeachParDiscard[R, E, A](
     as: Iterable[A]

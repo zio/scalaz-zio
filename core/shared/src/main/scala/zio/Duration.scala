@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,10 +173,11 @@ final class DurationOps(private val duration: Duration) extends AnyVal {
     }
   }
 
-  def asScala: ScalaDuration = duration match {
-    case Duration.Infinity => ScalaDuration.Inf
-    case Duration.Zero     => ScalaDuration.Zero
-    case _                 => ScalaFiniteDuration(duration.toNanos, TimeUnit.NANOSECONDS)
+  def asScala: ScalaDuration = asFiniteDuration
+
+  def asFiniteDuration: ScalaFiniteDuration = duration match {
+    case Duration.Zero => ScalaDuration.Zero
+    case _             => ScalaFiniteDuration(duration.toNanos, TimeUnit.NANOSECONDS)
   }
 
   def asJava: JavaDuration = duration

@@ -153,7 +153,7 @@ val s3 = ZStream.range(1, 11).filterNot(_ % 2 == 0)
 
 ## Scanning
 
-Scans are like folds, but with a history. Like folds, they take a binary operator with an initial value. A fold combines elements of a stream and emits every intermediary result as an output of the stream:
+Scans are like folds, but with a history. Like folds, they take a binary operator with an initial value. A scan combines elements of a stream and emits every intermediary result as an output of the stream:
 
 ```scala mdoc:silent:nest
 val scan = ZStream(1, 2, 3, 4, 5).scan(0)(_ + _)
@@ -363,7 +363,7 @@ val indexedStream: ZStream[Any, Nothing, (String, Long)] =
 
 ## Cross Product
 
-ZIO stream has `ZStram#cross` and its variants to compute _Cartesian Product_ of two streams:
+ZIO stream has `ZStream#cross` and its variants to compute _Cartesian Product_ of two streams:
 
 ```scala mdoc:silent:nest
 val first = ZStream(1, 2, 3)

@@ -57,7 +57,7 @@ object ZLayerDerivationMacros {
       unroll(ctorType)
     }
 
-    val trace = '{ summon[Trace] }.asTerm
+    val trace = '{ Trace.empty }.asTerm
 
     val (fromServices, fromDefaults) =
       params.zip(paramTypes).partitionMap { case (pTerm, pType) =>
@@ -101,14 +101,17 @@ object ZLayerDerivationMacros {
 
           hookRETypes match {
             case None =>
-              '{ ZIO.succeed[A](${ newInstance }) }.asTerm
+              '{ Exit.succeed[A](${ newInstance }) }.asTerm
 
             case Some((rType, eType)) =>
               (rType.asType, eType.asType) match {
                 case ('[r], '[e]) =>
                   '{
                     val instance = ${ newInstance }
-                    instance.asInstanceOf[ZLayer.Derive.Scoped[r, e]].scoped.as(instance)
+                    instance
+                      .asInstanceOf[ZLayer.Derive.Scoped[r, e]]
+                      .scoped(using Trace.empty)
+                      .as(instance)(using Trace.empty)
                   }.asTerm
               }
           }
@@ -116,7 +119,8 @@ object ZLayerDerivationMacros {
         case ((pName, pType), rType) :: ps =>
           (rType.asType, eInit.asType, pType.asType) match {
             case ('[r], '[e], '[a]) =>
-              val nextEffect = '{ ZIO.service[a] }
+              val tag        = summonTag[a]
+              val nextEffect = '{ ZIO.service[a](using $tag, Trace.empty) }
 
               val lambda = Lambda(
                 Symbol.spliceOwner,
@@ -188,7 +192,8 @@ object ZLayerDerivationMacros {
                 runNoDefault(fromServices.zip(serviceTypes), args)
                   .asExprOf[ZIO[r with Scope, e, A]]
 
-              '{ ZLayer.scoped($make) }.asTerm
+              val tag = summonTag[A]
+              '{ ZLayer.scoped($make)(using $tag, summon[Trace]) }.asTerm
           }
 
         case ((pName, pType, d), (rType, eType)) :: ps =>
@@ -236,5 +241,10 @@ object ZLayerDerivationMacros {
         runDefault(fromDefaults.zip(reTypes), Map.empty)
           .asExprOf[ZLayer[r, e, A]]
     }
+  }
+
+  private def summonTag[A: Type](using Quotes): Expr[Tag[A]] = {
+    import quotes.reflect._
+    Expr.summon[Tag[A]].getOrElse(report.errorAndAbort(s"Cannot find Tag[${TypeRepr.of[A].show}] in implicit scope"))
   }
 }

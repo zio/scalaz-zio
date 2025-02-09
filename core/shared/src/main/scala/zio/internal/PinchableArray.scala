@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2022-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ private[zio] final class PinchableArray[A: ClassTag](hint: Int) extends Iterable
   }
 
   private[zio] def asChunk(): Chunk[A] =
-    if (array == null) Chunk.empty
+    if (array eq null) Chunk.empty
     else Chunk.fromArray(array).take(_size)
 
   private def ensurePinchCapacity(newSize: Int): Unit =

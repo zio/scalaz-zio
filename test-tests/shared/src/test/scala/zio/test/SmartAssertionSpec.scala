@@ -1,10 +1,13 @@
 package zio.test
 
 import zio._
+import zio.internal.stacktracer.SourceLocation
 import zio.test.SmartTestTypes._
+import zio.test.TestAspect.scala2Only
 
 import java.time.LocalDateTime
 import scala.collection.immutable.SortedSet
+import scala.util.Try
 
 object SmartAssertionSpec extends ZIOBaseSpec {
 
@@ -29,7 +32,11 @@ object SmartAssertionSpec extends ZIOBaseSpec {
           val a1 = Array(1, 2, 3)
           val a2 = Array(1, 3, 2)
           assertTrue(a1 == a2)
-        } @@ failing
+        } @@ failing,
+        test("i9153") {
+          val map = Map(1 -> 2)
+          assertTrue(map.view.map { case (k, v) => k -> (v + 1) }.toMap == Map(1 -> 3))
+        }
       )
     ),
     test("multiple assertions") {
@@ -197,6 +204,53 @@ object SmartAssertionSpec extends ZIOBaseSpec {
     test("equalTo must not have type inference issues") {
       val list: List[Int] = List(1, 2, 3, 4)
       assertTrue(list.filter(_ => false) == List.empty[Int])
+    },
+    test("equalTo compiles when comparing different primitive types") {
+      val a = 1
+      val b = 1L
+      assertTrue(a == b) && assertTrue(b == a)
+    },
+    test("equalTo compiles when comparing parent to child class") {
+      class A {
+        override def equals(o: Any): Boolean = true
+      }
+      class B extends A
+      val a = new A()
+      val b = new B()
+      assertTrue(a == b) && assertTrue(b == a)
+    },
+    test("equalTo does not compile when comparing unrelated types in Scala 2") {
+      val resultZIO = typeCheck("""
+      class A
+      class B
+      val a = new A()
+      val b = new B()
+      assertTrue(a == b) && assertTrue(b == a)
+      """)
+      for {
+        result <- resultZIO
+      } yield assertTrue(result.is(_.left).contains("type mismatch"))
+    } @@ scala2Only,
+    test("comparison compiles when comparing different primitive types") {
+      val a  = 1
+      val b  = 2
+      val aL = 1L
+      val bL = 2L
+      assertTrue(a < bL) && assertTrue(aL < b) &&
+      assertTrue(a <= bL) && assertTrue(aL <= b) &&
+      assertTrue(b > aL) && assertTrue(bL > a) &&
+      assertTrue(b >= aL) && assertTrue(bL >= a)
+    },
+    test("comparison compiles when comparing different primitive types without direct implicit conversion") {
+      val a: Int = 1
+      val b: Int = 2
+
+      val aL: java.lang.Long = 1
+      val bL: java.lang.Long = 2
+      assertTrue(a < bL) && assertTrue(aL < b) &&
+      assertTrue(a <= bL) && assertTrue(aL <= b) &&
+      assertTrue(b > aL) && assertTrue(bL > a) &&
+      assertTrue(b >= aL) && assertTrue(bL >= a)
     },
     test("exists must succeed when at least one element of iterable satisfy specified assertion") {
       assertTrue(Seq(1, 42, 5).exists(_ == 42))
@@ -430,6 +484,10 @@ object SmartAssertionSpec extends ZIOBaseSpec {
         test("success") {
           val exit: Exit[Int, String] = Exit.succeed("Yes")
           assertTrue(exit.is(_.success) == "No")
+        },
+        test("cause") {
+          val exit: Exit[String, String] = Exit.succeed("Success!")
+          assertTrue(exit.is(_.cause) == Cause.fail("Fail!"))
         }
       ),
       suite("subtype")(
@@ -439,6 +497,16 @@ object SmartAssertionSpec extends ZIOBaseSpec {
         }
       )
     ) @@ failing,
+    suite("Try")(
+      test("success") {
+        val tr: Try[Int] = Try(42)
+        assertTrue(tr.is(_.success) == 42)
+      },
+      test("failure") {
+        val tr: Try[Int] = Try(throw new Exception("FAIL!"))
+        assertTrue(tr.is(_.failure).getMessage == "FAIL!")
+      }
+    ),
     suite("is anything")(
       test("success") {
         val opt: Option[Int] = Option(1)
@@ -491,6 +559,28 @@ object SmartAssertionSpec extends ZIOBaseSpec {
       } @@ failing
     ),
     suite("subtype seq")(
+      test("compiles contains") {
+        import zio.test.Assertion._
+        val result = typeCheck {
+          """
+            val numbers = List(1,2)
+            val allNumbers = List(1,2,3)
+            assertTrue(numbers.forall(allNumbers.contains))
+            """
+        }
+        assertZIO(result)(isRight(anything))
+      } @@ TestAspect.exceptScala212,
+      test("compiles contains with Seq") {
+        import zio.test.Assertion._
+        val result = typeCheck {
+          """
+            val numbers = Seq(Seq[Any](1))
+            val allNumbers = Seq(Seq[Int](1))
+            assertTrue(numbers.forall(allNumbers.contains))
+            """
+        }
+        assertZIO(result)(isRight(anything))
+      } @@ TestAspect.exceptScala212,
       test("contains") {
         assertTrue(Seq(Seq[Any](1)).contains(Seq[Int](1)))
       },
@@ -533,10 +623,10 @@ object SmartAssertionSpec extends ZIOBaseSpec {
         }
         suite("test complex class with same name for method and field")(
           test("one line default apply field check") {
-            assertTrue(Foo(Bar(), true).otherField)
+            assertTrue(Foo(Bar(), otherField = true).otherField)
           },
           test("one line default apply nested same name check") {
-            assertTrue(Foo(Bar(), true).bar.valid)
+            assertTrue(Foo(Bar(), otherField = true).bar.valid)
           },
           test("one line companion apply field check") {
             assertTrue(Foo(true).otherField)
@@ -559,6 +649,27 @@ object SmartAssertionSpec extends ZIOBaseSpec {
             assertTrue(externalBar.valid)
           }
         )
+      }
+    ),
+    suite("TestFailure")(
+      test("location") {
+        val empty = SourceLocation("", 0)
+        assertTrue(implicitly[SourceLocation] == empty) && assertTrue(
+          implicitly[SourceLocation] == empty
+        ) && assertTrue(
+          implicitly[SourceLocation] == empty,
+          implicitly[SourceLocation] == empty
+        ) && assertTrue {
+          val _ = "this is a statement"
+          // this is a comment
+          implicitly[SourceLocation] == empty
+        }
+      } @@ TestAspect.failing[Nothing] {
+        case TestFailure.Assertion(result, _) =>
+          val expected = result.result.values.collect { case SourceLocation(path, line) => s"$path:$line" }
+          val actual   = FailureCase.fromTrace(result.result, Chunk.empty).map(_.location)
+          actual.length == 5 && actual == expected
+        case _ => false
       }
     )
   )

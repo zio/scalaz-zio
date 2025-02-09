@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2017-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,14 @@
 
 package zio
 
+import zio.internal.LoomSupport.LoomNotAvailableException
 import zio.internal.{Blocking, IsFatal, LoomSupport}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 private[zio] trait RuntimePlatformSpecific {
 
   final val defaultExecutor: Executor =
-    LoomSupport.newVirtualThreadPerTaskExecutor().map(Executor.fromJavaExecutor(_)).getOrElse(Executor.makeDefault())
+    Executor.makeDefault(autoBlocking = false)
 
   final val defaultBlockingExecutor: Executor =
     Blocking.blockingExecutor
@@ -44,4 +45,32 @@ private[zio] trait RuntimePlatformSpecific {
 
   final val defaultSupervisor: Supervisor[Any] =
     Supervisor.none
+
+  def enableLoomBasedExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
+    ZLayer.suspend {
+      sharedLoomExecutor.fold(
+        ZLayer.fail(_),
+        Runtime.setExecutor
+      )
+    }
+
+  def enableLoomBasedBlockingExecutor(implicit trace: Trace): ZLayer[Any, LoomNotAvailableException, Unit] =
+    ZLayer.suspend {
+      sharedLoomExecutor.fold(
+        ZLayer.fail(_),
+        Runtime.setBlockingExecutor
+      )
+    }
+
+  // a single Loom executor instance that can be shared between blocking and non-blocking fibers
+  private lazy val sharedLoomExecutor: Either[LoomNotAvailableException, Executor] =
+    LoomSupport.newVirtualThreadPerTaskExecutor() match {
+      case None           => Left(LoomNotAvailableException("Loom API not available", null))
+      case Some(executor) => Right(Executor.fromJavaExecutor(executor))
+    }
+
+  def enableAutoBlockingExecutor(implicit trace: Trace): ZLayer[Any, Nothing, Unit] =
+    ZLayer.suspend {
+      Runtime.setExecutor(Executor.makeDefault(autoBlocking = true))
+    }
 }

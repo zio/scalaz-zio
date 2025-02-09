@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,8 @@ private[zio] final class RingBufferPow2[A](val requestedCapacity: Int)
 
 private[zio] object RingBufferPow2 {
   def apply[A](requestedCapacity: Int): RingBufferPow2[A] = {
-    assert(requestedCapacity > 0)
+    // NOTE: Do not use `assert` as the compiler removes it in releases
+    require(requestedCapacity > 0)
 
     new RingBufferPow2(requestedCapacity)
   }

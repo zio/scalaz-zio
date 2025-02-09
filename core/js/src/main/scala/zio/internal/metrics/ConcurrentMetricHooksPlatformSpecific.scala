@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2022-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ private[zio] class ConcurrentMetricHooksPlatformSpecific extends ConcurrentMetri
 
       for (idx <- 0 until maxSize) {
         val item = values(idx)
-        if (item != null) {
+        if (item ne null) {
           val (t, v) = item
           val age    = Duration.fromInterval(t, now)
           if (!age.isNegative && age.compareTo(maxAge) <= 0) {

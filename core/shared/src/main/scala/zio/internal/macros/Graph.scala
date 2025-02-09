@@ -25,8 +25,13 @@ final case class Graph[Key, A](nodes: List[Node[Key, A]], keyEquals: (Key, Key) 
   def map[B](f: A => B): Graph[Key, B] =
     Graph(nodes.map(_.map(f)), keyEquals)
 
-  private def getNodeWithOutput[E](output: Key, error: E): Either[::[E], Node[Key, A]] =
-    nodes.find(_.outputs.exists(keyEquals(_, output))).toRight(::(error, Nil))
+  private val nodeWithOutputCache = new java.util.HashMap[Key, Option[Node[Key, A]]]
+
+  private def getNodeWithOutput[E](output: Key, error: => E): Either[::[E], Node[Key, A]] =
+    nodeWithOutputCache.computeIfAbsent(output, findNodeWithOutput).toRight(::(error, Nil))
+
+  private def findNodeWithOutput(output: Key): Option[Node[Key, A]] =
+    nodes.find(_.outputs.exists(keyEquals(_, output)))
 
   private def buildNode(
     node: Node[Key, A],

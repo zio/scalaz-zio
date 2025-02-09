@@ -6,27 +6,27 @@ sidebar_label: Interruption Model
 
 While developing concurrent applications, there are several cases that we need to _interrupt_ the execution of other fibers, for example:
 
-1. A parent fiber might start some child fibers to perform a task, and later the parent might decide that, it doesn't need the result of some or all of the child fibers.
-2. Two or more fibers start race with each other. The fiber whose result is computed first wins, and all other fibers are no longer needed, and should be interrupted.
+1. A parent fiber might start some child fibers to perform a task, and later the parent might decide that it doesn't need the result of some or all of the child fibers.
+2. Two or more fibers start a race with each other. The fiber whose result is computed first wins and all other fibers are no longer needed so they should be interrupted.
 3. In interactive applications, a user may want to stop some already running tasks, such as clicking on the "stop" button to prevent downloading more files.
 4. Computations that run longer than expected should be aborted by using timeout operations.
 5. When we have an application that perform compute-intensive tasks based on the user inputs, if the user changes the input we should cancel the current task and perform another one.
 
 ## Polling vs. Asynchronous Interruption
 
-A simple and naive way to implement fiber interruption is to provide a mechanism that one fiber can _kill/terminate_ another fiber. This is not a correct solution, because if the target fiber is in the middle of changing a shared state, it leads to an inconsistent state. So this solution doesn't guarantee to leave the shared mutable state in an internally consistent state.
+A simple and naive way to implement fiber interruption is to provide a mechanism for one fiber to _kill/terminate_ another fiber. This is not a correct solution because if the target fiber is in the middle of changing a shared state it leads to an inconsistent state. So this solution doesn't guarantee to leave the shared mutable state internally consistent.
 
 Other than the very simple kill solution, there are two popular valid solutions to this problem:
 
-  1. **Semi-asynchronous Interruption (Polling for Interruption)**— Imperative languages often use polling to implement a semi-asynchronous signaling mechanism, such as Java. In this model, a fiber sends a request for interruption of other fiber. The target fiber keep polling the interrupt status, and based on the interrupt status will find out that weather there is an interruption request from other fibers received or not. Then it should terminate itself as soon as possible.
+  1. **Semi-asynchronous Interruption (Polling for Interruption)**— Imperative languages such as Java often use polling to implement a semi-asynchronous signaling mechanism. In this model, a fiber sends a request for interruption of other fiber. The target fiber keeps polling the interrupt status, and based on the interrupt status will find out that whether there is an interruption request from other fibers. If so, it should terminate itself as soon as possible.
 
-  Using this solution, the fiber itself takes care of critical sections. So while a fiber is in the middle of a critical section, if it receives an interruption request, it should ignore the interruption and postpone the delivery of interruption during the critical section.
+  Using this solution, the fiber itself takes care of critical sections. So while a fiber is in the middle of a critical section, if it receives an interruption request it should ignore the interruption and postpone the delivery of interruption during the critical section.
 
-  The drawback of this solution is that, if the programmer forget to poll regularly enough, then the target fiber become unresponsive and cause deadlocks. Another problem with this solution is that polling a global flag is not a functional operation, that doesn't fit with ZIO's paradigm.
+  The drawback of this solution is that, if the programmer forgets to poll regularly enough, then the target fiber becomes unresponsive and causes deadlocks. Another problem is that polling a global flag is not a functional operation and doesn't fit with ZIO's paradigm.
 
-  2. **Asynchronous Interruption**— In asynchronous interruption a fiber allows to terminate another fiber. So the target fiber is not responsible for polling the status, instead in critical sections the target fiber disable the interruptibility of these regions. This is a purely-functional solution and doesn't require to poll a global state. ZIO uses this solution for its interruption model. It is a fully asynchronous signalling mechanism.
+  2. **Asynchronous Interruption**— In asynchronous interruption, a fiber is allowed to terminate another fiber. So the target fiber is not responsible for polling the status, instead in critical sections the target fiber disables the interruptibility of these regions. This is a purely-functional solution and doesn't require polling a global state. ZIO uses this solution for its interruption model. It is a fully asynchronous signalling mechanism.
 
-  This mechanism doesn't have the drawback of forgetting to poll regularly. And also its fully compatible with functional paradigm because in a purely-functional computation, at any point we can abort the computation, except for critical sections.
+  This mechanism doesn't have the drawback of forgetting to poll regularly and also it's fully compatible with the functional paradigm because in a purely-functional computation, we can abort the computation at any point, except for critical sections.
 
 ## When Does a Fiber Get Interrupted?
 
@@ -70,7 +70,7 @@ Task interrupted while running
 
 ### Interruption of Parallel Effects
 
-When composing multiple parallel effects, when one of them interrupted, other fibers will be interrupted. So if we have two parallel tasks, if one of them failed or interrupted, another will be interrupted:
+When composing multiple parallel effects, when one of them is interrupted the other fibers will be interrupted also. So if we have two parallel tasks, if one of them fails or gets interrupted, the other will be interrupted:
 
 ```scala mdoc:compile-only
 import zio._
@@ -128,7 +128,7 @@ object MainApp extends ZIOAppDefault {
 }
 ```
 
-In the above code the `first <&> second` is a parallel composition of two `first` and `second` tasks. so when we run them together, the `zipwithpar`/`<&>` operator will run these two tasks in two parallel fibers. if either side of this operator fails or is interrupted the other side will be interrupted.
+In the above code the `first <&> second` is a parallel composition of the `first` and `second` tasks. When we run them together, the `zipWithPar`/`<&>` operator will run these two tasks in two parallel fibers. If either side of this operator fails or is interrupted the other side will be interrupted.
 
 ### Child Fibers Are Scoped to Their Parents
 
@@ -235,7 +235,7 @@ The zio-fiber-8 fiber which is the underlying fiber of the random number task in
 
 ### Interruption of Blocking Operations
 
-By default, when we convert a blocking operation into the ZIO effects using `attemptBlocking`, there is no guarantee that if that effect is interrupted the underlying effect will be interrupted.
+By default, when we convert a blocking operation into a ZIO effect using `attemptBlocking`, there is no guarantee that if that effect is interrupted the underlying effect will be interrupted.
 
 Let's create a blocking effect from an endless loop:
 
@@ -260,7 +260,7 @@ for {
 } yield ()
 ```
 
-When we interrupt this loop after one second, it will still not stop. It will only stop when the entire JVM stops. So the `attemptBlocking` doesn't translate the ZIO interruption into thread interruption (`Thread.interrupt`).
+When we interrupt this loop after one second it will still not stop. It will only stop when the entire JVM stops. The `attemptBlocking` doesn't translate the ZIO interruption into thread interruption (`Thread.interrupt`).
 
 Instead, we should use `attemptBlockingInterrupt` to create interruptible blocking effects:
 
@@ -287,15 +287,15 @@ for {
 
 Notes:
 
-1. If we are converting a blocking I/O to the ZIO effect, it would be better to use `attemptBlockingIO` which refines the error type to the `java.io.IOException`.
+1. If we are converting a blocking I/O to a ZIO effect, it would be better to use `attemptBlockingIO` which refines the error type to `java.io.IOException`.
 
 2. The `attemptBlockingInterrupt` method adds significant overhead. So for performance-sensitive applications, it is better to handle interruptions manually using `attemptBlockingCancelable`.
 
 ### Cancellation of Blocking Operation
 
-Some blocking operations do not respect `Thread#interrupt` by swallowing `InterruptedException`. So, they will not be interrupted via `attemptBlockingInterrupt`. Instead, they may provide us an API to signal them to _cancel_ their operation.
+Some blocking operations do not respect `Thread#interrupt` by swallowing `InterruptedException`. So they will not be interrupted via `attemptBlockingInterrupt`. Instead, they may provide us an API to signal them to _cancel_ their operation.
 
-The following `BlockingService` will not be interrupted in case of `Thread#interrupt` call, but it checks the `released` flag constantly. If this flag becomes true, the blocking service will finish its job:
+The following `BlockingService` will not be interrupted in case of a `Thread#interrupt` call, but it checks the `released` flag constantly. If this flag becomes true, the blocking service will finish its job:
 
 ```scala mdoc:silent
 import zio._
@@ -322,7 +322,7 @@ final case class BlockingService() {
 }
 ```
 
-So, to translate ZIO interruption into cancellation of these types of blocking operations we should use `attemptBlockingCancelable`. This method takes a `cancel` effect which is responsible to signal the blocking code to close itself when ZIO interruption occurs:
+So to translate ZIO interruption into cancellation of these types of blocking operations we should use `attemptBlockingCancelable`. This method takes a `cancel` effect which is responsible for signalling the blocking code to close itself when ZIO interruption occurs:
 
 ```scala mdoc:compile-only
 import zio._
@@ -343,7 +343,7 @@ val myApp =
   } yield ()
 ```
 
-Here is another example of the cancellation of a blocking operation. When we `accept` a server socket, this blocking operation will never be interrupted until we close that using `ServerSocket#close` method:
+Here is another example of the cancellation of a blocking operation. When we `accept` a server socket, this blocking operation will never be interrupted until we close it using the `ServerSocket#close` method:
 
 ```scala mdoc:compile-only
 import java.net.{Socket, ServerSocket}
@@ -363,6 +363,6 @@ As we discussed earlier, it is dangerous for fibers to interrupt others. The dan
 
 - It is also a threat to _resource safety_. If the fiber is in the middle of acquiring a resource and is interrupted, the application will leak resources.
 
-ZIO introduces the `uninterruptible` and `uninterruptibleMask` operations for this purpose. The former creates a region of code uninterruptible and the latter has the same functionality but gives us a `restore` function that can be applied to any region of code, to restore the interruptibility of that region.
+ZIO introduces the `uninterruptible` and `uninterruptibleMask` operations for this purpose. The former creates a region of code uninterruptible and the latter has the same functionality but gives us a `restore` function that can be applied to any region of code to restore the interruptibility of that region.
 
-These operators are advanced and very low-level; so we don't use them in regularly in application development unless we know what we are as library designers. If you find yourself using these operators, think again to refactor your code using high-level operators like `ZIO#onInterrupt`, `ZIO#onDone`, `ZIO#ensuring`, `ZIO.requireRelease*` and many other concurrent operators like `race`, `foreachPar`, etc.
+These operators are advanced and very low-level so we don't use them in regularly in application development unless we know what we are doing as library designers. If you find yourself using these operators, think again about refactoring your code using high-level operators like `ZIO#onInterrupt`, `ZIO#onDone`, `ZIO#ensuring`, `ZIO.acquireRelease*` and many other concurrent operators like `race`, `foreachPar`, etc.

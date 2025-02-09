@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 John A. De Goes and the ZIO Contributors
+ * Copyright 2018-2024 John A. De Goes and the ZIO Contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -378,6 +378,12 @@ final class ZSink[-R, +E, -In, +L, +Z] private (val channel: ZChannel[R, ZNothin
     new ZSink(channel.mapErrorCause(f))
 
   /**
+   * Transforms the errors emitted by this sink using `f`.
+   */
+  def mapErrorZIO[R1 <: R, E2](f: E => URIO[R1, E2])(implicit trace: Trace): ZSink[R1, E2, In, L, Z] =
+    new ZSink(self.channel.mapErrorZIO(f))
+
+  /**
    * Transforms the leftovers emitted by this sink using `f`.
    */
   def mapLeftover[L2](f: L => L2)(implicit trace: Trace): ZSink[R, E, In, L2, Z] =
@@ -456,8 +462,8 @@ final class ZSink[-R, +E, -In, +L, +Z] private (val channel: ZChannel[R, ZNothin
     capacity: => Int = 16
   )(implicit trace: Trace): ZSink[R1, E1, In1, L1, Either[Z, Z2]] =
     self.raceWith(that, capacity)(
-      selfDone => ZChannel.MergeDecision.done(ZIO.done(selfDone).map(Left(_))),
-      thatDone => ZChannel.MergeDecision.done(ZIO.done(thatDone).map(Right(_)))
+      selfDone => ZChannel.MergeDecision.done(selfDone.map(Left(_))),
+      thatDone => ZChannel.MergeDecision.done(thatDone.map(Right(_)))
     )
 
   /**
@@ -483,8 +489,8 @@ final class ZSink[-R, +E, -In, +L, +Z] private (val channel: ZChannel[R, ZNothin
                      rightDone
                    )
         channel = reader.mergeWith(writer)(
-                    _ => ZChannel.MergeDecision.await(ZIO.done(_)),
-                    done => ZChannel.MergeDecision.done(ZIO.done(done))
+                    _ => ZChannel.MergeDecision.await(ZIO.identityFn),
+                    done => ZChannel.MergeDecision.done(done)
                   )
       } yield new ZSink[R1, E1, In1, L1, Z2](channel)
     ZSink.unwrapScopedWith(scoped)
@@ -656,18 +662,18 @@ final class ZSink[-R, +E, -In, +L, +Z] private (val channel: ZChannel[R, ZNothin
   )(f: (Z, Z1) => Z2)(implicit trace: Trace): ZSink[R1, E1, In1, L1, Z2] =
     self.raceWith(that)(
       {
-        case Exit.Failure(err) => ZChannel.MergeDecision.done(ZIO.refailCause(err))
+        case Exit.Failure(err) => ZChannel.MergeDecision.done(Exit.failCause(err))
         case Exit.Success(lz) =>
           ZChannel.MergeDecision.await {
-            case Exit.Failure(cause) => ZIO.refailCause(cause)
+            case Exit.Failure(cause) => Exit.failCause(cause)
             case Exit.Success(rz)    => ZIO.succeed(f(lz, rz))
           }
       },
       {
-        case Exit.Failure(err) => ZChannel.MergeDecision.done(ZIO.refailCause(err))
+        case Exit.Failure(err) => ZChannel.MergeDecision.done(Exit.failCause(err))
         case Exit.Success(rz) =>
           ZChannel.MergeDecision.await {
-            case Exit.Failure(cause) => ZIO.refailCause(cause)
+            case Exit.Failure(cause) => Exit.failCause(cause)
             case Exit.Success(lz)    => ZIO.succeed(f(lz, rz))
           }
       }
@@ -742,6 +748,43 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
     foldWeighted[In, Map[K, In]](Map())((acc, in) => if (acc.contains(key(in))) 0 else 1, n) { (acc, in) =>
       val k = key(in)
       val v = if (acc.contains(k)) f(acc(k), in) else in
+
+      acc.updated(k, v)
+    }
+
+  /**
+   * A sink that collects all of its inputs into a map. The keys are extracted
+   * from inputs using the keying function `key`; The values are extracted using
+   * the value function `value` if multiple inputs use the same key, they are
+   * merged using the `f` function.
+   */
+  def collectAllToMapValue[In, K, V](
+    key: In => K
+  )(value: In => V)(f: (V, V) => V)(implicit trace: Trace): ZSink[Any, Nothing, In, Nothing, Map[K, V]] =
+    foldLeftChunks(Map[K, V]()) { (acc, as) =>
+      as.foldLeft(acc) { (acc, a) =>
+        val k = key(a)
+        acc.updated(
+          k,
+          // Avoiding `get/getOrElse` here to avoid an Option allocation
+          if (acc.contains(k)) f(acc(k), value(a))
+          else value(a)
+        )
+      }
+    }
+
+  /**
+   * A sink that collects first `n` keys into a map. The keys are calculated
+   * from inputs using the keying function `key`; The values are extracted using
+   * * the value function `value` if multiple inputs use the the same key, they
+   * are merged using the `f` function.
+   */
+  def collectAllToMapValueN[Err, In, K, V](
+    n: => Long
+  )(key: In => K)(value: In => V)(f: (V, V) => V)(implicit trace: Trace): ZSink[Any, Err, In, In, Map[K, V]] =
+    foldWeighted[In, Map[K, V]](Map())((acc, in) => if (acc.contains(key(in))) 0 else 1, n) { (acc, in) =>
+      val k = key(in)
+      val v = if (acc.contains(k)) f(acc(k), value(in)) else value(in)
 
       acc.updated(k, v)
     }
@@ -859,7 +902,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
    * Drops incoming elements until the predicate `p` is satisfied.
    */
   def dropUntil[In](p: In => Boolean)(implicit trace: Trace): ZSink[Any, Nothing, In, In, Any] =
-    new ZSink(ZPipeline.dropUntil(p).toChannel)
+    ZSink.dropWhile((x: In) => !p(x)) *> ZSink.head
 
   /**
    * Drops incoming elements until the effectful predicate `p` is satisfied.
@@ -867,13 +910,27 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
   def dropUntilZIO[R, InErr, In](
     p: In => ZIO[R, InErr, Boolean]
   )(implicit trace: Trace): ZSink[R, InErr, In, In, Any] =
-    new ZSink(ZPipeline.dropUntilZIO(p).toChannel)
+    ZSink.dropWhileZIO(p(_: In).negate) *> ZSink.head
 
   /**
    * Drops incoming elements as long as the predicate `p` is satisfied.
    */
-  def dropWhile[In](p: In => Boolean)(implicit trace: Trace): ZSink[Any, Nothing, In, In, Any] =
-    new ZSink(ZPipeline.dropWhile(p).toChannel)
+  def dropWhile[In](p: In => Boolean)(implicit trace: Trace): ZSink[Any, Nothing, In, In, Any] = {
+    lazy val ch: ZChannel[Any, ZNothing, Chunk[In], Any, Nothing, Chunk[In], Unit] =
+      ZChannel.readWithCause(
+        in => {
+          val out = in.dropWhile(p)
+          if (out.nonEmpty)
+            ZChannel.write(out) *> ZChannel.unit
+          else
+            ch
+        },
+        ZChannel.refailCause,
+        _ => ZChannel.unit
+      )
+
+    ch.toSink
+  }
 
   /**
    * Drops incoming elements as long as the effectful predicate `p` is
@@ -881,8 +938,26 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
    */
   def dropWhileZIO[R, InErr, In](
     p: In => ZIO[R, InErr, Boolean]
-  )(implicit trace: Trace): ZSink[R, InErr, In, In, Any] =
-    new ZSink(ZPipeline.dropWhileZIO(p).toChannel)
+  )(implicit trace: Trace): ZSink[R, InErr, In, In, Any] = {
+    lazy val ch: ZChannel[R, ZNothing, Chunk[In], Any, InErr, Chunk[In], Unit] =
+      ZChannel.readWithCause(
+        in => {
+          val out = in.dropWhileZIO(p)
+          ZChannel.unwrap {
+            out.map { o =>
+              if (o.nonEmpty)
+                ZChannel.write(o) *> ZChannel.unit
+              else
+                ch
+            }
+          }
+        },
+        ZChannel.refailCause,
+        _ => ZChannel.unit
+      )
+
+    ch.toSink
+  }
 
   /**
    * Accesses the whole environment of the sink.
