@@ -168,24 +168,16 @@ import zio._
 import zio.kafka._
 import zio.kafka.producer._
 
-val producer: ZIO[Any, Throwable, Producer] =
+val producer: ZIO[Scope, Throwable, Producer] =
   Producer.make(
     ProducerSettings(List("localhost:9092"))
   )
 ```
 
-This is already sufficient for this example, although more helper methods are available for further customization:
+The `ProducerSettings` as constructed in this code fragment is already sufficient for many applications. However, more configuration options are available on `ProducerSettings`.
 
-```scala
-class ProducerSettings {
-  def withBootstrapServers(servers: List[String]): ProducerSettings
-  def withClientId(clientId: String)             : ProducerSettings
-  def withCloseTimeout(duration: Duration)       : ProducerSettings
-  def withProperty(key: String, value: AnyRef)   : ProducerSettings
-  def withProperties(kvs: (String, AnyRef)*)     : ProducerSettings
-  def withProperties(kvs: Map[String, AnyRef])   : ProducerSettings
-}
-```
+Notice that the created producer requires a `Scope` in the environment. When this scope closes, the producer closes its
+connection with the Kafka cluster. An explicit scope can be created with the `ZIO.scoped` method.
 
 ### 4. Creating a Consumer
 
@@ -206,6 +198,8 @@ def consumeAndPrintEvents(consumer: Consumer, groupId: String, topic: String, to
 ```
 
 For performance reasons, records are always consumed in batches. The `consumeWith` method commits the offsets of consumed records, as soon all records of a batch have been processed.
+
+For more options see [consumer tuning](https://zio.dev/zio-kafka/consumer-tuning).
 
 ### 5. The Complete Example
 
@@ -297,7 +291,28 @@ ZStream
 
 For performance reasons, method `produceAll` produces records in batches, every chunk of the input stream results in a batch.
 
-### 2. Streaming Consumer API
+### 2. Creating a Consumer
+
+When we use the streaming API we need to construct a Consumer:
+
+```scala mdoc:compile-only
+import zio._
+import zio.kafka._
+import zio.kafka.consumer._
+
+val consumer: ZIO[Scope, Throwable, Consumer] =
+  Consumer.make(
+    ConsumerSettings(List("localhost:9092"))
+      .withGroupId("streaming-kafka-app")
+  )
+```
+
+Notice that the consumer requires a `Scope` in the environment. When this scope closes, the consumer closes its
+connection with the Kafka cluster. An explicit scope can be created with the `ZIO.scoped` method.
+
+For more options see [creating a consumer](https://zio.dev/zio-kafka/creating-a-consumer) and [consumer tuning](https://zio.dev/zio-kafka/consumer-tuning).
+
+### 3. Streaming Consumer API
 
 The `Consumer.plainStream` method gives a `ZStream` that, when run, consumes records from a Kafka topic and gives a stream of `CommittableRecord[K, V]`:
 
@@ -368,7 +383,9 @@ Keeping the chunking structure intact is important.
 In the example so far we have used `tap` to print the records as they are consumed. Unfortunately, methods like `tap` and `mapZIO` destroy the chunking structure and lead to much lower throughput. Please read [a warning about mapZIO](https://zio.dev/zio-kafka/serialization-and-deserialization#a-warning-about-mapzio) for more details and alternatives.
 :::
 
-### 3. The Complete Streaming Example
+For more details see [consuming Kafka topics using ZIO Streams](https://zio.dev/zio-kafka/consuming-kafka-topics-using-zio-streams).
+
+### 4. The Complete Streaming Example
 
 It's time to create a full working example of zio-kafka with zio-streams:
 
