@@ -35,5 +35,10 @@ import scala.util.NotGiven
 sealed abstract class CanFail[-E]
 
 object CanFail extends CanFail[Any] {
-  implicit def canFail[E](implicit ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
+
+  inline given canFail[E](using inline ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
+
+  @targetName("canFail")
+  @deprecated("Kept for binary compatibility only, do not use", "2.1.16")
+  private[zio] def _canFailCompat[E](implicit ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
 }
