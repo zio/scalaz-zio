@@ -39,9 +39,12 @@ object BenchmarkUtil extends Runtime[Any] { self =>
     Unsafe.unsafe(implicit unsafe => rt.unsafe.run(zio).getOrThrowFiberFailure())
   }
 
+  override val unsafe = super.unsafe
+
   private object NoFiberRootsRuntime extends Runtime[Any] {
-    val environment  = Runtime.default.environment
-    val fiberRefs    = Runtime.default.fiberRefs
-    val runtimeFlags = RuntimeFlags(RuntimeFlag.CooperativeYielding, RuntimeFlag.Interruption)
+    override val unsafe = super.unsafe
+    val environment     = Runtime.default.environment
+    val fiberRefs       = Runtime.default.fiberRefs
+    val runtimeFlags    = RuntimeFlags(RuntimeFlag.CooperativeYielding, RuntimeFlag.Interruption)
   }
 }

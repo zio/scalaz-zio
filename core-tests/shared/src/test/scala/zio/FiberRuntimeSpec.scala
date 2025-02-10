@@ -62,6 +62,27 @@ object FiberRuntimeSpec extends ZIOBaseSpec {
             }
         }
       }
+    ),
+    suite("async")(
+      test("async callback after interruption is ignored") {
+        ZIO.suspendSucceed {
+          val cb = Ref.unsafe.make[Option[ZIO[Any, Nothing, Unit] => Unit]](None)
+          val effect =
+            (ZIO.async[Any, Nothing, Unit] { (k: (ZIO[Any, Nothing, Unit] => Unit)) =>
+              cb.unsafe.set(Some(k))
+            } *> ZIO.never)
+
+          for {
+            fiber    <- effect.fork
+            _        <- fiber.interrupt
+            callback <- cb.get.some
+            _        <- ZIO.succeed(callback(ZIO.unit))
+            first    <- fiber.poll
+            _        <- ZIO.succeed(callback(ZIO.unit))
+            second   <- fiber.poll
+          } yield assertTrue(first == second) && assertTrue(first == None)
+        }
+      }
     )
   )
 
