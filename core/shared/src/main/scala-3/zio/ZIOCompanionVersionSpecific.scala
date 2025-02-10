@@ -4,6 +4,7 @@ import zio.ZIO.Async
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.targetName
 
 private[zio] transparent trait ZIOCompanionVersionSpecific {
