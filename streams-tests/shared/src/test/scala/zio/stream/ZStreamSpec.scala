@@ -576,7 +576,7 @@ object ZStreamSpec extends ZIOBaseSpec {
               cleaned     <- finalized.get
             } yield assertTrue(cleaned)
           }
-        ) @@ TestAspect.timeout(5.seconds) @@ flaky,
+        ) @@ TestAspect.timeout(5.seconds) @@ nonFlaky,
         suite("buffer")(
           test("maintains elements and ordering")(check(tinyChunkOf(tinyChunkOf(Gen.int))) { chunk =>
             assertZIO(

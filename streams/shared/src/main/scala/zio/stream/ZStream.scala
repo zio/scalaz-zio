@@ -372,8 +372,14 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    */
   def broadcastedQueuesDynamic(
     maximumLag: => Int
-  )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[Scope, Nothing, Dequeue[Take[E, A]]]] =
-    toHub(maximumLag).map(_.subscribe)
+  )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[R with Scope, Nothing, Dequeue[Take[E, A]]]] =
+    for {
+      hub <- ZIO.acquireRelease(Hub.bounded[Take[E, A]](maximumLag))(_.shutdown)
+      subscriber = for {
+                     queue <- hub.subscribe
+                     _     <- ZIO.whenZIO(hub.isEmpty)(self.runIntoHubScoped(hub).forkScoped)
+                   } yield queue
+    } yield subscriber
 
   /**
    * Allows a faster producer to progress independently of a slower consumer by
