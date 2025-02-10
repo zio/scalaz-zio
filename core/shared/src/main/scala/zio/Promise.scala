@@ -177,7 +177,8 @@ final class Promise[E, A] private (
     ZIO.succeed(unsafe.succeed(a)(trace, Unsafe.unsafe))
 
   /**
-   * Internally, you can use this method instead of calling `myPromise.succeed(())`
+   * Internally, you can use this method instead of calling
+   * `myPromise.succeed(())`
    *
    * It avoids the `Exit` allocation
    */
