@@ -689,11 +689,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
 
                            permits
                              .withPermit(
-                               latch.succeed(()) *>
+                               latch.succeedUnit *>
                                  f(outElem)
                                    .catchAllCause(cause =>
                                      failureRef.update(_ && cause).unless(cause.isInterruptedOnly) *>
-                                       errorSignal.succeed(()) *>
+                                       errorSignal.succeedUnit *>
                                        ZChannel.failLeftUnit
                                    )
                              )
@@ -770,11 +770,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             for {
               _ <- permits
                      .withPermit(
-                       latch.succeed(()) *> f(outElem)
+                       latch.succeedUnit *> f(outElem)
                          .foldCauseZIO(
                            cause =>
                              failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
-                               errorSignal.succeed(()) *>
+                               errorSignal.succeedUnit *>
                                outgoing.offer(ZChannel.failLeftUnit),
                            elem => outgoing.offer(Exit.succeed(elem))
                          )
@@ -1248,8 +1248,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         fiber          <- restore(run(channelPromise, scopePromise, child)).forkDaemon
         _ <- parent.addFinalizer {
                channelPromise.isDone.flatMap { isDone =>
-                 if (isDone) scopePromise.succeed(()) *> fiber.await *> fiber.inheritAll
-                 else scopePromise.succeed(()) *> fiber.interrupt *> fiber.inheritAll
+                 if (isDone) scopePromise.succeedUnit *> fiber.await *> fiber.inheritAll
+                 else scopePromise.succeedUnit *> fiber.interrupt *> fiber.inheritAll
                }
              }
         done <- restore(channelPromise.await)
@@ -2009,9 +2009,9 @@ object ZChannel {
                     }
                   }
                 case Left(l: Left[OutErr, OutDone]) =>
-                  outgoing.offer(Result.Error(l.value)) *> errorSignal.succeed(()).unit
+                  outgoing.offer(Result.Error(l.value)) *> errorSignal.succeedUnit.unit
                 case Right(cause) =>
-                  outgoing.offer(Result.Fatal(cause)) *> errorSignal.succeed(()).unit
+                  outgoing.offer(Result.Fatal(cause)) *> errorSignal.succeedUnit.unit
               }
             )
 
@@ -2028,7 +2028,7 @@ object ZChannel {
               }
 
             permits
-              .withPermit(latch.succeed(()) *> raceIOs)
+              .withPermit(latch.succeedUnit *> raceIOs)
               .interruptible
               .forkIn(childScope) *> latch.await
           }
@@ -2040,7 +2040,7 @@ object ZChannel {
 
             for {
               size <- cancelers.size
-              _    <- ZIO.when(size >= n0)(cancelers.take.flatMap(_.succeed(())))
+              _    <- ZIO.when(size >= n0)(cancelers.take.flatMap(_.succeedUnit))
               _    <- cancelers.offer(canceler)
               raceIOs =
                 ZIO.scopedWith { scope =>
@@ -2049,7 +2049,7 @@ object ZChannel {
                     .flatMap(evaluatePull(_).race(canceler.await.interruptible))
                 }
               _ <- permits
-                     .withPermit(latch.succeed(()) *> raceIOs)
+                     .withPermit(latch.succeedUnit *> raceIOs)
                      .interruptible
                      .forkIn(childScope)
               _ <- latch.await

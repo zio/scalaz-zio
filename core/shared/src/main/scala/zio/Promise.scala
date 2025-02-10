@@ -176,6 +176,15 @@ final class Promise[E, A] private (
   def succeed(a: A)(implicit trace: Trace): UIO[Boolean] =
     ZIO.succeed(unsafe.succeed(a)(trace, Unsafe.unsafe))
 
+  /**
+   * Internally, you can use this method instead of calling
+   * `myPromise.succeed(())`
+   *
+   * It avoids the `Exit` allocation
+   */
+  private[zio] def succeedUnit(implicit ev0: A =:= Unit, trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.succeedUnit(ev0, trace, Unsafe))
+
   private def interruptJoiner(joiner: IO[E, A] => Any)(implicit trace: Trace): UIO[Any] = ZIO.succeed {
     var retry = true
 
@@ -205,6 +214,7 @@ final class Promise[E, A] private (
     def poll(implicit unsafe: Unsafe): Option[IO[E, A]]
     def refailCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean
     def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def succeedUnit(implicit ev0: A =:= Unit, trace: Trace, unsafe: Unsafe): Boolean
   }
 
   private[zio] val unsafe: UnsafeAPI =
@@ -280,6 +290,9 @@ final class Promise[E, A] private (
 
       def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean =
         completeWith(Exit.succeed(a))
+
+      override def succeedUnit(implicit ev0: A =:= Unit, trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(Exit.unit.asInstanceOf[IO[E, A]])
     }
 
 }
