@@ -130,7 +130,7 @@ final class ReentrantLock private (fairness: Boolean, state: Ref[ReentrantLock.S
       ZIO.unit -> State(epoch + 1, None, 0, Map.empty)
     else {
       val (fiberId, (_, promise)) = if (fairness) holders.minBy(_._2._1) else pickRandom(holders)
-      promise.succeed(()).unit -> State(epoch + 1, Some(fiberId), 1, holders - fiberId)
+      promise.succeedUnit.unit -> State(epoch + 1, Some(fiberId), 1, holders - fiberId)
     }
 
   private def pickRandom(

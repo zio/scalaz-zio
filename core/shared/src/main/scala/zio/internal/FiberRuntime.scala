@@ -411,14 +411,11 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           val exit =
             runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
-          if (null eq exit) {
+          if (exit eq null) {
             // Terminate this evaluation, async resumption will continue evaluation:
             _forksSinceYield = 0
             effect = null
           } else {
-
-            if (supervisor ne Supervisor.none) supervisor.onEnd(exit, self)(Unsafe)
-
             self._runtimeFlags = RuntimeFlags.enable(_runtimeFlags)(RuntimeFlag.WindDown)
 
             val interruption = interruptAllChildren()
@@ -426,6 +423,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             if (interruption eq null) {
               if (inbox.isEmpty) {
                 finalExit = exit
+
+                if (supervisor ne Supervisor.none) supervisor.onEnd(finalExit, self)(Unsafe)
 
                 // No more messages to process, so we will allow the fiber to end life:
                 self.setExitValue(exit)
@@ -510,12 +509,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
    *
    * '''NOTE''': This method must be invoked by the fiber itself.
    */
-  private def generateStackTrace(): StackTrace = {
+  private[zio] def generateStackTrace(): StackTrace = {
     val builder = stackTraceBuilderPool.get()
 
     val stack = _stack
     val size  = _stackSize // racy
 
+    builder += _lastTrace
     try {
       if (stack ne null) {
         var i = (if (stack.length < size) stack.length else size) - 1
@@ -805,17 +805,21 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     overrideLogLevel: Option[LogLevel],
     trace: Trace
   ): Unit = {
-    val logLevel =
-      if (overrideLogLevel.isDefined) overrideLogLevel.get
-      else getFiberRef(FiberRef.currentLogLevel)
+    val contextMap = getFiberRefs(false)
+    val loggers    = contextMap.getOrDefault(FiberRef.currentLoggers)
 
-    val spans       = getFiberRef(FiberRef.currentLogSpan)
-    val annotations = getFiberRef(FiberRef.currentLogAnnotations)
-    val loggers     = getLoggers()
-    val contextMap  = getFiberRefs()
+    if (!loggers.isEmpty) {
+      val logLevel =
+        if (overrideLogLevel.isDefined) overrideLogLevel.get
+        else contextMap.getOrDefault(FiberRef.currentLogLevel)
 
-    loggers.foreach { logger =>
-      logger(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      val spans       = contextMap.getOrDefault(FiberRef.currentLogSpan)
+      val annotations = contextMap.getOrDefault(FiberRef.currentLogAnnotations)
+
+      val it = loggers.iterator
+      while (it.hasNext) {
+        it.next()(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      }
     }
   }
 
@@ -1248,13 +1252,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 return failure
               }
 
-            case gen0: GenerateStackTrace =>
-              updateLastTrace(gen0.trace)
-              cur = Exit.succeed(generateStackTrace())
-
             case updateRuntimeFlags: UpdateRuntimeFlags =>
               updateLastTrace(updateRuntimeFlags.trace)
               cur = patchRuntimeFlags(updateRuntimeFlags.update, null, Exit.unit)
+
+            case gen0: GenerateStackTrace =>
+              updateLastTrace(gen0.trace)
+              cur = Exit.succeed(generateStackTrace())
 
             // Should be unreachable, but we keep it to be backwards compatible
             case update0: UpdateRuntimeFlagsWithin[Any, Any, Any] =>

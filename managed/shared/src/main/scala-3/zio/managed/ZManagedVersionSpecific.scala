@@ -4,7 +4,7 @@ import zio._
 
 import zio.internal.macros.LayerMacros
 
-trait ZManagedVersionSpecific[-R, +E, +A] { self: ZManaged[R, E, A] =>
+private[managed] trait ZManagedVersionSpecific[-R, +E, +A] { self: ZManaged[R, E, A] =>
 
   /**
    * Splits the environment into two parts, assembling one part using the

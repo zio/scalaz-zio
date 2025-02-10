@@ -155,9 +155,9 @@ object Semaphore {
                   case None => acc -> Right(n)
                   case Some(((promise, permits), queue)) =>
                     if (n > permits)
-                      loop(n - permits, Left(queue), acc *> promise.succeed(()))
+                      loop(n - permits, Left(queue), acc *> promise.succeedUnit)
                     else if (n == permits)
-                      (acc *> promise.succeed(())) -> Left(queue)
+                      (acc *> promise.succeedUnit) -> Left(queue)
                     else
                       acc -> Left((promise -> (permits - n)) +: queue)
                 }

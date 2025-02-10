@@ -31,11 +31,12 @@ import scala.annotation.implicitNotFound
     "they cannot be equal."
 )
 sealed abstract class Eql[A, B]
-
 object Eql extends EqlLowPriority {
-  implicit final def eqlSubtype1[A <: B, B]: Eql[A, B] = new Eql[A, B] {}
+  implicit final def eqlSubtype1[A <: B, B]: Eql[A, B] = instance.asInstanceOf[Eql[A, B]]
 }
 
 private[test] sealed abstract class EqlLowPriority {
-  implicit final def eqlSubtype2[A, B <: A]: Eql[A, B] = new Eql[A, B] {}
+  protected val instance: Eql[Any, Any] = new Eql[Any, Any] {}
+
+  implicit final def eqlSubtype2[A, B <: A]: Eql[A, B] = instance.asInstanceOf[Eql[A, B]]
 }

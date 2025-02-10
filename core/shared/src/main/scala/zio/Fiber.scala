@@ -42,7 +42,7 @@ import zio.internal.WeakConcurrentBag
  *   } yield (a, b)
  * }}}
  */
-abstract class Fiber[+E, +A] { self =>
+sealed abstract class Fiber[+E, +A] { self =>
 
   /**
    * Same as `zip` but discards the output of the left hand side.
@@ -544,6 +544,13 @@ object Fiber extends FiberPlatformSpecific {
     private[zio] def deleteFiberRef(ref: FiberRef[_]): Unit
 
     /**
+     * Generates a full stack trace from the reified stack.
+     *
+     * '''NOTE''': This method must be invoked by the fiber itself.
+     */
+    private[zio] def generateStackTrace(): StackTrace
+
+    /**
      * Retrieves the current executor that effects are executed on.
      *
      * '''NOTE''': This method is safe to invoke on any fiber, but if not
@@ -743,11 +750,11 @@ object Fiber extends FiberPlatformSpecific {
   }
 
   sealed trait Status { self =>
-    def isDone: Boolean = self match { case Status.Done => true; case _ => false }
+    def isDone: Boolean = self eq Status.Done
 
-    def isRunning: Boolean = self match { case _: Status.Running => true; case _ => false }
+    def isRunning: Boolean = self.isInstanceOf[Status.Running]
 
-    def isSuspended: Boolean = self match { case _: Status.Suspended => true; case _ => false }
+    def isSuspended: Boolean = self.isInstanceOf[Status.Suspended]
   }
   object Status {
     sealed trait Unfinished extends Status {
@@ -764,7 +771,7 @@ object Fiber extends FiberPlatformSpecific {
     final case class Running(runtimeFlags: RuntimeFlags, trace: Trace) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace == Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Running(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation})"
@@ -777,7 +784,7 @@ object Fiber extends FiberPlatformSpecific {
     ) extends Unfinished {
       override def toString(): String = {
         val currentLocation =
-          if (trace == Trace.empty) "<trace unavailable>"
+          if ((trace eq Trace.empty) || (trace eq null)) "<trace unavailable>"
           else trace
 
         s"Suspended(${RuntimeFlags.render(runtimeFlags)}, ${currentLocation}, ${blockingOn})"

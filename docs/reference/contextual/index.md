@@ -281,6 +281,8 @@ Let's look at each one in more detail:
 
 In the following example, we need to use the `ZIO.serviceWith` to write accessor methods for all of the `AppConfig` members:
 
+<!-- accessor methods are now deprecated, TODO: rewrite the following so it no longer needs accessor methods -->
+
 ```scala mdoc:compile-only
 import zio._
 
@@ -306,6 +308,10 @@ val myApp: ZIO[AppConfig, Nothing, Unit] =
 2. **ZIO.serviceWithZIO** — When we are accessing service members whose return type is a ZIO effect, we should use the `ZIO.serviceWithZIO`.
 
 For example, in order to write the accessor method for the `foo` member of the `Foo` service, we need to use the `ZIO.serviceWithZIO` function:
+
+<!-- accessor methods are now deprecated, TODO: rewrite the following so it no longer needs accessor methods
+perhaps we can simply remove this?
+-->
 
 ```scala mdoc:compile-only
 import zio._

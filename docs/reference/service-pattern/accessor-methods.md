@@ -1,37 +1,101 @@
 ---
-id: generating-accessor-methods-using-macros
-title: "Generating Accessor Methods Using Macros"
-sidebar_label: "Generating Accessor Methods"
+id: accessor-methods
+title: "Accessor Methods (deprecated)"
+sidebar_label: "Accessor Methods (deprecated)"
 ---
 
+Accessor methods are little helper methods that lookup a service from the environment, and then forward your call to
+that service.
 
-Writing accessor methods is a repetitive task and would be cumbersome in services with many methods. We can automate the generation of accessor methods using `zio-macro` module.
+:::info
+The [service pattern](service-pattern.md) provides a better way to structure programs, and it does not need accessor
+methods. Therefore, accessor methods are now deprecated.
+:::
 
-To install the `zio-macro` we should add the following line in our `build.sbt` file:
+## What is an Accessor Method?
+
+Imagine a service defined as:
+
+```scala
+import zio._
+
+trait BlobStorage {
+  def get(id: String): ZIO[Any, Throwable, Array[Byte]]
+
+  def put(content: Array[Byte]): ZIO[Any, Throwable, String]
+}
+```
+
+The accessor methods are then defined as:
+
+```scala
+import zio._
+
+object BlobStorage {
+  // Accessor method for BlobStorage.get
+  def get(id: String): ZIO[BlobStorage, Throwable, Array[Byte]] =
+    ZIO.serviceWithZIO[BlobStorage](_.get(id))
+
+  // Accessor method for BlobStorage.put
+  def put(content: Array[Byte]): ZIO[BlobStorage, Throwable, String] =
+    ZIO.serviceWithZIO[BlobStorage](_.put(content))
+}
+```
+
+Each accessor method fetches the service from the environment, and then immediately forwards the method call.
+
+The service can now be used as:
+
+```scala
+  BlobStorage.get("blob-id")  // returns a ZIO[BlobStorage, Throwable, Array[Byte]]
+```
+
+Notice how the `BlobStorage` trait is in the environment (the `R` channel) of the returned ZIO.
+
+## Why are accessor methods deprecated?
+
+Accessor methods have some drawbacks:
+
+- You must write more code.
+- The extra code must stay in sync with the service's trait.
+- The service is looked up in the environment each time it is used. This incurs (a small) performance penalty.
+- The ZIO environment permeates deeper into your code than strictly necessary. This problem is exacerbated when
+  services start exposing the services they depend on in the `R` channel of their method's return types.
+
+The recommended [service pattern](service-pattern.md) injects service dependencies directly, and therefore has none of
+these problems.
+
+## Generating Accessor Methods with Macros
+
+:::info
+Accessor Methods macros are only available for Scala versions `2.x`. They will _not_ be made available for scala `3.x`.
+:::
+
+Writing accessor methods is a repetitive task and is tedious for services with many methods. We can automate the
+generation of accessor methods using the `zio-macro` module.
+
+To install the `zio-macro` add the following line in the `build.sbt` file:
 
 ```scala
 libraryDependencies += "dev.zio" %% "zio-macros" % "<zio-version>"
 ```
 
-Also, to enable macro expansion we need to setup our project:
+In addition, enable macro expansion with:
 
-- for Scala `>= 2.13` add compiler option:
+- for Scala `2.13` add the compiler option:
 
   ```scala
   scalacOptions += "-Ymacro-annotations"
   ```
 
-- for Scala `< 2.13` add macro paradise compiler plugin:
+- for Scala `< 2.13` add the macro paradise compiler plugin:
 
   ```scala
   compilerPlugin(("org.scalamacros" % "paradise"  % "2.1.1") cross CrossVersion.full)
   ```
 
-If you are using IntelliJ, macro generated accessors will not be available in IDE hints without [ZIO plugin](../../guides/tutorials/running-our-first-zio-project-with-intellij-idea.md).
-
-:::info
-At the moment these are only available for Scala versions `2.x`, however their equivalents for Scala 3 are on our roadmap.
-:::
+If you are using IntelliJ, macro generated accessors will not be available in IDE hints
+without [ZIO plugin](../../guides/tutorials/running-our-first-zio-project-with-intellij-idea.md).
 
 ## Monomorphic Services
 
@@ -71,7 +135,8 @@ object ServiceB {
 }
 ```
 
-The `@throwing` annotation will mark impure methods. Using this annotation will request ZIO to push the error on the error channel:
+The `@throwing` annotation will mark impure methods. Using this annotation will request ZIO to push the error on the
+error channel:
 
 ```scala
 import zio._
@@ -126,10 +191,10 @@ object InmemoryKeyValueStore {
 object MainApp extends ZIOAppDefault {
   val myApp =
     for {
-      _   <- KeyValueStore.set("key", 5)
+      _ <- KeyValueStore.set("key", 5)
       key <- KeyValueStore.get("key")
     } yield key
-    
+
   def run = myApp.provide(InmemoryKeyValueStore.layer).debug
 }
 ```
@@ -186,7 +251,8 @@ object MainApp extends ZIOAppDefault {
 
 ### With Higher-Kinded Type Parameters (`F[_]`)
 
-If a service has a higher-kinded type parameter like `F[_]` we should use the `accessibleM` macro. Here is an example of such a service:
+If a service has a higher-kinded type parameter like `F[_]` we should use the `accessibleM` macro. Here is an example of
+such a service:
 
 ```scala
 import zio._
@@ -223,7 +289,7 @@ object MainApp extends ZIOAppDefault {
   val myApp =
     for {
       key <- KeyValueStore.set[String, Int]("key", 5)
-      _   <- KeyValueStore.get[String, Int]("key")
+      _ <- KeyValueStore.get[String, Int]("key")
     } yield key
 
   def run = myApp.provide(InmemoryKeyValueStore.layer).debug
@@ -233,7 +299,8 @@ object MainApp extends ZIOAppDefault {
 
 ### With Higher-Kinded Type Parameters (`F[_, _]`)
 
-If the service has a higher-kinded type parameter like `F[_, _]` we should use the `accessibleMM` macro. Let's see an example:
+If the service has a higher-kinded type parameter like `F[_, _]` we should use the `accessibleMM` macro. Let's see an
+example:
 
 ```scala
 import zio._
@@ -267,7 +334,7 @@ object InmemoryKeyValueStore {
 object MainApp extends ZIOAppDefault {
   val myApp =
     for {
-      _   <- KeyValueStore.set[String, Int, String]("key", 5)
+      _ <- KeyValueStore.set[String, Int, String]("key", 5)
       key <- KeyValueStore.get[String, Int, String]("key")
     } yield key
 

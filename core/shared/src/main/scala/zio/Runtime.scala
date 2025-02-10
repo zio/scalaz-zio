@@ -153,8 +153,6 @@ trait Runtime[+R] { self =>
 
       if (supervisor ne Supervisor.none) {
         supervisor.onStart(environment, zio, None, fiber)
-
-        fiber.addObserver(exit => supervisor.onEnd(exit, fiber))
       }
 
       val exit = fiber.start[R](zio)
@@ -201,8 +199,6 @@ trait Runtime[+R] { self =>
 
       if (supervisor ne Supervisor.none) {
         supervisor.onStart(environment, zio, None, fiber)
-
-        fiber.addObserver(exit => supervisor.onEnd(exit, fiber))
       }
 
       fiber

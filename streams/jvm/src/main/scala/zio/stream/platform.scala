@@ -534,7 +534,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
       ZIO.acquireRelease(ZIO.succeed(new Connection(socket)))(_.close())
   }
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
 
     /**
      * Constructs a `ZStream[Any, Throwable, A]` from a

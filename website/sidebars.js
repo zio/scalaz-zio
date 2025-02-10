@@ -141,9 +141,9 @@ module.exports = {
       items: [
         "reference/service-pattern/service-pattern",
         "reference/service-pattern/defining-polymorphic-services-in-zio",
-        "reference/service-pattern/generating-accessor-methods-using-macros",
         "reference/service-pattern/the-three-laws-of-zio-environment",
-        "reference/service-pattern/reloadable-services"
+        "reference/service-pattern/reloadable-services",
+        "reference/service-pattern/accessor-methods"
       ]
     },
     {
@@ -556,14 +556,11 @@ module.exports = {
         "ecosystem/community/tranzactio",
         "ecosystem/community/zio-amqp",
         "ecosystem/community/zio-apache-parquet",
-        "ecosystem/community/zio-arrow",
-        "ecosystem/community/zio-aws-s3",
         "ecosystem/community/zio-grpc",
         "ecosystem/community/zio-k8s",
         "ecosystem/community/zio-kinesis",
         "ecosystem/community/zio-nebula",
         "ecosystem/community/zio-pulsar",
-        "ecosystem/community/zio-saga",
         "ecosystem/community/zio-slick-interop",
         "ecosystem/community/zio-temporal",
         "ecosystem/community/zio-test-akka-http",
