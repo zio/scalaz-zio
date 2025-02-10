@@ -534,7 +534,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     ): ZChannel[R1, Any, Any, Any, E1, Chunk[A1], Unit] = {
       lazy val process: ZChannel[Any, Any, Any, Any, E1, Chunk[A1], Unit] =
         ZChannel.fromZIO(queue.take).flatMap { case (take, promise) =>
-          ZChannel.fromZIO(promise.succeed(())) *>
+          ZChannel.fromZIO(promise.succeedUnit) *>
             take.fold(
               ZChannel.unit,
               error => ZChannel.refailCause(error),
@@ -549,7 +549,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
       for {
         queue <- scoped
         start <- Promise.make[Nothing, Unit]
-        _     <- start.succeed(())
+        _     <- start.succeedUnit
         ref   <- Ref.make(start)
         _     <- (channel >>> producer(queue, ref)).runScoped.forkScoped
       } yield consumer(queue)
@@ -3320,7 +3320,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
           .pipeTo(loop)
           .ensuring(queue.offer(Take.end).forkDaemon *> queue.awaitShutdown) *> ZChannel.unit
       )
-        .merge(ZStream.execute((promise.succeed(()) *> right.run(sink)).ensuring(queue.shutdown)), HaltStrategy.Both)
+        .merge(ZStream.execute((promise.succeedUnit *> right.run(sink)).ensuring(queue.shutdown)), HaltStrategy.Both)
     }
 
   /**
@@ -5656,14 +5656,14 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
           case s @ Handoff.State.Full(_, notifyProducer) => (notifyProducer.await *> offer(a), s)
-          case Handoff.State.Empty(notifyConsumer)       => (notifyConsumer.succeed(()) *> p.await, Handoff.State.Full(a, p))
+          case Handoff.State.Empty(notifyConsumer)       => (notifyConsumer.succeedUnit *> p.await, Handoff.State.Full(a, p))
         }.flatten
       }
 
     def take(implicit trace: Trace): UIO[A] =
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
-          case Handoff.State.Full(a, notifyProducer)   => (notifyProducer.succeed(()).as(a), Handoff.State.Empty(p))
+          case Handoff.State.Full(a, notifyProducer)   => (notifyProducer.succeedUnit.as(a), Handoff.State.Empty(p))
           case s @ Handoff.State.Empty(notifyConsumer) => (notifyConsumer.await *> take, s)
         }.flatten
       }
@@ -5671,7 +5671,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     def poll(implicit trace: Trace): UIO[Option[A]] =
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
-          case Handoff.State.Full(a, notifyProducer) => (notifyProducer.succeed(()).as(Some(a)), Handoff.State.Empty(p))
+          case Handoff.State.Full(a, notifyProducer) => (notifyProducer.succeedUnit.as(Some(a)), Handoff.State.Empty(p))
           case s @ Handoff.State.Empty(_)            => (ZIO.succeed(None), s)
         }.flatten
       }
