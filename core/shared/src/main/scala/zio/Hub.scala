@@ -160,7 +160,7 @@ object Hub {
         ZIO.fiberIdWith { fiberId =>
           shutdownFlag.set(true)
           ZIO
-            .whenZIO(shutdownHook.succeed(())) {
+            .whenZIO(shutdownHook.succeedUnit) {
               scope.close(Exit.interrupt(fiberId)) *> strategy.shutdown
             }
             .unit
@@ -229,7 +229,7 @@ object Hub {
         ZIO.fiberIdWith { fiberId =>
           shutdownFlag.set(true)
           ZIO
-            .whenZIO(shutdownHook.succeed(())) {
+            .whenZIO(shutdownHook.succeedUnit) {
               ZIO.foreachPar(unsafePollAll(pollers))(_.interruptAs(fiberId)) *>
                 ZIO.succeed {
                   subscribers.remove(subscription -> pollers)
