@@ -344,7 +344,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZStream[Any, E, A]] =
     self
       .broadcastedQueuesDynamic(maximumLag)
-      .map(ZStream.scoped(_).flatMap(ZStream.fromQueue(_)).flattenTake)
+      .flatMap(_.map(ZStream.fromQueueWithShutdown(_).flattenTake))
 
   /**
    * Converts the stream to a scoped list of queues. Every value will be

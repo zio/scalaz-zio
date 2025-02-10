@@ -24,7 +24,7 @@ trait KeyValueStore[K, V, E, F[_, _]] {
 }
 ```
 
-In the next step, we are going to write its accessors. We might end up with the following snippet code:
+In the next step, we are going to write its accessors (note: [accessor methods](accessor-methods.md) are deprecated). We might end up with the following snippet code:
 
 ```scala mdoc:fail:silent
 import zio._
