@@ -179,6 +179,8 @@ object Config {
     }
 
     def value: Chunk[Char] = Chunk.fromArray(raw)
+
+    def stringValue = new String(raw)
   }
   object Secret extends (Chunk[Char] => Secret) {
     def apply(chunk: Chunk[Char]): Secret = new Secret(chunk.toArray)
