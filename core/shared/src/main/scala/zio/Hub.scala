@@ -160,10 +160,9 @@ object Hub {
         ZIO.fiberIdWith { fiberId =>
           shutdownFlag.set(true)
           ZIO
-            .whenZIO(shutdownHook.succeed(())) {
+            .whenZIODiscard(shutdownHook.succeedUnit) {
               scope.close(Exit.interrupt(fiberId)) *> strategy.shutdown
             }
-            .unit
         }.uninterruptible
       def size(implicit trace: Trace): UIO[Int] =
         ZIO.suspendSucceed {
@@ -229,15 +228,14 @@ object Hub {
         ZIO.fiberIdWith { fiberId =>
           shutdownFlag.set(true)
           ZIO
-            .whenZIO(shutdownHook.succeed(())) {
-              ZIO.foreachPar(unsafePollAll(pollers))(_.interruptAs(fiberId)) *>
+            .whenZIODiscard(shutdownHook.succeedUnit) {
+              ZIO.foreachParDiscard(unsafePollAll(pollers))(_.interruptAs(fiberId)) *>
                 ZIO.succeed {
                   subscribers.remove(subscription -> pollers)
                   subscription.unsubscribe()
                   strategy.unsafeOnHubEmptySpace(hub, subscribers)
                 }
             }
-            .unit
         }.uninterruptible
       def size(implicit trace: Trace): UIO[Int] =
         ZIO.suspendSucceed {

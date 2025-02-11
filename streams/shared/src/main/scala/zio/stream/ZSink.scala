@@ -1575,7 +1575,7 @@ object ZSink extends ZSinkPlatformSpecificConstructors {
   /**
    * Creates a sink containing the last value.
    */
-  def last[In](implicit trace: Trace): ZSink[Any, Nothing, In, In, Option[In]] =
+  def last[In](implicit trace: Trace): ZSink[Any, Nothing, In, Nothing, Option[In]] =
     foldLeftChunks[In, Option[In]](None)((s, in) => in.lastOption.orElse(s))
 
   /**
