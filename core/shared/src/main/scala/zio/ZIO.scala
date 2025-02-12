@@ -16,18 +16,16 @@
 
 package zio
 
-import zio.internal.{FiberScope, Platform}
+import zio.internal.FiberScope
 import zio.metrics.{MetricLabel, Metrics}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.io.IOException
 import java.util.function.IntFunction
 import scala.annotation.implicitNotFound
-import scala.collection.mutable.{Builder, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
-import scala.util.control.NoStackTrace
-import izumi.reflect.macrortti.LightTypeTag
 
 /**
  * A `ZIO[R, E, A]` value is an immutable value (called an "effect") that
@@ -358,7 +356,7 @@ sealed trait ZIO[-R, +E, +A]
     pf: PartialFunction[E, ZIO[R1, E1, A1]]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A1] = {
     def tryRescue(c: Cause[E]): ZIO[R1, E1, A1] =
-      c.failureOrCause.fold(t => pf.applyOrElse(t, (_: E) => Exit.failCause(c)), Exit.failCause)
+      c.foldFailureOrCause(t => pf.applyOrElse(t, (_: E) => Exit.failCause(c)), Exit.failCause)
 
     self.foldCauseZIO[R1, E1, A1](tryRescue, ZIO.successFn)
   }
@@ -736,7 +734,7 @@ sealed trait ZIO[-R, +E, +A]
     ev: CanFail[E],
     trace: Trace
   ): ZIO[R1, E2, B] =
-    foldCauseZIO(c => c.failureOrCause.fold(failure, Exit.failCause), success)
+    foldCauseZIO(c => c.foldFailureOrCause(failure, Exit.failCause), success)
 
   /**
    * Returns a new effect that will pass the success value of this effect to the
@@ -823,7 +821,7 @@ sealed trait ZIO[-R, +E, +A]
   final def forkWithErrorHandler[R1 <: R](handler: E => URIO[R1, Any])(implicit
     trace: Trace
   ): URIO[R1, Fiber.Runtime[E, A]] =
-    onError(c => c.failureOrCause.fold(handler, Exit.failCause)).fork
+    onError(c => c.foldFailureOrCause(handler, Exit.failCause)).fork
 
   private[zio] final def forkWithScopeOverride(
     scopeOverride: FiberScope
@@ -1059,7 +1057,7 @@ sealed trait ZIO[-R, +E, +A]
     success: A => ZIO[R1, Nothing, Any]
   )(implicit trace: Trace): ZIO[R1, Nothing, Unit] =
     onDoneCause(
-      _.failureOrCause.fold(error, Exit.failCause(_)),
+      _.foldFailureOrCause(error, Exit.failCause(_)),
       success
     )
 
@@ -1687,7 +1685,7 @@ sealed trait ZIO[-R, +E, +A]
 
       def loop(driver: Schedule.Driver[Any, R1, E, S]): ZIO[R1, E, A] =
         self.catchAllCause { cause =>
-          cause.failureOrCause.fold(
+          cause.foldFailureOrCause(
             e =>
               driver
                 .next(e)
@@ -1710,7 +1708,7 @@ sealed trait ZIO[-R, +E, +A]
 
       def loop(n: Int): ZIO[R, E, A] =
         self.catchAllCause { cause =>
-          cause.failureOrCause.fold(
+          cause.foldFailureOrCause(
             _ => if (n <= 0) Exit.failCause(cause) else ZIO.yieldNow *> loop(n - 1),
             cause => Exit.failCause(cause)
           )
@@ -2056,7 +2054,7 @@ sealed trait ZIO[-R, +E, +A]
     ev: CanFail[E],
     trace: Trace
   ): ZIO[R1, E1, A] =
-    self.foldCauseZIO(c => c.failureOrCause.fold(f(_) *> Exit.failCause(c), _ => Exit.failCause(c)), a => g(a).as(a))
+    self.foldCauseZIO(c => c.foldFailureOrCause(f(_) *> Exit.failCause(c), _ => Exit.failCause(c)), a => g(a).as(a))
 
   /**
    * Returns an effect that effectually "peeks" at the defect of this effect.
@@ -2079,7 +2077,7 @@ sealed trait ZIO[-R, +E, +A]
     trace: Trace
   ): ZIO[R1, E1, A] =
     self.foldCauseZIO(
-      c => c.failureOrCause.fold(e => f(Left(e)) *> Exit.failCause(c), _ => Exit.failCause(c)),
+      c => c.foldFailureOrCause(e => f(Left(e)) *> Exit.failCause(c), _ => Exit.failCause(c)),
       a => f(Right(a)).as(a)
     )
 
@@ -2092,7 +2090,7 @@ sealed trait ZIO[-R, +E, +A]
   final def tapError[R1 <: R, E1 >: E](
     f: E => ZIO[R1, E1, Any]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E1, A] =
-    self.foldCauseZIO(c => c.failureOrCause.fold(f(_) *> Exit.failCause(c), _ => Exit.failCause(c)), ZIO.successFn)
+    self.foldCauseZIO(c => c.foldFailureOrCause(f(_) *> Exit.failCause(c), _ => Exit.failCause(c)), ZIO.successFn)
 
   /**
    * Returns an effect that effectually "peeks" at the cause of the failure of
@@ -2318,9 +2316,10 @@ sealed trait ZIO[-R, +E, +A]
     pf: PartialFunction[Throwable, E1]
   )(f: E => E1)(implicit trace: Trace): ZIO[R, E1, A] =
     catchAllCause { cause =>
-      cause.find {
-        case Cause.Die(t, _) if pf.isDefinedAt(t) => pf(t)
-      }.fold(Exit.failCause(cause.map(f)))(ZIO.failFn)
+      cause.findOr(
+        { case Cause.Die(t, _) if pf.isDefinedAt(t) => Exit.fail(pf(t)) },
+        fallback = Exit.failCause(cause.map(f))
+      )
     }
 
   /**
@@ -3362,7 +3361,7 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
 
       def loop(zio: ZIO[R1, E, A]): ZIO[R1, E, A] =
         zio.catchAllCause { cause =>
-          cause.failureOrCause.fold(
+          cause.foldFailureOrCause(
             _ => if (iterator.hasNext) loop(iterator.next()) else Exit.failCause(cause),
             cause => Exit.failCause(cause)
           )
