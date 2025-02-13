@@ -69,6 +69,11 @@ object ConfigSpec extends ZIOBaseSpec {
         test("toString") {
           assertTrue(Secret("secret").toString() == "Secret(<redacted>)")
         } +
+        test("stringValue") {
+          val string = "secret"
+          val secret = Secret(string)
+          assertTrue(secret.stringValue == string)
+        } +
         test("equals") {
           assertTrue(Secret("secret") == Secret("secret")) &&
           assertTrue(Secret("secret1") != Secret("secret2"))
