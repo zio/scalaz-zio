@@ -558,7 +558,7 @@ sealed trait ZIO[-R, +E, +A]
    * an [[zio.Exit]] for the completion value of the fiber.
    */
   final def exit(implicit trace: Trace): URIO[R, Exit[E, A]] =
-    self.foldCause(Exit.failCause, Exit.succeed(_))
+    self.foldCause(Exit.failCause, ZIO.successFn)
 
   /**
    * Extracts this effect as an [[zio.Exit]] and then applies the provided
@@ -654,7 +654,10 @@ sealed trait ZIO[-R, +E, +A]
   final def flatMapError[R1 <: R, E2](
     f: E => URIO[R1, E2]
   )(implicit ev: CanFail[E], trace: Trace): ZIO[R1, E2, A] =
-    flipWith(_ flatMap f)
+    self.foldZIO(
+      success = ZIO.successFn,
+      failure = f(_).flip
+    )
 
   /**
    * Returns an effect that performs the outer effect first, followed by the

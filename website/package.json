@@ -33,7 +33,7 @@
     "@zio.dev/zio-dynamodb": "1.0.0-RC18",
     "@zio.dev/zio-ftp": "0.4.3",
     "@zio.dev/zio-http": "3.0.1",
-    "@zio.dev/zio-json": "0.7.18",
+    "@zio.dev/zio-json": "0.7.20",
     "@zio.dev/zio-kafka": "2.10.0",
     "@zio.dev/zio-lambda": "1.0.5",
     "@zio.dev/zio-logging": "2.4.0",
@@ -92,7 +92,7 @@
     "@types/react": "19.0.8",
     "@types/react-helmet": "6.1.11",
     "@types/react-router-dom": "5.3.3",
-    "prettier": "3.5.0",
+    "prettier": "3.5.1",
     "prettier-plugin-tailwindcss": "0.6.11",
     "typescript": "5.7.3"
   }
