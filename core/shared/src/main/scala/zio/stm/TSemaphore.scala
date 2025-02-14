@@ -61,21 +61,21 @@ final class TSemaphore private (val permits: TRef[Long]) extends Serializable {
     acquireBetween(n, n).unit
 
   /**
-   * Tries to acquire a single permit in a transactional context.
-   * Returns `true` if the permit was acquired, otherwise `false`.
+   * Tries to acquire a single permit in a transactional context. Returns `true`
+   * if the permit was acquired, otherwise `false`.
    */
   def tryAcquire: USTM[Boolean] = tryAcquireN(1L)
 
   /**
-   * Tries to acquire the specified number of permits in a transactional context.
-   * Returns `true` if the permits were acquired, otherwise `false`.
+   * Tries to acquire the specified number of permits in a transactional
+   * context. Returns `true` if the permits were acquired, otherwise `false`.
    */
   def tryAcquireN(n: Long): USTM[Boolean] =
-    ZSTM.Effect{ (journal, _, _) =>
+    ZSTM.Effect { (journal, _, _) =>
       assertNonNegative(n)
 
       val available: Long = permits.unsafeGet(journal)
-      if(available >= n){
+      if (available >= n) {
         permits.unsafeSet(journal, available - n)
         true
       } else false

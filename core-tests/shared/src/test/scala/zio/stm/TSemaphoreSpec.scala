@@ -153,9 +153,9 @@ object TSemaphoreSpec extends ZIOBaseSpec {
       },
       test("tryAcquire should decrease the permit count when successful") {
         for {
-          sem    <- TSemaphore.makeCommit(1L)
-          _      <- sem.tryAcquire.commit
-          avail  <- sem.available.commit
+          sem   <- TSemaphore.makeCommit(1L)
+          _     <- sem.tryAcquire.commit
+          avail <- sem.available.commit
         } yield assert(avail)(equalTo(0L))
       },
       test("tryAcquireN should acquire permits if enough are available") {
@@ -172,16 +172,16 @@ object TSemaphoreSpec extends ZIOBaseSpec {
       },
       test("tryAcquireN should decrease the permit count when successful") {
         for {
-          sem    <- TSemaphore.makeCommit(5L)
-          _      <- sem.tryAcquireN(3L).commit
-          avail  <- sem.available.commit
+          sem   <- TSemaphore.makeCommit(5L)
+          _     <- sem.tryAcquireN(3L).commit
+          avail <- sem.available.commit
         } yield assert(avail)(equalTo(2L))
       },
       test("tryAcquireN should not change permit count when unsuccessful") {
         for {
-          sem    <- TSemaphore.makeCommit(2L)
-          _      <- sem.tryAcquireN(3L).commit
-          avail  <- sem.available.commit
+          sem   <- TSemaphore.makeCommit(2L)
+          _     <- sem.tryAcquireN(3L).commit
+          avail <- sem.available.commit
         } yield assert(avail)(equalTo(2L))
       }
     )
