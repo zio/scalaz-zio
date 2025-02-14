@@ -137,6 +137,53 @@ object TSemaphoreSpec extends ZIOBaseSpec {
           assertTrue(remaining == 3L)
         }
       }
+    ),
+    suite("tryAcquire and tryAcquireN")(
+      test("tryAcquire should succeed when a permit is available") {
+        for {
+          sem <- TSemaphore.makeCommit(1L)
+          res <- sem.tryAcquire.commit
+        } yield assert(res)(isTrue)
+      },
+      test("tryAcquire should fail when no permits are available") {
+        for {
+          sem <- TSemaphore.makeCommit(0L)
+          res <- sem.tryAcquire.commit
+        } yield assert(res)(isFalse)
+      },
+      test("tryAcquire should decrease the permit count when successful") {
+        for {
+          sem    <- TSemaphore.makeCommit(1L)
+          _      <- sem.tryAcquire.commit
+          avail  <- sem.available.commit
+        } yield assert(avail)(equalTo(0L))
+      },
+      test("tryAcquireN should acquire permits if enough are available") {
+        for {
+          sem <- TSemaphore.makeCommit(5L)
+          res <- sem.tryAcquireN(3L).commit
+        } yield assert(res)(isTrue)
+      },
+      test("tryAcquireN should fail if not enough permits are available") {
+        for {
+          sem <- TSemaphore.makeCommit(2L)
+          res <- sem.tryAcquireN(3L).commit
+        } yield assert(res)(isFalse)
+      },
+      test("tryAcquireN should decrease the permit count when successful") {
+        for {
+          sem    <- TSemaphore.makeCommit(5L)
+          _      <- sem.tryAcquireN(3L).commit
+          avail  <- sem.available.commit
+        } yield assert(avail)(equalTo(2L))
+      },
+      test("tryAcquireN should not change permit count when unsuccessful") {
+        for {
+          sem    <- TSemaphore.makeCommit(2L)
+          _      <- sem.tryAcquireN(3L).commit
+          avail  <- sem.available.commit
+        } yield assert(avail)(equalTo(2L))
+      }
     )
   )
 
