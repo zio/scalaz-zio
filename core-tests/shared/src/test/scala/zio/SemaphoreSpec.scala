@@ -32,6 +32,38 @@ object SemaphoreSpec extends ZIOBaseSpec {
         permits   <- semaphore.available
       } yield assertTrue(permits == 2L)
     },
+    test("tryAcquire should succeed when a permit is available") {
+      for {
+        sem <- Semaphore.make(1L)
+        res <- sem.tryAcquire
+      } yield assert(res)(isTrue)
+    },
+    test("tryAcquireN should acquire permits if enough are available") {
+      for {
+        sem <- Semaphore.make(5L)
+        res <- sem.tryAcquireN(3L)
+      } yield assert(res)(isTrue)
+    },
+    test("tryAcquireN should fail if not enough permits are available") {
+      for {
+        sem <- Semaphore.make(2L)
+        res <- sem.tryAcquireN(3L)
+      } yield assert(res)(isFalse)
+    },
+    test("tryAcquireN should decrease the permit count when successful") {
+      for {
+        sem   <- Semaphore.make(5L)
+        _     <- sem.tryAcquireN(3L)
+        avail <- sem.available
+      } yield assert(avail)(equalTo(2L))
+    },
+    test("tryAcquireN should not change permit count when unsuccessful") {
+      for {
+        sem   <- Semaphore.make(2L)
+        _     <- sem.tryAcquireN(3L)
+        avail <- sem.available
+      } yield assert(avail)(equalTo(2L))
+    },
     test("awaiting returns the count of waiting fibers") {
       for {
         semaphore    <- Semaphore.make(1)

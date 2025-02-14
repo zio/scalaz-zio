@@ -40,6 +40,19 @@ sealed trait Semaphore extends Serializable {
   def available(implicit trace: Trace): UIO[Long]
 
   /**
+   * Attempts to acquire a permit without blocking. Returns `true` if the permit
+   * was acquired, otherwise `false`.
+   */
+  def tryAcquire(implicit trace: Trace): UIO[Boolean] =
+    tryAcquireN(1L)
+
+  /**
+   * Attempts to acquire the specified number of permits without blocking.
+   * Returns `true` if the permits were acquired, otherwise `false`.
+   */
+  def tryAcquireN(n: Long)(implicit trace: Trace): UIO[Boolean] = ZIO.succeed(false)
+
+  /**
    * Returns the number of tasks currently waiting for permits. The default
    * implementation returns 0.
    */
@@ -96,6 +109,14 @@ object Semaphore {
           ref.get.map {
             case Left(queue) => queue.size.toLong
             case Right(_)    => 0L
+          }
+
+        override def tryAcquireN(n: Long)(implicit trace: Trace): UIO[Boolean] =
+          ref.modify {
+            case Right(permits) if permits >= n =>
+              true -> Right(permits - n)
+            case other =>
+              false -> other
           }
 
         def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
