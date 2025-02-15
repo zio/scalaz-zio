@@ -1,0 +1,50 @@
+zio.Test.Gen generates the same data each time in certain situations
+Issue URL: Issue #9101
+Description:
+When the use of zio.Take a look at.Gen.FromIterable mixed with other mills in sure orders, the generated output from the ensuing Gen can result in the equal output every time.
+Two instance situations are supplied showing this conduct.
+Comments: 14
+Labels: malicious program, 🧾 Bounty
+I will now proceed to research the code and suggest answers.Here are the proposed solutions to deal with the difficulty with zio.Take a look at.Gen:
+Reorder Generators: Ensure that Gen.Uuid is located earlier than Gen.FromIterable to keep away from the equal ID being generated each time.
+Scala
+for {
+  id <- Gen.uuid
+  i <- Gen.fromIterable(LazyList.iterate(0)(_ + 1))
+} yield id
+Modify Implementation of Gen.FromIterable: Update the implementation of Gen.FromIterable to make certain it does now not intervene with the randomness of different generators.
+Add Tests: Create extra take a look at instances to verify the conduct of Gen whilst combined with different mills.
+Scala
+import zio.test._
+import zio.ZIO
+object DemoApplication extends ZIOSpecDefault {
+  val spec = suite("DemoSpec")(
+    test("fromIterable before uuid") {
+      check(
+        for {
+          i <- Gen.fromIterable(List(1,2,3,4))
+          id <- Gen.uuid
+        } yield id
+      ) { id =>
+        ZIO.logInfo(s"fromIterable before uuid: $id") *> assertCompletes
+      }
+    },
+    test("uuid before fromIterable") {
+      check(
+        for {
+          id <- Gen.uuid
+          i <- Gen.fromIterable(List(1,2,3,4))
+        } yield id
+      ) { id =>
+        ZIO.logInfo(s"uuid before fromIterable: $id") *> assertCompletes
+      }
+    }
+  )
+}
+Next steps:
+	• Validate these solutions by running the tests.
+
+
+
+
+
