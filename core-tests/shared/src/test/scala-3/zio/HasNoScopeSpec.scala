@@ -1,14 +1,13 @@
 package zio.managed
 
 import zio._
-
 import zio.test._
 
 object HasNoScopeSpec extends ZIOSpecDefault {
   def isScopeError(e: Either[String, Unit], typeString: String): Boolean = e match {
     case Left(err) =>
       err.startsWith(
-        s"""Can not proof that $typeString does not contain Scope.
+        s"""Can not prove that $typeString does not contain Scope.
            |If $typeString contains a zio.Scope, please handle it explicitly. If it contains a generic type, add a context bound""".stripMargin
       )
     case _ => false

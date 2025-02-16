@@ -3,7 +3,10 @@ package zio
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
-private[zio] trait HasNoScopeCompanionVersionSpecific {
+private[zio] abstract class HasNoScopeCompanionVersionSpecific {
+
+  val instance: HasNoScope[Any]
+
   implicit def noScope[R]: HasNoScope[R] =
     macro HasNoScopeMacro.impl[R]
 }
@@ -31,24 +34,25 @@ private[zio] class HasNoScopeMacro(val c: blackbox.Context) {
     val rTypes    = intersectionTypes(rType.dealias.map(_.dealias))
     val scopeType = weakTypeOf[zio.Scope]
     if (rTypes.contains(scopeType)) {
-      c.abort(
-        c.enclosingPosition,
-        "Routes can not have a zio.Scope dependency in their environment type. You can use Handler.scoped to scope your requests."
-      )
-    } else if (rType.typeSymbol.isParameter) {
       val rName = rType.dealias.typeSymbol.name
       c.abort(
         c.enclosingPosition,
         s"The type $rName contains a zio.Scope. This is not allowed."
       )
+    } else if (rType.typeSymbol.isParameter) {
+      val rName = rType.dealias.typeSymbol.name
+      c.abort(
+        c.enclosingPosition,
+        s"Can not prove that $rName does not contain a zio.Scope. Please add a context bound $rName: HasNoScope."
+      )
     } else if (rTypes.exists(_.typeSymbol.isParameter)) {
       val rName = rTypes.find(_.typeSymbol.isParameter).get.typeSymbol.name
       c.abort(
         c.enclosingPosition,
-        s"Can not proof that $rName does not contain a zio.Scope. Please add a context bound $rName: HasNoScope."
+        s"Can not prove that $rName does not contain a zio.Scope. Please add a context bound $rName: HasNoScope."
       )
     } else {
-      reify(HasNoScope.noScope.asInstanceOf[HasNoScope[R]])
+      reify(HasNoScope.instance.asInstanceOf[HasNoScope[R]])
     }
   }
 
