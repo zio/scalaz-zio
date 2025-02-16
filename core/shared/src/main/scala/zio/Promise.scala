@@ -303,6 +303,11 @@ object Promise {
     sealed abstract class State[E, A]                              extends Serializable with Product
     final case class Pending[E, A](joiners: List[IO[E, A] => Any]) extends State[E, A]
     final case class Done[E, A](value: IO[E, A])                   extends State[E, A]
+
+    object State {
+      private val _pending: State[Nothing, Nothing] = Pending(Nil)
+      def pending[E, A]: State[E, A]                = _pending.asInstanceOf[State[E, A]]
+    }
   }
 
   /**
@@ -318,6 +323,6 @@ object Promise {
 
   object unsafe {
     def make[E, A](fiberId: FiberId)(implicit unsafe: Unsafe): Promise[E, A] =
-      new Promise[E, A](new AtomicReference[State[E, A]](new internal.Pending[E, A](Nil)), fiberId)
+      new Promise[E, A](new AtomicReference[State[E, A]](internal.State.pending[E, A]), fiberId)
   }
 }
