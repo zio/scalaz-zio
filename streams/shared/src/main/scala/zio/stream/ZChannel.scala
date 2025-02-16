@@ -1,9 +1,9 @@
 package zio.stream
 
-import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
+import zio.stream.internal.ChannelExecutor.ChannelState
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
-import ChannelExecutor.ChannelState
+import zio.{ZIO, _}
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -751,75 +751,91 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
    */
   final def mapOutZIOParUnordered[Env1 <: Env, OutErr1 >: OutErr, OutElem2](n: Int, bufferSize: Int = 16)(
     f: OutElem => ZIO[Env1, OutErr1, OutElem2]
-  )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr1, OutElem2, OutDone] =
+  )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr1, OutElem2, OutDone] = {
+    sealed trait Result
+    object Result {
+      final case class Value(value: OutElem2) extends Result
+      final case class Done(done: OutDone)    extends Result
+      final case object Failure               extends Result
+    }
+
     ZChannel.unwrapScopedWith { scope =>
-      for {
-        input       <- SingleProducerAsyncInput.make[InErr, InElem, InDone]
-        queueReader  = ZChannel.fromInput(input)
-        outgoing    <- Queue.bounded[Exit[Either[Unit, OutDone], OutElem2]](bufferSize)
-        _           <- scope.addFinalizer(outgoing.shutdown)
-        errorSignal <- Promise.make[Nothing, Unit]
-        permits     <- Semaphore.make(n.toLong)
-        failure      = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
-        pull        <- (queueReader >>> self).toPullInAlt(scope)
-        childScope  <- scope.fork
-        fiberId     <- ZIO.fiberId
-        _ <-
-          pull.flatMap { outElem =>
-            val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
-            for {
-              _ <- permits
-                     .withPermit(
-                       latch.succeedUnit *> f(outElem)
-                         .foldCauseZIO(
-                           cause =>
-                             failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
-                               errorSignal.succeedUnit *>
-                               outgoing.offer(ZChannel.failLeftUnit),
-                           elem => outgoing.offer(Exit.succeed(elem))
-                         )
-                     )
-                     .interruptible
-                     .forkIn(childScope)
-              _ <- latch.await
-            } yield ()
-          }.forever.interruptible
-            .onError(_.failureOrCause match {
-              case Left(x: Left[OutErr, OutDone]) =>
-                failure.update(_ && Cause.fail(x.value)) *>
-                  outgoing.offer(ZChannel.failLeftUnit)
-              case Left(x: Right[OutErr, OutDone]) =>
-                permits.withPermits(n.toLong)(ZIO.unit).interruptible *>
-                  outgoing.offer(Exit.fail(x.asInstanceOf[Either[Unit, OutDone]]))
-              case Right(cause) =>
-                failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
-                  outgoing.offer(ZChannel.failLeftUnit)
-            })
-            .ignore
-            .raceFirst(ZChannel.awaitErrorSignal(childScope, fiberId)(errorSignal))
-            .forkIn(scope)
-      } yield {
-        lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
-          ZChannel.unwrap[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] {
-            outgoing.take.flatMap {
-              case s: Exit.Success[OutElem2] => Exit.succeed(ZChannel.write(s.value) *> writer)
-              case f: Exit.Failure[Either[Unit, OutDone]] =>
-                val failure0 = failure.unsafe.get(Unsafe)
-                val out = f.cause.failureOrCause match {
-                  case Left(_: Left[Unit, OutDone]) => ZChannel.refailCause(failure0)
-                  case Left(x: Right[Unit, OutDone]) =>
-                    if (failure0 eq Cause.empty) ZChannel.succeedNow(x.value)
-                    else ZChannel.refailCause(failure0)
-                  case Right(c) if c.isInterruptedOnly => ZChannel.refailCause(failure0)
-                  case Right(cause)                    => ZChannel.refailCause(cause)
-                }
-                outgoing.shutdown.as(out)
-            }
+      ZIO.fiberIdWith { fiberId =>
+        val input       = SingleProducerAsyncInput.unsafe.make[InErr, InElem, InDone](fiberId)(Unsafe)
+        val queueReader = ZChannel.fromInput(input)
+        val n0          = n.toLong
+        val bufferSize0 = bufferSize
+        val outgoing    = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe)
+        val errorSignal = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
+        val permits     = Semaphore.unsafe.make(n0)(Unsafe)
+        val failure     = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
+
+        val setFinalizer: UIO[Unit] =
+          ZIO.uninterruptible {
+            scope.addFinalizer(outgoing.shutdown)
           }
 
-        writer.embedInput(input)
+        for {
+          _          <- setFinalizer
+          pull       <- (queueReader >>> self).toPullInAlt(scope)
+          childScope <- scope.fork
+          processElems = pull.flatMap { outElem =>
+                           val latch = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
+
+                           permits
+                             .withPermit(
+                               latch.succeedUnit *>
+                                 f(outElem)
+                                   .foldCauseZIO(
+                                     cause =>
+                                       failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
+                                         errorSignal.succeedUnit *>
+                                         outgoing.offer(Result.Failure),
+                                     elem => outgoing.offer(Result.Value(elem))
+                                   )
+                             )
+                             .interruptible
+                             .forkIn(childScope) *> latch.await
+                         }.forever.interruptible
+                           .onError(_.failureOrCause match {
+                             case Left(x: Left[OutErr, OutDone]) =>
+                               failure.update(_ && Cause.fail(x.value)) *>
+                                 outgoing.offer(Result.Failure)
+                             case Left(x: Right[OutErr, OutDone]) =>
+                               permits.withPermits(n0)(ZIO.unit).interruptible *>
+                                 outgoing.offer(Result.Done(x.value))
+                             case Right(cause) =>
+                               failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
+                                 outgoing.offer(Result.Failure)
+                           })
+                           .ignore
+
+          _ <- (processElems raceFirst ZChannel.awaitErrorSignal(childScope, fiberId)(errorSignal)).forkIn(scope)
+        } yield {
+          lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
+            ZChannel.unwrap[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] {
+              outgoing.take.flatMap {
+                case s: Result.Value => Exit.succeed(ZChannel.write(s.value) *> writer)
+                case d: Result.Done =>
+                  val failure0 = failure.unsafe.get(Unsafe)
+                  val out =
+                    if (failure0 eq Cause.empty) ZChannel.succeedNow(d.done)
+                    else ZChannel.refailCause(failure0)
+
+                  outgoing.shutdown.as(out)
+                case Result.Failure =>
+                  val failure0 = failure.unsafe.get(Unsafe)
+                  val out      = ZChannel.refailCause(failure0)
+
+                  outgoing.shutdown.as(out)
+              }
+            }
+
+          writer.embedInput(input)
+        }
       }
     }
+  }
 
   /**
    * Returns a new channel which creates a new channel for each emitted element
