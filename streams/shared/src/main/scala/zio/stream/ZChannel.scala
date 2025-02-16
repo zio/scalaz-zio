@@ -752,11 +752,11 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
   final def mapOutZIOParUnordered[Env1 <: Env, OutErr1 >: OutErr, OutElem2](n: Int, bufferSize: Int = 16)(
     f: OutElem => ZIO[Env1, OutErr1, OutElem2]
   )(implicit trace: Trace): ZChannel[Env1, InErr, InElem, InDone, OutErr1, OutElem2, OutDone] = {
-    sealed trait Result
-    object Result {
-      final case class Value(value: OutElem2) extends Result
-      final case class Done(done: OutDone)    extends Result
-      final case object Failure               extends Result
+    sealed trait ResultUnordered
+    object ResultUnordered {
+      final case class Value(value: OutElem2) extends ResultUnordered
+      final case class Done(done: OutDone)    extends ResultUnordered
+      final case object Failure               extends ResultUnordered
     }
 
     ZChannel.unwrapScopedWith { scope =>
@@ -765,7 +765,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
         val queueReader = ZChannel.fromInput(input)
         val n0          = n.toLong
         val bufferSize0 = bufferSize
-        val outgoing    = Queue.unsafe.bounded[Result](bufferSize0, fiberId)(Unsafe)
+        val outgoing    = Queue.unsafe.bounded[ResultUnordered](bufferSize0, fiberId)(Unsafe)
         val errorSignal = Promise.unsafe.make[Nothing, Unit](fiberId)(Unsafe)
         val permits     = Semaphore.unsafe.make(n0)(Unsafe)
         val failure     = Ref.unsafe.make[Cause[OutErr1]](Cause.empty)(Unsafe)
@@ -790,8 +790,8 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                                      cause =>
                                        failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
                                          errorSignal.succeedUnit *>
-                                         outgoing.offer(Result.Failure),
-                                     elem => outgoing.offer(Result.Value(elem))
+                                         outgoing.offer(ResultUnordered.Failure),
+                                     elem => outgoing.offer(ResultUnordered.Value(elem))
                                    )
                              )
                              .interruptible
@@ -800,13 +800,13 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
                            .onError(_.failureOrCause match {
                              case Left(x: Left[OutErr, OutDone]) =>
                                failure.update(_ && Cause.fail(x.value)) *>
-                                 outgoing.offer(Result.Failure)
+                                 outgoing.offer(ResultUnordered.Failure)
                              case Left(x: Right[OutErr, OutDone]) =>
                                permits.withPermits(n0)(ZIO.unit).interruptible *>
-                                 outgoing.offer(Result.Done(x.value))
+                                 outgoing.offer(ResultUnordered.Done(x.value))
                              case Right(cause) =>
                                failure.update(_ && cause).unless(cause.isInterruptedOnly) *>
-                                 outgoing.offer(Result.Failure)
+                                 outgoing.offer(ResultUnordered.Failure)
                            })
                            .ignore
 
@@ -815,15 +815,15 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
           lazy val writer: ZChannel[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] =
             ZChannel.unwrap[Env1, Any, Any, Any, OutErr1, OutElem2, OutDone] {
               outgoing.take.flatMap {
-                case s: Result.Value => Exit.succeed(ZChannel.write(s.value) *> writer)
-                case d: Result.Done =>
+                case v: ResultUnordered.Value => Exit.succeed(ZChannel.write(v.value) *> writer)
+                case d: ResultUnordered.Done =>
                   val failure0 = failure.unsafe.get(Unsafe)
                   val out =
                     if (failure0 eq Cause.empty) ZChannel.succeedNow(d.done)
                     else ZChannel.refailCause(failure0)
 
                   outgoing.shutdown.as(out)
-                case Result.Failure =>
+                case ResultUnordered.Failure =>
                   val failure0 = failure.unsafe.get(Unsafe)
                   val out      = ZChannel.refailCause(failure0)
 
