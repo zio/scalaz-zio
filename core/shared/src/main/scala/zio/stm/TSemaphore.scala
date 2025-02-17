@@ -82,6 +82,25 @@ final class TSemaphore private (val permits: TRef[Long]) extends Serializable {
     }
 
   /**
+   * Executes the specified effect, acquiring `1` permit if available and
+   * releasing them after execution. Returns `None` if no permits were
+   * available.
+   */
+  def tryWithPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    tryWithPermits(1L)(zio)
+
+  /**
+   * Executes the specified effect, acquiring `n` permits if available and
+   * releasing them after execution. Returns `None` if no permits were
+   * available.
+   */
+  def tryWithPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    tryAcquireN(n).commit.flatMap {
+      case true  => zio.onExit(_ => releaseN(n).commit).asSome
+      case false => ZIO.succeed(None)
+    }
+
+  /**
    * Acquire at least `min` permits and at most `max` permits in a transactional
    * context.
    */

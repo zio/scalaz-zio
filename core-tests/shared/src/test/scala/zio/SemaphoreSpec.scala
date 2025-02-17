@@ -32,37 +32,33 @@ object SemaphoreSpec extends ZIOBaseSpec {
         permits   <- semaphore.available
       } yield assertTrue(permits == 2L)
     },
-    test("tryAcquire should succeed when a permit is available") {
+    test("tryWithPermits acquires and releases same number of permits") {
       for {
-        sem <- Semaphore.make(1L)
-        res <- sem.tryAcquire
-      } yield assert(res)(isTrue)
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermits(2L)(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isDefined)
     },
-    test("tryAcquireN should acquire permits if enough are available") {
+    test("tryWithPermits returns None if no permits available") {
       for {
-        sem <- Semaphore.make(5L)
-        res <- sem.tryAcquireN(3L)
-      } yield assert(res)(isTrue)
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermits(4L)(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isEmpty)
     },
-    test("tryAcquireN should fail if not enough permits are available") {
+    test("tryWithPermit acquires and releases same number of permits") {
       for {
-        sem <- Semaphore.make(2L)
-        res <- sem.tryAcquireN(3L)
-      } yield assert(res)(isFalse)
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermit(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isDefined)
     },
-    test("tryAcquireN should decrease the permit count when successful") {
+    test("tryWithPermits returns None if requested permits in negative number") {
       for {
-        sem   <- Semaphore.make(5L)
-        _     <- sem.tryAcquireN(3L)
-        avail <- sem.available
-      } yield assert(avail)(equalTo(2L))
-    },
-    test("tryAcquireN should not change permit count when unsuccessful") {
-      for {
-        sem   <- Semaphore.make(2L)
-        _     <- sem.tryAcquireN(3L)
-        avail <- sem.available
-      } yield assert(avail)(equalTo(2L))
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermits(-1L)(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isEmpty)
     },
     test("awaiting returns the count of waiting fibers") {
       for {

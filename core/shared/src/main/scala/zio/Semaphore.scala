@@ -40,19 +40,6 @@ sealed trait Semaphore extends Serializable {
   def available(implicit trace: Trace): UIO[Long]
 
   /**
-   * Attempts to acquire a permit without blocking. Returns `true` if the permit
-   * was acquired, otherwise `false`.
-   */
-  def tryAcquire(implicit trace: Trace): UIO[Boolean] =
-    tryAcquireN(1L)
-
-  /**
-   * Attempts to acquire the specified number of permits without blocking.
-   * Returns `true` if the permits were acquired, otherwise `false`.
-   */
-  def tryAcquireN(n: Long)(implicit trace: Trace): UIO[Boolean] = ZIO.succeed(false)
-
-  /**
    * Returns the number of tasks currently waiting for permits. The default
    * implementation returns 0.
    */
@@ -84,6 +71,20 @@ sealed trait Semaphore extends Serializable {
    * permits and releasing them when the scope is closed.
    */
   def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit]
+
+  /**
+   * Executes the effect, acquiring a permit if available and releasing it after
+   * execution. Returns `None` if no permits were available.
+   */
+  def tryWithPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    tryWithPermits(1L)(zio)
+
+  /**
+   * Executes the effect, acquiring `n` permits if available and releasing them
+   * after execution. Returns `None` if no permits were available.
+   */
+  def tryWithPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    ZIO.succeed(None)
 }
 
 object Semaphore {
@@ -111,14 +112,6 @@ object Semaphore {
             case Right(_)    => 0L
           }
 
-        override def tryAcquireN(n: Long)(implicit trace: Trace): UIO[Boolean] =
-          ref.modify {
-            case Right(permits) if permits >= n =>
-              true -> Right(permits - n)
-            case other =>
-              false -> other
-          }
-
         def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
           withPermits(1L)(zio)
 
@@ -131,7 +124,22 @@ object Semaphore {
         def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
           ZIO.acquireRelease(reserve(n))(_.release).flatMap(_.acquire)
 
+        override def tryWithPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+          tryReserve(n).flatMap {
+            case Some(reservation) => (reservation.acquire *> zio <* reservation.release).asSome
+            case None              => ZIO.succeed(None)
+          }
+
         case class Reservation(acquire: UIO[Unit], release: UIO[Any])
+
+        def tryReserve(n: Long)(implicit trace: Trace): UIO[Option[Reservation]] =
+          if (n <= 0) ZIO.succeed(None)
+          else
+            ref.modify {
+              case Right(permits) if permits >= n =>
+                Some(Reservation(ZIO.unit, releaseN(n))) -> Right(permits - n)
+              case other => None -> other
+            }
 
         def reserve(n: Long)(implicit trace: Trace): UIO[Reservation] =
           if (n < 0)
