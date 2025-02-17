@@ -3495,8 +3495,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     channel.toPull.map { pull =>
       pull.foldZIO(
         success = {
-          case Left(done)  => Exit.failNone
           case Right(elem) => Exit.succeed(elem)
+          case _           => Exit.failNone
         },
         failure = error => Exit.fail(Some(error))
       )
