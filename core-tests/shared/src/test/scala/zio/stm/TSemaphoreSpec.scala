@@ -6,12 +6,22 @@ import zio.test.TestAspect._
 import zio.test._
 
 object TSemaphoreSpec extends ZIOBaseSpec {
-  override def spec = suite("TSemaphore")(
+  override def spec = suite("TSemaphoreSpec")(
     suite("factories")(
       test("make") {
         check(Gen.long(1L, Int.MaxValue)) { expected =>
           val actual = for {
             sem <- TSemaphore.make(expected)
+            cap <- sem.available
+          } yield cap
+
+          assertZIO(actual.commit)(equalTo(expected))
+        }
+      },
+      test("make with fairness") {
+        check(Gen.long(1L, Int.MaxValue), Gen.boolean) { (expected, fairness) =>
+          val actual = for {
+            sem <- TSemaphore.make(expected, fairness)
             cap <- sem.available
           } yield cap
 
@@ -136,6 +146,17 @@ object TSemaphoreSpec extends ZIOBaseSpec {
           assertTrue(actual == 2L)
           assertTrue(remaining == 3L)
         }
+      }
+    ),
+    suite("fairness")(
+      test("unfair semaphore allows barging") {
+        for {
+          semaphore <- TSemaphore.make(1, fairness = false).commit
+          _         <- semaphore.withPermit(ZIO.unit) // Acquire the permit
+          fibers    <- ZIO.foreachPar(1 to 10)(_ => semaphore.withPermit(ZIO.unit).fork)
+          _         <- semaphore.release.commit
+          _         <- ZIO.foreachParDiscard(fibers)(_.join)
+        } yield assertCompletes
       }
     )
   )
