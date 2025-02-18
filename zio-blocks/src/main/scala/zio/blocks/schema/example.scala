@@ -81,6 +81,9 @@ object Main {
     println("age:     " + Person.age.get(person))
     println("address: " + Person.address.get(person))
 
+    // (a)(b)(c)
+    // a > b > c
+
     val newPerson = Person.name.set(person, "Jane")
 
     println("newPerson: " + newPerson)

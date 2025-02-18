@@ -2,4 +2,4 @@ package zio.blocks.schema.codec
 
 import java.nio.ByteBuffer
 
-trait BinaryCodec[A] extends Codec[ByteBuffer, A]
+abstract class BinaryCodec[A] extends Codec[ByteBuffer, ByteBuffer, A]

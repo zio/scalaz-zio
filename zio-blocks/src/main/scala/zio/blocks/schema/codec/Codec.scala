@@ -1,13 +1,17 @@
 package zio.blocks.schema.codec
 
-trait Codec[I, A] {
-  def encode(a: A): I
+abstract class Codec[InStream, OutStream, Value] {
 
-  def decode(i: I): Either[CodecError, A] =
-    try Right(unsafeDecode(i))
-    catch {
-      case e: CodecError => Left(e)
-    }
+  /**
+   * The format of the codec. For any given type `A`, there should be a unique
+   * `Format` that corresponds to the binary encoding of that type.
+   *
+   * The format tag is used to cache derivation of type classes on a per-schema
+   * basis.
+   */
+  def format: Format
 
-  def unsafeDecode(i: I): A
+  def encode(stream: OutStream, value: Value): Unit
+
+  def decode(stream: InStream): Value
 }

@@ -8,17 +8,24 @@ import zio.blocks.schema.binding.Binding
  * build up values of that type.
  */
 final case class Schema[A](reflect: Reflect.Bound[A]) {
-  def toDynamicValue(value: A): DynamicValue = ??? // TODO
-
-  def fromDynamicValue(value: DynamicValue): Either[codec.CodecError, A] = ??? // TODO
-
-  def encode[I](value: A, input: I)(implicit codec: zio.blocks.schema.codec.Codec[I, A]): I = ??? // TODO
-
   def defaultValue[B](optic: Optic.Bound[A, B], value: => B): Schema[A] = ??? // TODO
 
   def defaultValue(value: => A): Schema[A] = ??? // TODO
 
   def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = ??? // TODO
+
+  def deserializeBinary[F <: codec.BinaryFormat](format: F)(bytes: Array[Byte]): Either[codec.CodecError, A] =
+    ??? // TODO
+
+  def deserializeText[F <: codec.TextFormat](format: F)(text: String): Either[codec.CodecError, A] = ??? // TODO
+
+  def doc: Doc = ??? // TODO
+
+  def doc(value: String): Schema[A] = ??? // TODO
+
+  def doc[B](optic: Optic.Bound[A, B]): Doc = ???
+
+  def doc[B](optic: Optic.Bound[A, B])(value: String): Schema[A] = ??? // TODO
 
   def examples: List[A] = ??? // TODO
 
@@ -28,13 +35,13 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def examples[B](optic: Optic.Bound[A, B])(value: B, values: B*): Schema[A] = ??? // TODO
 
-  def doc: Doc = ??? // TODO
+  def fromDynamicValue(value: DynamicValue): Either[codec.CodecError, A] = ??? // TODO
 
-  def doc(value: String): Schema[A] = ??? // TODO
+  def serializeBinary[F <: codec.BinaryFormat](format: F)(value: A): Array[Byte] = ??? // TODO
 
-  def doc[B](optic: Optic.Bound[A, B]): Doc = ???
+  def serializeText[F <: codec.TextFormat](format: F)(value: A): String = ??? // TODO
 
-  def doc[B](optic: Optic.Bound[A, B])(value: String): Schema[A] = ??? // TODO
+  def toDynamicValue(value: A): DynamicValue = ??? // TODO
 }
 object Schema {
   import Reflect._
