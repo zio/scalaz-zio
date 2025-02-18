@@ -12,7 +12,9 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def defaultValue(value: => A): Schema[A] = ??? // TODO
 
-  def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = ??? // TODO
+  def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = deriving[TC].derive
+
+  def deriving[TC[_]](implicit deriver: Deriver[TC]): DerivationBuilder[TC, A] = ??? // TODO
 
   def deserializeBinary[F <: codec.BinaryFormat](format: F)(bytes: Array[Byte]): Either[codec.CodecError, A] =
     ??? // TODO
