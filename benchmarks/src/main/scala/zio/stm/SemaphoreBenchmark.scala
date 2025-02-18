@@ -22,16 +22,29 @@ class SemaphoreBenchmark {
 
   val ops: Int = 1000
 
+  // Original benchmark: Fair semaphore contention
   @Benchmark
   def semaphoreContention(): Unit =
     unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
       for {
-        sem   <- Semaphore.make(math.max(1, fibers / 2L))
+        sem   <- Semaphore.make(math.max(1, fibers / 2L), fairness = true)
         fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeed(1)))))
         _     <- fiber.join
       } yield ()
     })
 
+  // New benchmark: Unfair semaphore contention
+  @Benchmark
+  def unfairSemaphoreContention(): Unit =
+    unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
+      for {
+        sem   <- Semaphore.make(math.max(1, fibers / 2L), fairness = false)
+        fiber <- ZIO.forkAll(List.fill(fibers)(repeat(ops)(sem.withPermit(ZIO.succeed(1)))))
+        _     <- fiber.join
+      } yield ()
+    })
+
+  // Original benchmark: TSemaphore contention
   @Benchmark
   def tsemaphoreContention(): Unit =
     unsafeRun(ZIO.foreachParDiscard(1 to nSTM) { _ =>
@@ -42,6 +55,7 @@ class SemaphoreBenchmark {
       } yield ()
     })
 
+  // Original benchmark: Cats Semaphore contention (for comparison)
   @Benchmark
   def catsSemaphoreContention(): Unit = {
     import cats.effect.std.Semaphore

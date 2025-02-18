@@ -18,153 +18,173 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stm.TSemaphore
-
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
+import java.util.concurrent.ConcurrentLinkedQueue
 import scala.annotation.tailrec
 import scala.collection.immutable.{Queue => ScalaQueue}
 
-/**
- * An asynchronous semaphore, which is a generalization of a mutex. Semaphores
- * have a certain number of permits, which can be held and released concurrently
- * by different parties. Attempts to acquire more permits than available result
- * in the acquiring fiber being suspended until the specified number of permits
- * become available.
- *
- * If you need functionality that `Semaphore` doesnt' provide, use a
- * [[TSemaphore]] and define it in a [[zio.stm.ZSTM]] transaction.
- */
 sealed trait Semaphore extends Serializable {
-
-  /**
-   * Returns the number of available permits.
-   */
   def available(implicit trace: Trace): UIO[Long]
-
-  /**
-   * Returns the number of tasks currently waiting for permits. The default
-   * implementation returns 0.
-   */
-  def awaiting(implicit trace: Trace): UIO[Long] = ZIO.succeed(0L)
-
-  /**
-   * Executes the specified workflow, acquiring a permit immediately before the
-   * workflow begins execution and releasing it immediately after the workflow
-   * completes execution, whether by success, failure, or interruption.
-   */
+  def awaiting(implicit trace: Trace): UIO[Long]
   def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A]
-
-  /**
-   * Returns a scoped workflow that describes acquiring a permit as the
-   * `acquire` action and releasing it as the `release` action.
-   */
   def withPermitScoped(implicit trace: Trace): ZIO[Scope, Nothing, Unit]
-
-  /**
-   * Executes the specified workflow, acquiring the specified number of permits
-   * immediately before the workflow begins execution and releasing them
-   * immediately after the workflow completes execution, whether by success,
-   * failure, or interruption.
-   */
   def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A]
-
-  /**
-   * Returns a scoped workflow that describes acquiring the specified number of
-   * permits and releasing them when the scope is closed.
-   */
   def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit]
+  def release(implicit trace: Trace): UIO[Unit] = releaseN(1L)
+  def releaseN(n: Long)(implicit trace: Trace): UIO[Unit]
 }
 
 object Semaphore {
 
-  /**
-   * Creates a new `Semaphore` with the specified number of permits.
-   */
-  def make(permits: => Long)(implicit trace: Trace): UIO[Semaphore] =
-    ZIO.succeed(unsafe.make(permits)(Unsafe.unsafe))
+  def make(permits: => Long, fairness: Boolean = true)(implicit trace: Trace): UIO[Semaphore] =
+    ZIO.succeed(unsafe.make(permits, fairness)(Unsafe.unsafe))
 
   object unsafe {
-    def make(permits: Long)(implicit unsafe: Unsafe): Semaphore =
-      new Semaphore {
-        val ref = Ref.unsafe.make[Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long]](Right(permits))
+    def make(permits: Long, fairness: Boolean)(implicit unsafe: Unsafe): Semaphore = {
+      if (fairness) new FairSemaphore(permits)
+      else new UnfairSemaphore(permits)
+    }
+  }
 
-        def available(implicit trace: Trace): UIO[Long] =
-          ref.get.map {
-            case Left(_)        => 0L
-            case Right(permits) => permits
-          }
+  private final class FairSemaphore(initialPermits: Long) extends Semaphore {
+    private val state = new AtomicReference[Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long]](Right(initialPermits))
 
-        override def awaiting(implicit trace: Trace): UIO[Long] =
-          ref.get.map {
-            case Left(queue) => queue.size.toLong
-            case Right(_)    => 0L
-          }
+    def available(implicit trace: Trace): UIO[Long] =
+      ZIO.succeed(state.get() match {
+        case Left(_)        => 0L
+        case Right(permits) => permits
+      })
 
-        def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-          withPermits(1L)(zio)
+    def awaiting(implicit trace: Trace): UIO[Long] =
+      ZIO.succeed(state.get() match {
+        case Left(queue) => queue.size.toLong
+        case Right(_)    => 0L
+      })
 
-        def withPermitScoped(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-          withPermitsScoped(1L)
+    def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      withPermits(1L)(zio)
 
-        def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
-          ZIO.acquireReleaseWith(reserve(n))(_.release)(_.acquire *> zio)
+    def withPermitScoped(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
+      withPermitsScoped(1L)
 
-        def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
-          ZIO.acquireRelease(reserve(n))(_.release).flatMap(_.acquire)
+    def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      ZIO.acquireReleaseWith(reserve(n))(_.release)(_.acquire *> zio)
 
-        case class Reservation(acquire: UIO[Unit], release: UIO[Any])
+    def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
+      ZIO.acquireRelease(reserve(n))(_.release).flatMap(_.acquire)
 
-        def reserve(n: Long)(implicit trace: Trace): UIO[Reservation] =
-          if (n < 0)
-            ZIO.die(new IllegalArgumentException(s"Unexpected negative `$n` permits requested."))
-          else if (n == 0L)
-            ZIO.succeedNow(Reservation(ZIO.unit, ZIO.unit))
-          else
-            Promise.make[Nothing, Unit].flatMap { promise =>
-              ref.modify {
-                case Right(permits) if permits >= n =>
-                  Reservation(ZIO.unit, releaseN(n)) -> Right(permits - n)
-                case Right(permits) =>
-                  Reservation(promise.await, restore(promise, n)) -> Left(ScalaQueue(promise -> (n - permits)))
-                case Left(queue) =>
-                  Reservation(promise.await, restore(promise, n)) -> Left(queue.enqueue(promise -> n))
-              }
-            }
+    def releaseN(n: Long)(implicit trace: Trace): UIO[Unit] =
+      ZIO.succeed(releaseInternal(n))
 
-        def restore(promise: Promise[Nothing, Unit], n: Long)(implicit trace: Trace): UIO[Any] =
-          ref.modify {
-            case Left(queue) =>
-              queue
-                .find(_._1 == promise)
-                .fold(releaseN(n) -> Left(queue)) { case (_, permits) =>
-                  releaseN(n - permits) -> Left(queue.filter(_._1 != promise))
+    private def reserve(n: Long)(implicit trace: Trace): UIO[Reservation] = {
+      if (n <= 0) ZIO.succeedNow(Reservation(ZIO.unit, ZIO.unit))
+      else Promise.make[Nothing, Unit].flatMap { promise =>
+        ZIO.succeed {
+          var loop = true
+          var result: Reservation = null
+          while (loop) {
+            val current = state.get()
+            current match {
+              case Right(permits) if permits >= n =>
+                if (state.compareAndSet(current, Right(permits - n))) {
+                  result = Reservation(ZIO.unit, ZIO.succeed(releaseInternal(n)))
+                  loop = false
                 }
-            case Right(permits) => ZIO.unit -> Right(permits + n)
-          }.flatten
-
-        def releaseN(n: Long)(implicit trace: Trace): UIO[Any] = {
-
-          @tailrec
-          def loop(
-            n: Long,
-            state: Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long],
-            acc: UIO[Any]
-          ): (UIO[Any], Either[ScalaQueue[(Promise[Nothing, Unit], Long)], Long]) =
-            state match {
-              case Right(permits) => acc -> Right(permits + n)
+              case Right(permits) =>
+                val newQueue = ScalaQueue(promise -> (n - permits))
+                if (state.compareAndSet(current, Left(newQueue))) {
+                  result = Reservation(promise.await, ZIO.succeed(releaseInternal(n)))
+                  loop = false
+                }
               case Left(queue) =>
-                queue.dequeueOption match {
-                  case None => acc -> Right(n)
-                  case Some(((promise, permits), queue)) =>
-                    if (n > permits)
-                      loop(n - permits, Left(queue), acc *> promise.succeedUnit)
-                    else if (n == permits)
-                      (acc *> promise.succeedUnit) -> Left(queue)
-                    else
-                      acc -> Left((promise -> (permits - n)) +: queue)
+                val newQueue = queue.enqueue(promise -> n)
+                if (state.compareAndSet(current, Left(newQueue))) {
+                  result = Reservation(promise.await, ZIO.succeed(releaseInternal(n)))
+                  loop = false
                 }
             }
-
-          ref.modify(loop(n, _, ZIO.unit)).flatten
+          }
+          result
         }
       }
+    }
+
+    @tailrec
+    private def releaseInternal(n: Long): Unit = {
+      val current = state.get()
+      current match {
+        case Right(permits) =>
+          if (!state.compareAndSet(current, Right(permits + n))) releaseInternal(n)
+        case Left(queue) =>
+          queue.dequeueOption match {
+            case None =>
+              if (!state.compareAndSet(current, Right(n))) releaseInternal(n)
+            case Some(((promise, required), remaining)) =>
+              if (n >= required) {
+                promise.succeedUnit.unsafe.run
+                if (!state.compareAndSet(current, Left(remaining))) releaseInternal(n - required)
+              } else {
+                val newQueue = (promise -> (required - n)) +: remaining
+                if (!state.compareAndSet(current, Left(newQueue))) releaseInternal(n)
+              }
+          }
+      }
+    }
+  }
+
+  private final class UnfairSemaphore(initialPermits: Long) extends Semaphore {
+    private val permits = new AtomicLong(initialPermits)
+    private val waiters = new ConcurrentLinkedQueue[Promise[Nothing, Unit]]
+
+    def available(implicit trace: Trace): UIO[Long] = ZIO.succeed(permits.get())
+
+    def awaiting(implicit trace: Trace): UIO[Long] = ZIO.succeed(waiters.size().toLong)
+
+    def withPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      withPermits(1L)(zio)
+
+    def withPermitScoped(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
+      withPermitsScoped(1L)
+
+    def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+      ZIO.acquireReleaseWith(reserve(n))(_.release)(_.acquire *> zio)
+
+    def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
+      ZIO.acquireRelease(reserve(n))(_.release).flatMap(_.acquire)
+
+    def releaseN(n: Long)(implicit trace: Trace): UIO[Unit] = ZIO.succeed {
+      permits.addAndGet(n)
+      var loop = true
+      while (loop && permits.get() > 0 && !waiters.isEmpty) {
+        val waiter = waiters.poll()
+        if (waiter != null) {
+          waiter.succeedUnit.unsafe.run
+          loop = permits.decrementAndGet() >= 0
+        }
+      }
+    }
+
+    private case class Reservation(acquire: UIO[Unit], release: UIO[Unit])
+
+    private def reserve(n: Long)(implicit trace: Trace): UIO[Reservation] = {
+      if (n <= 0) ZIO.succeedNow(Reservation(ZIO.unit, ZIO.unit))
+      else ZIO.succeed {
+        var loop = true
+        var result: Reservation = null
+        while (loop) {
+          val current = permits.get()
+          if (current >= n && permits.compareAndSet(current, current - n)) {
+            result = Reservation(ZIO.unit, releaseN(n))
+            loop = false
+          } else {
+            val promise = Promise.unsafe.make[Nothing, Unit](FiberId.None)
+            waiters.add(promise)
+            result = Reservation(promise.await, releaseN(n))
+            loop = false
+          }
+        }
+        result
+      }
+    }
   }
 }
