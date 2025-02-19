@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M # JDK_JAVA_OPTIONS is _the_ env. variable to use for modern Java
-  SBT_OPTS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M # Needed for sbt
+  JDK_JAVA_OPTIONS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M
+  SBT_OPTS: -XX:+PrintCommandLineFlags -Xms6G -Xmx6G -Xss4M -XX:+UseG1GC -XX:ReservedCodeCacheSize=512M -XX:NonProfiledCodeHeapSize=256M
   NODE_OPTIONS: --max_old_space_size=6144
 
 on:
@@ -20,7 +20,6 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     timeout-minutes: 60
-    if: ${{ ((github.event_name != 'repository_dispatch') && (github.event.action != 'update-docs')) }}
     steps:
     - name: Checkout current branch
       uses: actions/checkout@v4.2.2
