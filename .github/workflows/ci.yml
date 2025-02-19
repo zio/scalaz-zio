@@ -32,6 +32,8 @@ jobs:
         check-latest: true
     - name: Cache scala dependencies
       uses: coursier/cache-action@v6
+    - name: Run Scalafmt
+      run: sbt scalafmt
     - name: Lint code
       run: sbt "++2.13; check; ++3.3; check"
 
