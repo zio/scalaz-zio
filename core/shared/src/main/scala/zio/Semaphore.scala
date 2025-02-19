@@ -172,10 +172,10 @@ object Semaphore {
     def withPermitScoped(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
       withPermitsScoped(1L)
 
-    def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, A] =
+    def withPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace, unsafe: Unsafe): ZIO[R, E, A] =
       ZIO.acquireReleaseWith(reserve(n))(_.release)(_.acquire *> zio)
 
-    def withPermitsScoped(n: Long)(implicit trace: Trace): ZIO[Scope, Nothing, Unit] =
+    def withPermitsScoped(n: Long)(implicit trace: Trace, unsafe: Unsafe): ZIO[Scope, Nothing, Unit] =
       ZIO.acquireRelease(reserve(n))(_.release).flatMap(_.acquire)
 
     def releaseN(n: Long)(implicit trace: Trace): UIO[Unit] = ZIO.succeed {
@@ -193,7 +193,7 @@ object Semaphore {
     /**
      * Reserves `n` permits, returning a `Reservation` that encapsulates the acquire and release actions.
      */
-    private def reserve(n: Long)(implicit trace: Trace): UIO[Reservation] = {
+    private def reserve(n: Long)(implicit trace: Trace, unsafe: Unsafe): UIO[Reservation] = {
       require(n >= 0, s"Unexpected negative `$n` permits requested.")
       if (n == 0L) ZIO.succeedNow(Reservation(ZIO.unit, ZIO.unit))
       else ZIO.succeed {
