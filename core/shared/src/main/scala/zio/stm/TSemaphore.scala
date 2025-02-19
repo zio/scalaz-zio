@@ -49,7 +49,7 @@ final class TSemaphore private (
       var loop = true
       while (loop && permits.unsafeGet(journal) > 0 && !waiters.isEmpty) {
         val waiter = waiters.poll()
-        if (waiter != null) waiter.succeedUnit.unsafe.run
+        if (waiter != null) waiter.unsafe.done(ZIO.succeedUnit)
         loop = permits.unsafeGet(journal) > 0
       }
     }
