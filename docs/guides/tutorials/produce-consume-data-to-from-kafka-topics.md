@@ -25,18 +25,6 @@ And finally, run the application using sbt:
 $ sbt run
 ```
 
-Alternatively, to enable hot-reloading and prevent port binding issues, you can use:
-
-```bash
-sbt reStart
-```
-
-:::note
-If you encounter a "port already in use" error, you can use `sbt-revolver` to manage server restarts more effectively. The `reStart` command will start your server and `reStop` will properly stop it, releasing the port.
-
-To enable this feature, we have included `sbt-revolver` in the project. For more details on this, refer to the [ZIO HTTP documentation on hot-reloading](https://zio.dev/zio-http/installation#hot-reload-changes-watch-mode).
-:::
-
 ## Adding Dependencies to The Project
 
 In this tutorial, we will be using the following dependencies. So, let's add them to the `build.sbt` file:
@@ -130,6 +118,26 @@ In this example, the type of the `key` is `Int` and the type of the `value` is `
 
 ### 2. Creating a Producer
 
+Now we can create a `Producer`:
+
+```scala mdoc:compile-only
+import zio._
+import zio.kafka._
+import zio.kafka.producer._
+
+val producer: ZIO[Scope, Throwable, Producer] =
+  Producer.make(
+    ProducerSettings(List("localhost:9092"))
+  )
+```
+
+The `ProducerSettings` as constructed in this code fragment is already sufficient for many applications. However, more configuration options are available on `ProducerSettings`.
+
+Notice that the created producer requires a `Scope` in the environment. When this scope closes, the producer closes its
+connection with the Kafka cluster. An explicit scope can be created with the `ZIO.scoped` method.
+
+### 3. Producing records
+
 Zio-kafka has several producers that can be used to produce data on Kafka topics. In this example, we will be using the `Producer.produce` method:
 
 ```scala
@@ -158,26 +166,6 @@ def produceRecord(producer: Producer, topic: String, key: Long, value: String): 
     valueSerializer = Serde.string
   )
 ```
-
-### 3. Creating a Producer
-
-Now we can create a `Producer`:
-
-```scala mdoc:compile-only
-import zio._
-import zio.kafka._
-import zio.kafka.producer._
-
-val producer: ZIO[Scope, Throwable, Producer] =
-  Producer.make(
-    ProducerSettings(List("localhost:9092"))
-  )
-```
-
-The `ProducerSettings` as constructed in this code fragment is already sufficient for many applications. However, more configuration options are available on `ProducerSettings`.
-
-Notice that the created producer requires a `Scope` in the environment. When this scope closes, the producer closes its
-connection with the Kafka cluster. An explicit scope can be created with the `ZIO.scoped` method.
 
 ### 4. Creating a Consumer
 
@@ -279,13 +267,15 @@ Here is an example that uses `Producer.produceAll`:
 
 ```scala
 ZStream
-  .fromIterator(Iterator.from(0), maxChunkSize = 50) // ZStream[Any, Throwable, Int]
+  .fromIterator(Iterator.from(0), maxChunkSize = 50)
+           // ZStream[Any, Throwable, Int]
   .mapChunksZIO { chunk =>
     chunk.map { i =>
       new ProducerRecord(topic, key = i, value = s"record $i") 
     }
-  }                                                  // ZStream[Any, Throwable, ProducerRecord]
-  .via(producer.produceAll(Serde.int, Serde.string)) // ZStream[Any, Throwable, RecordMetadata]
+  }        // ZStream[Any, Throwable, ProducerRecord]
+  .via(producer.produceAll(Serde.int, Serde.string))
+           // ZStream[Any, Throwable, RecordMetadata]
   .runDrain
 ```
 
@@ -435,8 +425,9 @@ object StreamingKafkaApp extends ZIOAppDefault {
               Serde.int,
               Serde.string
             )
-            // do not use `tap` in prod because it destroys the chunking structure and leads to lower performance
-            // See https://zio.dev/zio-kafka/serialization-and-deserialization#a-warning-about-mapzio
+            // Do not use `tap` in throughput sensitive applications because it
+            // destroys the chunking structure and leads to lower performance.
+            // See the previous section for more info.
             .tap(r => Console.printLine("Consumed: " + r.value))
             .map(_.offset)
             .aggregateAsync(Consumer.offsetBatches)
@@ -520,7 +511,7 @@ object EventKafkaSerde {
 
 As we can see, we use the `String#fromJson` to convert the string to an `Event` object, and we also encode any parsing failure with a `RuntimeException` in the `ZIO` workflow.
 
-See [](https://zio.dev/zio-kafka/serialization-and-deserialization)
+See [zio-kafka serialization and deserialization](https://zio.dev/zio-kafka/serialization-and-deserialization) for more details.
 
 ### 2. The Complete JSON Streaming Example
 
@@ -620,3 +611,9 @@ object JsonStreamingKafkaApp extends ZIOAppDefault {
 In this tutorial we first learned how to create a producer and consumer for Kafka using the ZIO workflow with zio-kafka. Then we learned how to do the same with zio-streams. We also learned how to create a custom serializer and deserializer for the Kafka records and how to produce and consume JSON data using the zio-json library.
 
 All the source code associated with this article is available on the [ZIO Quickstart](http://github.com/zio/zio-quickstarts) project on GitHub.
+
+More information:
+
+- [zio-kafka](https://zio.dev/zio-kafka/)
+- [zio-streams](https://zio.dev/reference/stream/)
+- [zio-json](https://zio.dev/zio-json/)
