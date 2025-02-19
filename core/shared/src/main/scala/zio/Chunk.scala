@@ -1171,7 +1171,10 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
   /**
    * Returns a chunk backed by an array.
    *
-   * WARNING: The array must not be mutated after creating the chunk.
+   * '''WARNING''': The array must not be mutated after creating the chunk. If
+   * you're unsure whether the array will be mutated, prefer
+   * `Chunk.fromIterable` or `Chunk.from` which create a copy of the provided
+   * array.
    */
   def fromArray[A](array: Array[A]): Chunk[A] =
     (if (array.isEmpty) Empty
