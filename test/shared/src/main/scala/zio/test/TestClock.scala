@@ -310,8 +310,8 @@ object TestClock extends Serializable {
         }
 
         // Sleep to give suspended fibers a chance to resume
-        def f(d: Duration) = ClockLive.sleep(d) *> freeze
-        f(2.milli).zipWith(f(5.millis))(allSuspendedUnchanged)
+        val f = ClockLive.sleep(5.millis) *> freeze
+        f.zipWith(f)(allSuspendedUnchanged)
           .flatMap {
             if (_) ZIO.succeed(ref.get)
             else if (ref.compareAndSet(false, true)) suspendedWarningStart *> Exit.failUnit
