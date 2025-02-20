@@ -14,6 +14,9 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = deriving[TC].derive
 
+  def derive[F <: codec.Format](format: F)(implicit deriver: Deriver[format.TypeClass]): format.TypeClass[A] =
+    ??? // TODO
+
   def deriving[TC[_]](implicit deriver: Deriver[TC]): DerivationBuilder[TC, A] = ??? // TODO
 
   def deserializeBinary[F <: codec.BinaryFormat](format: F)(bytes: Array[Byte]): Either[codec.CodecError, A] =
