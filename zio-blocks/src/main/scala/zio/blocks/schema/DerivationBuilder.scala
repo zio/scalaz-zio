@@ -10,7 +10,8 @@ package zio.blocks.schema
  *
  * {{ val personSchema = Schema.derive[Person]
  *
- * personSchema.deriving[Eq].instance(Person.age, Eq[Int]).derive }}
+ * val personEq: Eq[Person] = personSchema .deriving[Eq] .instance(Person.age,
+ * Eq[Int]) .modifier(Person.name, Term.transient) .derive }}
  */
 final case class DerivationBuilder[TC[_], A](
   schema: Schema[A],

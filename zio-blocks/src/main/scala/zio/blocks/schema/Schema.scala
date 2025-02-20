@@ -19,10 +19,8 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def deriving[TC[_]](implicit deriver: Deriver[TC]): DerivationBuilder[TC, A] = ??? // TODO
 
-  def deserializeBinary[F <: codec.BinaryFormat](format: F)(bytes: Array[Byte]): Either[codec.CodecError, A] =
+  def decode[F <: codec.Format](format: F)(decodeInput: format.DecodeInput): Either[codec.CodecError, A] =
     ??? // TODO
-
-  def deserializeText[F <: codec.TextFormat](format: F)(text: String): Either[codec.CodecError, A] = ??? // TODO
 
   def doc: Doc = ??? // TODO
 
@@ -31,6 +29,8 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
   def doc[B](optic: Optic.Bound[A, B]): Doc = ???
 
   def doc[B](optic: Optic.Bound[A, B])(value: String): Schema[A] = ??? // TODO
+
+  def encode[F <: codec.Format](format: F)(value: A): format.EncodeOutput = ??? // TODO
 
   def examples: List[A] = ??? // TODO
 
@@ -41,10 +41,6 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
   def examples[B](optic: Optic.Bound[A, B])(value: B, values: B*): Schema[A] = ??? // TODO
 
   def fromDynamicValue(value: DynamicValue): Either[codec.CodecError, A] = ??? // TODO
-
-  def serializeBinary[F <: codec.BinaryFormat](format: F)(value: A): Array[Byte] = ??? // TODO
-
-  def serializeText[F <: codec.TextFormat](format: F)(value: A): String = ??? // TODO
 
   def toDynamicValue(value: A): DynamicValue = ??? // TODO
 }
