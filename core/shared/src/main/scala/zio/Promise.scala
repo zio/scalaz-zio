@@ -176,6 +176,15 @@ final class Promise[E, A] private (
   def succeed(a: A)(implicit trace: Trace): UIO[Boolean] =
     ZIO.succeed(unsafe.succeed(a)(trace, Unsafe.unsafe))
 
+  /**
+   * Internally, you can use this method instead of calling
+   * `myPromise.succeed(())`
+   *
+   * It avoids the `Exit` allocation
+   */
+  private[zio] def succeedUnit(implicit ev0: A =:= Unit, trace: Trace): UIO[Boolean] =
+    ZIO.succeed(unsafe.succeedUnit(ev0, trace, Unsafe))
+
   private def interruptJoiner(joiner: IO[E, A] => Any)(implicit trace: Trace): UIO[Any] = ZIO.succeed {
     var retry = true
 
@@ -205,6 +214,7 @@ final class Promise[E, A] private (
     def poll(implicit unsafe: Unsafe): Option[IO[E, A]]
     def refailCause(e: Cause[E])(implicit trace: Trace, unsafe: Unsafe): Boolean
     def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean
+    def succeedUnit(implicit ev0: A =:= Unit, trace: Trace, unsafe: Unsafe): Boolean
   }
 
   private[zio] val unsafe: UnsafeAPI =
@@ -279,7 +289,10 @@ final class Promise[E, A] private (
         completeWith(Exit.failCause(e))
 
       def succeed(a: A)(implicit trace: Trace, unsafe: Unsafe): Boolean =
-        completeWith(ZIO.succeed(a))
+        completeWith(Exit.succeed(a))
+
+      override def succeedUnit(implicit ev0: A =:= Unit, trace: Trace, unsafe: Unsafe): Boolean =
+        completeWith(Exit.unit.asInstanceOf[IO[E, A]])
     }
 
 }
@@ -290,6 +303,11 @@ object Promise {
     sealed abstract class State[E, A]                              extends Serializable with Product
     final case class Pending[E, A](joiners: List[IO[E, A] => Any]) extends State[E, A]
     final case class Done[E, A](value: IO[E, A])                   extends State[E, A]
+
+    object State {
+      private val _pending: State[Nothing, Nothing] = Pending(Nil)
+      def pending[E, A]: State[E, A]                = _pending.asInstanceOf[State[E, A]]
+    }
   }
 
   /**
@@ -305,6 +323,6 @@ object Promise {
 
   object unsafe {
     def make[E, A](fiberId: FiberId)(implicit unsafe: Unsafe): Promise[E, A] =
-      new Promise[E, A](new AtomicReference[State[E, A]](new internal.Pending[E, A](Nil)), fiberId)
+      new Promise[E, A](new AtomicReference[State[E, A]](internal.State.pending[E, A]), fiberId)
   }
 }

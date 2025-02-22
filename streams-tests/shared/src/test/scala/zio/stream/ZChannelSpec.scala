@@ -125,15 +125,15 @@ object ZChannelSpec extends ZIOBaseSpec {
                   )
                 )
               ) &&
-                assert(elements)(
-                  equalTo(
-                    Chunk(
-                      Second(First(1)),
-                      Second(First(2)),
-                      Second(First(3))
-                    )
+              assert(elements)(
+                equalTo(
+                  Chunk(
+                    Second(First(1)),
+                    Second(First(2)),
+                    Second(First(3))
                   )
                 )
+              )
             }
 
           }
@@ -329,7 +329,7 @@ object ZChannelSpec extends ZIOBaseSpec {
 
           merged.runCollect.map { case (chunk, result) =>
             assert(chunk.toSet)(equalTo(Set(1, 2))) &&
-              assert(result)(equalTo(("Whatever", true)))
+            assert(result)(equalTo(("Whatever", true)))
           }
         },
         test("handles polymorphic failures") {
@@ -375,10 +375,10 @@ object ZChannelSpec extends ZIOBaseSpec {
 
           conduit.runCollect.map { case (chunk, _) =>
             assert(chunk.toSet)(equalTo(Set(1, 4, 9))) ||
-              assert(chunk.toSet)(equalTo(Set(1, 6))) ||
-              assert(chunk.toSet)(equalTo(Set(2, 3, 6))) ||
-              assert(chunk.toSet)(equalTo(Set(2, 9))) ||
-              assert(chunk.toSet)(equalTo(Set(3, 4)))
+            assert(chunk.toSet)(equalTo(Set(1, 6))) ||
+            assert(chunk.toSet)(equalTo(Set(2, 3, 6))) ||
+            assert(chunk.toSet)(equalTo(Set(2, 9))) ||
+            assert(chunk.toSet)(equalTo(Set(3, 4)))
           }
         }
       ),
@@ -488,7 +488,7 @@ object ZChannelSpec extends ZIOBaseSpec {
 
           conduit.runCollect.map { case (outputs, result) =>
             assert(outputs)(equalTo(Chunk(1, 1, 2, 2))) &&
-              assert(result)(equalTo(List(2, 2, 1, 1)))
+            assert(result)(equalTo(List(2, 2, 1, 1)))
           }
         },
         test("another pipeline") {
@@ -720,7 +720,7 @@ object ZChannelSpec extends ZIOBaseSpec {
                  .onExit(ref.set)
                  .ensuring(finished.succeed(()))
                  .raceEither(promise.await)
-          _ <- finished.await // Note: interruption in race is now done in the background
+          _    <- finished.await // Note: interruption in race is now done in the background
           exit <- ref.get
         } yield assertTrue(exit.isInterrupted)
       },

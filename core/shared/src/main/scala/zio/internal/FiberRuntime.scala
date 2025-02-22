@@ -24,7 +24,6 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.IntFunction
 import java.util.{Set => JavaSet}
 import scala.annotation.tailrec
 
@@ -83,7 +82,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     }
 
   private[this] def childrenChunk(children: java.util.Set[Fiber.Runtime[?, ?]]): Chunk[Fiber.Runtime[_, _]] =
-    //may be executed by a foreign fiber (under Sync), hence we're risking a race over the _children variable being set back to null by a concurrent transferChildren call
+    // may be executed by a foreign fiber (under Sync), hence we're risking a race over the _children variable being set back to null by a concurrent transferChildren call
     if (children eq null) Chunk.empty
     else {
       val bldr = Chunk.newBuilder[Fiber.Runtime[_, _]]
@@ -412,14 +411,11 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
           val exit =
             runLoop(effect, 0, _stackSize, initialDepth, 0).asInstanceOf[Exit[E, A]]
 
-          if (null eq exit) {
+          if (exit eq null) {
             // Terminate this evaluation, async resumption will continue evaluation:
             _forksSinceYield = 0
             effect = null
           } else {
-
-            if (supervisor ne Supervisor.none) supervisor.onEnd(exit, self)(Unsafe)
-
             self._runtimeFlags = RuntimeFlags.enable(_runtimeFlags)(RuntimeFlag.WindDown)
 
             val interruption = interruptAllChildren()
@@ -427,6 +423,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             if (interruption eq null) {
               if (inbox.isEmpty) {
                 finalExit = exit
+
+                if (supervisor ne Supervisor.none) supervisor.onEnd(finalExit, self)(Unsafe)
 
                 // No more messages to process, so we will allow the fiber to end life:
                 self.setExitValue(exit)
@@ -511,12 +509,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
    *
    * '''NOTE''': This method must be invoked by the fiber itself.
    */
-  private def generateStackTrace(): StackTrace = {
+  private[zio] def generateStackTrace(): StackTrace = {
     val builder = stackTraceBuilderPool.get()
 
     val stack = _stack
     val size  = _stackSize // racy
 
+    builder += _lastTrace
     try {
       if (stack ne null) {
         var i = (if (stack.length < size) stack.length else size) - 1
@@ -544,7 +543,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
    * '''NOTE''': This method must be invoked by the fiber itself.
    */
   private def getChildren(): JavaSet[Fiber.Runtime[_, _]] = {
-    //executed by the fiber itself, no risk of racing with transferChildren
+    // executed by the fiber itself, no risk of racing with transferChildren
     var children = _children
     if (children eq null) {
       children = Platform.newConcurrentWeakSet[Fiber.Runtime[_, _]]()(Unsafe)
@@ -727,7 +726,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
       var curr: Fiber.Runtime[_, _] = null
 
-      //this finds the next operable child fiber and stores it in the `curr` variable
+      // this finds the next operable child fiber and stores it in the `curr` variable
       def skip() = {
         var next: Fiber.Runtime[_, _] = null
         while (iterator.hasNext && (next eq null)) {
@@ -738,8 +737,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
         curr = next
       }
 
-      //find the first operable child fiber
-      //if there isn't any we can simply return null and save ourselves an effect evaluation
+      // find the first operable child fiber
+      // if there isn't any we can simply return null and save ourselves an effect evaluation
       skip()
 
       if (null ne curr) {
@@ -779,17 +778,21 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     overrideLogLevel: Option[LogLevel],
     trace: Trace
   ): Unit = {
-    val logLevel =
-      if (overrideLogLevel.isDefined) overrideLogLevel.get
-      else getFiberRef(FiberRef.currentLogLevel)
+    val contextMap = getFiberRefs(false)
+    val loggers    = contextMap.getOrDefault(FiberRef.currentLoggers)
 
-    val spans       = getFiberRef(FiberRef.currentLogSpan)
-    val annotations = getFiberRef(FiberRef.currentLogAnnotations)
-    val loggers     = getLoggers()
-    val contextMap  = getFiberRefs()
+    if (!loggers.isEmpty) {
+      val logLevel =
+        if (overrideLogLevel.isDefined) overrideLogLevel.get
+        else contextMap.getOrDefault(FiberRef.currentLogLevel)
 
-    loggers.foreach { logger =>
-      logger(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      val spans       = contextMap.getOrDefault(FiberRef.currentLogSpan)
+      val annotations = contextMap.getOrDefault(FiberRef.currentLogAnnotations)
+
+      val it = loggers.iterator
+      while (it.hasNext) {
+        it.next()(trace, fiberId, logLevel, message, cause, contextMap, spans, annotations)
+      }
     }
   }
 
@@ -995,6 +998,34 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
       } else {
         try {
           cur match {
+            case success: Exit.Success[Any] =>
+              val value = success.value
+
+              cur = null
+
+              while ((cur eq null) && stackIndex > minStackIndex) {
+                stackIndex -= 1
+
+                val continuation = _stack(stackIndex)
+
+                popStackFrame(stackIndex)
+
+                continuation match {
+                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
+                    cur = flatMap.successK(value)
+
+                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
+                    cur = foldZIO.successK(value)
+
+                  case updateFlags: ZIO.UpdateRuntimeFlags =>
+                    cur = patchRuntimeFlags(updateFlags.update, null, null)
+                }
+              }
+
+              if (cur eq null) {
+                return success
+              }
+
             case sync: Sync[Any] =>
               updateLastTrace(sync.trace)
               val value = sync.eval()
@@ -1010,14 +1041,10 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
                 continuation match {
                   case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
+                    cur = flatMap.successK(value)
 
                   case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
+                    cur = foldZIO.successK(value)
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
                     cur = patchRuntimeFlags(updateFlags.update, null, null)
@@ -1028,58 +1055,26 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 return Exit.succeed(value)
               }
 
-            case success: Exit.Success[Any] =>
-              val value = success.value
-
-              cur = null
-
-              while ((cur eq null) && stackIndex > minStackIndex) {
-                stackIndex -= 1
-
-                val continuation = _stack(stackIndex)
-
-                popStackFrame(stackIndex)
-
-                continuation match {
-                  case flatMap: ZIO.FlatMap[Any, Any, Any, Any] =>
-                    val f = flatMap.successK
-
-                    cur = f(value)
-
-                  case foldZIO: ZIO.FoldZIO[Any, Any, Any, Any, Any] =>
-                    val f = foldZIO.successK
-
-                    cur = f(value)
-
-                  case updateFlags: ZIO.UpdateRuntimeFlags =>
-                    cur = patchRuntimeFlags(updateFlags.update, null, null)
-                }
-              }
-
-              if (cur eq null) {
-                return success
-              }
-
             case flatmap: FlatMap[Any, Any, Any, Any] =>
               updateLastTrace(flatmap.trace)
 
-              stackIndex = pushStackFrame(flatmap, stackIndex)
+              val first = flatmap.first
 
-              val result = runLoop(flatmap.first, stackIndex, stackIndex, currentDepth + 1, ops)
-              ops += 1
-
-              if (null eq result)
-                return null
+              if (first eq ZIO.unit) cur = flatmap.successK(())
               else {
+                stackIndex = pushStackFrame(flatmap, stackIndex)
+
+                val result = runLoop(first, stackIndex, stackIndex, currentDepth + 1, ops)
+                ops += 1
+
+                if (null eq result) return null
+
                 stackIndex -= 1
                 popStackFrame(stackIndex)
 
                 result match {
-                  case s: Success[Any] =>
-                    cur = flatmap.successK(s.value)
-
-                  case failure =>
-                    cur = failure
+                  case s: Success[Any] => cur = flatmap.successK(s.value)
+                  case failure         => cur = failure
                 }
               }
             case stateful: Stateful[Any, Any, Any] =>
@@ -1099,26 +1094,17 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               val result = runLoop(fold.first, stackIndex, stackIndex, currentDepth + 1, ops)
               ops += 1
 
-              if (null eq result)
-                return null
-              else {
-                stackIndex -= 1
-                popStackFrame(stackIndex)
+              if (null eq result) return null
 
-                result match {
-                  case s: Success[Any] =>
-                    cur = fold.successK(s.value)
+              stackIndex -= 1
+              popStackFrame(stackIndex)
 
-                  case f: Failure[Any] =>
-                    val cause = f.cause
-                    if (shouldInterrupt()) {
-                      cur = Exit.Failure(cause.stripFailures)
-                    } else {
-                      val f = fold.failureK
-
-                      cur = f(cause)
-                    }
-                }
+              result match {
+                case s: Success[Any] => cur = fold.successK(s.value)
+                case f: Failure[Any] =>
+                  val cause = f.cause
+                  if (shouldInterrupt()) cur = Exit.Failure(cause.stripFailures)
+                  else cur = fold.failureK(cause)
               }
 
             case async: Async[Any, Any, Any] =>
@@ -1166,16 +1152,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 val exit = runLoop(update0.f(oldRuntimeFlags), stackIndex, stackIndex, currentDepth + 1, ops)
                 ops += 1
 
-                if (null eq exit)
-                  return null
-                else {
+                if (null eq exit) return null
 
-                  stackIndex -= 1
-                  popStackFrame(stackIndex)
+                stackIndex -= 1
+                popStackFrame(stackIndex)
 
-                  // Go backward, on the stack:
-                  cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
-                }
+                // Go backward, on the stack:
+                cur = patchRuntimeFlags(revertFlags, exit.causeOrNull, exit)
               }
 
             case iterate: WhileLoop[Any, Any, Any] =>
@@ -1183,13 +1166,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
 
               val check = iterate.check
 
-              val k = // TODO: Push into WhileLoop so we don't have to allocate here
-                ZIO.Continuation({ (element: Any) =>
-                  iterate.process(element)
-                  iterate
-                })(iterate.trace)
-
-              stackIndex = pushStackFrame(k, stackIndex)
+              stackIndex = pushStackFrame(iterate.k, stackIndex)
 
               val nextDepth = currentDepth + 1
 
@@ -1236,9 +1213,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                     if (shouldInterrupt()) {
                       cause = cause.stripFailures
                     } else {
-                      val f = foldZIO.failureK
-
-                      cur = f(cause)
+                      cur = foldZIO.failureK(cause)
                     }
 
                   case updateFlags: ZIO.UpdateRuntimeFlags =>
@@ -1250,13 +1225,13 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 return failure
               }
 
-            case gen0: GenerateStackTrace =>
-              updateLastTrace(gen0.trace)
-              cur = Exit.succeed(generateStackTrace())
-
             case updateRuntimeFlags: UpdateRuntimeFlags =>
               updateLastTrace(updateRuntimeFlags.trace)
               cur = patchRuntimeFlags(updateRuntimeFlags.update, null, Exit.unit)
+
+            case gen0: GenerateStackTrace =>
+              updateLastTrace(gen0.trace)
+              cur = Exit.succeed(generateStackTrace())
 
             // Should be unreachable, but we keep it to be backwards compatible
             case update0: UpdateRuntimeFlagsWithin[Any, Any, Any] =>
@@ -1470,9 +1445,9 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
     val children = _children
     if ((children ne null) && !children.isEmpty) {
       val childs = childrenChunk(children)
-      //we're effectively clearing this set, seems cheaper to 'drop' it and allocate a new one if we spawn more fibers
-      //a concurrent children call might get the stale set, but this method (and its primary usage for dumping fibers)
-      //is racy by definition
+      // we're effectively clearing this set, seems cheaper to 'drop' it and allocate a new one if we spawn more fibers
+      // a concurrent children call might get the stale set, but this method (and its primary usage for dumping fibers)
+      // is racy by definition
       _children = null
 
       // Might be empty because all the children have already exited

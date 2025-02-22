@@ -68,7 +68,7 @@ sealed abstract class ZTestRunnerJS(
 final class ZMasterTestRunnerJS(args: Array[String], remoteArgs: Array[String], testClassLoader: ClassLoader)
     extends ZTestRunnerJS(args, remoteArgs, testClassLoader, "master") {
 
-  //This implementation seems to be used when there's only single spec to run
+  // This implementation seems to be used when there's only single spec to run
   override val sendSummary: SendSummary = SendSummary.fromSend { summary =>
     summaries += summary
     ()

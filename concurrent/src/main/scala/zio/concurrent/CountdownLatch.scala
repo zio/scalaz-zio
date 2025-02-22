@@ -38,7 +38,7 @@ final class CountdownLatch private (_count: Ref[Int], _waiters: Promise[Nothing,
    */
   val countDown: UIO[Unit] = _count.modify {
     case 0 => ZIO.unit             -> 0
-    case 1 => _waiters.succeed(()) -> 0
+    case 1 => _waiters.succeedUnit -> 0
     case n => ZIO.unit             -> (n - 1)
   }.flatten.unit
 

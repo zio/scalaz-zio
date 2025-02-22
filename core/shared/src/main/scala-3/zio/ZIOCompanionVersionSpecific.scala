@@ -6,7 +6,7 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
 import java.io.IOException
 import scala.annotation.targetName
 
-transparent trait ZIOCompanionVersionSpecific {
+private[zio] transparent trait ZIOCompanionVersionSpecific {
 
   /**
    * Converts an asynchronous, callback-style API into a ZIO effect, which will
@@ -210,12 +210,12 @@ transparent trait ZIOCompanionVersionSpecific {
 
   @targetName("succeed")
   @deprecated("use succeed", "2.1.7")
-  def _succeedCompat[A](a: Unsafe ?=> A)(implicit trace: Trace): ZIO[Any, Nothing, A] =
+  private[zio] def _succeedCompat[A](a: Unsafe ?=> A)(implicit trace: Trace): ZIO[Any, Nothing, A] =
     succeed(a)
 
   @targetName("succeedBlocking")
   @deprecated("use succeedBlocking", "2.1.7")
-  def _succeedBlockingCompat[A](a: Unsafe ?=> A)(implicit trace: Trace): UIO[A] =
+  private[zio] def _succeedBlockingCompat[A](a: Unsafe ?=> A)(implicit trace: Trace): UIO[A] =
     ZIO.blocking(ZIO.succeed(a))
 
 }

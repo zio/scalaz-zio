@@ -65,7 +65,7 @@ object TaggedSpecsExample extends ZIOSpecDefault {
 By adding the `-tags slow` argument to the command line, we will only run the slow tests:
 
 ```
-sbt> test:runMain TaggedSpecsExample -tags slow
+sbt> testOnly TaggedSpecsExample -tags slow
 ```
 
 The output would be:
@@ -77,4 +77,10 @@ The output would be:
 [info]   + another slow test - tagged: "slow"
 [info] Ran 2 tests in 162 ms: 2 succeeded, 0 ignored, 0 failed
 [success] Total time: 1 s, completed Nov 2, 2021, 12:36:36 PM
+```
+
+Run tests tagged with `slow` for the entire project:
+
+```
+sbt> testOnly -- -tags slow
 ```

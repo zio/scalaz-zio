@@ -20,6 +20,7 @@ import java.nio._
 import java.nio.charset.Charset
 import java.util.concurrent.atomic.AtomicInteger
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.Builder
 import scala.math.log
 import scala.reflect.{ClassTag, classTag}
@@ -1018,7 +1019,7 @@ sealed abstract class Chunk[+A] extends ChunkLike[A] with Serializable { self =>
     builder.result()
   }
 
-  //noinspection AccessorLikeMethodIsUnit
+  // noinspection AccessorLikeMethodIsUnit
   protected[zio] final def toArray[A1 >: A](n: Int, dest: Array[A1]): Unit =
     toArray(0, dest, n, length)
 
@@ -1170,7 +1171,10 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
   /**
    * Returns a chunk backed by an array.
    *
-   * WARNING: The array must not be mutated after creating the chunk.
+   * '''WARNING''': The array must not be mutated after creating the chunk. If
+   * you're unsure whether the array will be mutated, prefer
+   * `Chunk.fromIterable` or `Chunk.from` which create a copy of the provided
+   * array.
    */
   def fromArray[A](array: Array[A]): Chunk[A] =
     (if (array.isEmpty) Empty
@@ -1272,6 +1276,7 @@ object Chunk extends ChunkFactory with ChunkPlatformSpecific {
       case chunk: Chunk[A]              => chunk
       case iterable if iterable.isEmpty => Empty
       case vector: Vector[A]            => VectorChunk(vector)
+      case arrSeq: mutable.ArraySeq[A]  => fromArraySeq(arrSeq)
       case iterable =>
         val builder = ChunkBuilder.make[A]()
         builder.sizeHint(iterable)

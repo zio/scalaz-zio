@@ -53,7 +53,7 @@ object Macros {
     if (!disableAutoTrace) {
       if (implicitTraceInScope)
         c.abort(c.enclosingPosition, "we already have an implicit trace - pass it through")
-      else //there's no implicit, so generate one
+      else // there's no implicit, so generate one
         traceExpression
     } else {
       println(

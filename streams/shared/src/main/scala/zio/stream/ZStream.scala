@@ -19,6 +19,7 @@ package zio.stream
 import zio._
 import zio.internal.{SingleThreadedRingBuffer, UniqueKey}
 import zio.metrics.MetricLabel
+import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.stm._
 import zio.stream.ZStream.{DebounceState, HandoffSignal, zipChunks}
 import zio.stream.internal.{ZInputStream, ZReader}
@@ -343,7 +344,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZStream[Any, E, A]] =
     self
       .broadcastedQueuesDynamic(maximumLag)
-      .map(ZStream.scoped(_).flatMap(ZStream.fromQueue(_)).flattenTake)
+      .flatMap(_.map(ZStream.fromQueueWithShutdown(_).flattenTake))
 
   /**
    * Converts the stream to a scoped list of queues. Every value will be
@@ -371,8 +372,14 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    */
   def broadcastedQueuesDynamic(
     maximumLag: => Int
-  )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[Scope, Nothing, Dequeue[Take[E, A]]]] =
-    toHub(maximumLag).map(_.subscribe)
+  )(implicit trace: Trace): ZIO[R with Scope, Nothing, ZIO[R with Scope, Nothing, Dequeue[Take[E, A]]]] =
+    for {
+      hub <- ZIO.acquireRelease(Hub.bounded[Take[E, A]](maximumLag))(_.shutdown)
+      subscriber = for {
+                     queue <- hub.subscribe
+                     _     <- ZIO.whenZIO(hub.isEmpty)(self.runIntoHubScoped(hub).forkScoped)
+                   } yield queue
+    } yield subscriber
 
   /**
    * Allows a faster producer to progress independently of a slower consumer by
@@ -533,7 +540,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     ): ZChannel[R1, Any, Any, Any, E1, Chunk[A1], Unit] = {
       lazy val process: ZChannel[Any, Any, Any, Any, E1, Chunk[A1], Unit] =
         ZChannel.fromZIO(queue.take).flatMap { case (take, promise) =>
-          ZChannel.fromZIO(promise.succeed(())) *>
+          ZChannel.fromZIO(promise.succeedUnit) *>
             take.fold(
               ZChannel.unit,
               error => ZChannel.refailCause(error),
@@ -548,7 +555,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
       for {
         queue <- scoped
         start <- Promise.make[Nothing, Unit]
-        _     <- start.succeed(())
+        _     <- start.succeedUnit
         ref   <- Ref.make(start)
         _     <- (channel >>> producer(queue, ref)).runScoped.forkScoped
       } yield consumer(queue)
@@ -1200,7 +1207,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def dropWhileZIO[R1 <: R, E1 >: E](f: A => ZIO[R1, E1, Boolean])(implicit
     trace: Trace
   ): ZStream[R1, E1, A] =
-    pipeThrough(ZSink.dropWhileZIO[R1, E1, A](f))
+    self >>> ZPipeline.dropWhileZIO(f)
 
   /**
    * Returns a stream whose failures and successes have been lifted into an
@@ -3188,28 +3195,27 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
    * Takes the last specified number of elements from this stream.
    */
   def takeRight(n: => Int)(implicit trace: Trace): ZStream[R, E, A] =
-    ZStream.succeed(n).flatMap { n =>
-      if (n <= 0) ZStream.empty
-      else
-        new ZStream(
-          ZChannel.unwrap(
-            for {
-              queue <- ZIO.succeed(SingleThreadedRingBuffer[A](n))
-            } yield {
-              lazy val reader: ZChannel[Any, E, Chunk[A], Any, E, Chunk[A], Unit] = ZChannel.readWithCause(
-                (in: Chunk[A]) => {
-                  in.foreach(queue.put)
-                  reader
-                },
-                ZChannel.refailCause,
-                (_: Any) => ZChannel.write(queue.toChunk) *> ZChannel.unit
-              )
+    new ZStream(
+      ZChannel.suspend {
+        val n0 = n
+        if (n0 <= 0) ZChannel.unit
+        else {
+          val queue = SingleThreadedRingBuffer[A](n0)
 
-              (self.channel >>> reader)
-            }
-          )
-        )
-    }
+          lazy val reader: ZChannel[Any, E, Chunk[A], Any, E, Chunk[A], Unit] =
+            ZChannel.readWithCause(
+              in = (in: Chunk[A]) => {
+                in.foreach(queue.put)
+                reader
+              },
+              halt = ZChannel.refailCause,
+              done = (_: Any) => ZChannel.write(queue.toChunk) *> ZChannel.unit
+            )
+
+          self.channel >>> reader
+        }
+      }
+    )
 
   /**
    * Takes all elements of the stream until the specified predicate evaluates to
@@ -3320,7 +3326,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
           .pipeTo(loop)
           .ensuring(queue.offer(Take.end).forkDaemon *> queue.awaitShutdown) *> ZChannel.unit
       )
-        .merge(ZStream.execute((promise.succeed(()) *> right.run(sink)).ensuring(queue.shutdown)), HaltStrategy.Both)
+        .merge(ZStream.execute((promise.succeedUnit *> right.run(sink)).ensuring(queue.shutdown)), HaltStrategy.Both)
     }
 
   /**
@@ -3489,8 +3495,8 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
     channel.toPull.map { pull =>
       pull.foldZIO(
         success = {
-          case Left(done)  => Exit.failNone
           case Right(elem) => Exit.succeed(elem)
+          case _           => Exit.failNone
         },
         failure = error => Exit.fail(Some(error))
       )
@@ -4186,8 +4192,9 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    */
   def fromChunk[O](chunk: => Chunk[O])(implicit trace: Trace): ZStream[Any, Nothing, O] =
     new ZStream(
-      ZChannel.succeed(chunk).flatMap { chunk =>
-        if (chunk.isEmpty) ZChannel.unit else ZChannel.write(chunk)
+      ZChannel.suspend {
+        val chunk0 = chunk
+        if (chunk0.isEmpty) ZChannel.unit else ZChannel.write(chunk0)
       }
     )
 
@@ -4923,7 +4930,13 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    * Repeats the provided value infinitely.
    */
   def repeat[A](a: => A)(implicit trace: Trace): ZStream[Any, Nothing, A] =
-    new ZStream(ZChannel.succeed(a).flatMap(a => ZChannel.write(Chunk.single(a)).repeated))
+    new ZStream(
+      ZChannel.suspend {
+        val a0 = a
+        val v  = Chunk.single(a0)
+        ZChannel.write(v).repeated
+      }
+    )
 
   /**
    * Repeats the value using the provided schedule.
@@ -5022,7 +5035,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
    * Creates a single-valued pure stream
    */
   def succeed[A](a: => A)(implicit trace: Trace): ZStream[Any, Nothing, A] =
-    fromChunk(Chunk.single(a))
+    new ZStream(ZChannel.suspend(ZChannel.write(Chunk.single(a))))
 
   /**
    * Returns a lazily constructed stream.
@@ -5649,14 +5662,14 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
           case s @ Handoff.State.Full(_, notifyProducer) => (notifyProducer.await *> offer(a), s)
-          case Handoff.State.Empty(notifyConsumer)       => (notifyConsumer.succeed(()) *> p.await, Handoff.State.Full(a, p))
+          case Handoff.State.Empty(notifyConsumer)       => (notifyConsumer.succeedUnit *> p.await, Handoff.State.Full(a, p))
         }.flatten
       }
 
     def take(implicit trace: Trace): UIO[A] =
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
-          case Handoff.State.Full(a, notifyProducer)   => (notifyProducer.succeed(()).as(a), Handoff.State.Empty(p))
+          case Handoff.State.Full(a, notifyProducer)   => (notifyProducer.succeedUnit.as(a), Handoff.State.Empty(p))
           case s @ Handoff.State.Empty(notifyConsumer) => (notifyConsumer.await *> take, s)
         }.flatten
       }
@@ -5664,7 +5677,7 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     def poll(implicit trace: Trace): UIO[Option[A]] =
       Promise.make[Nothing, Unit].flatMap { p =>
         ref.modify {
-          case Handoff.State.Full(a, notifyProducer) => (notifyProducer.succeed(()).as(Some(a)), Handoff.State.Empty(p))
+          case Handoff.State.Full(a, notifyProducer) => (notifyProducer.succeedUnit.as(Some(a)), Handoff.State.Empty(p))
           case s @ Handoff.State.Empty(_)            => (ZIO.succeed(None), s)
         }.flatten
       }

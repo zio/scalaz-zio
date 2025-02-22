@@ -228,8 +228,8 @@ object TerminalRendering {
        |${title("ZLayer Error").red}
        |
        | Due to bug in Scala 2 compiler invoking methods with by-name parameters in ${methodName(
-      "provide"
-    )}/${methodName("provideSome")} method does not work
+        "provide"
+      )}/${methodName("provideSome")} method does not work
        | ${colorMethodSignature(fullMethodSignature, byNameParameters, Color.Red)}
        |
        | Bug can be workarounded in following ways:

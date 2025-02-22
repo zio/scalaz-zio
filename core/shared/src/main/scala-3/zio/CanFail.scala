@@ -18,7 +18,7 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, targetName}
 import scala.util.NotGiven
 
 /**
@@ -34,6 +34,16 @@ import scala.util.NotGiven
 )
 sealed abstract class CanFail[-E]
 
-object CanFail extends CanFail[Any] {
-  implicit def canFail[E](implicit ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
+object CanFail extends CanFail[Any] with CanFailLowPriority {
+  inline given canFail[E](using inline ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
+
+  @targetName("canFail")
+  @deprecated("Kept for binary compatibility only, do not use", "2.1.16")
+  private[zio] def _canFailCompat[E](implicit ev: NotGiven[E =:= Nothing]): CanFail[E] = CanFail
+}
+
+private[zio] transparent trait CanFailLowPriority { self: CanFail.type =>
+  // In some extremely extremely rare case the type inference prior to macro expansion doesn't work,
+  // so we need a non-inlined low priority as a fallback
+  implicit def canFailLowPriority[E](implicit ev: NotGiven[E =:= Nothing]): CanFail[E] = self
 }

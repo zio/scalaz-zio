@@ -655,7 +655,7 @@ object RuntimeBootstrapTests {
     // invisibleinterruptedCause()
     // accretiveInterruptions()
     stackRegression1()
-    //zipParInterruption()
+    // zipParInterruption()
   }
 
 }

@@ -294,7 +294,7 @@ final case class CLive(a: A, b: B) extends C {
 }
 ```
 
-Now, we need to create layers for each of our implementations. This lets ZIO automatically wire them together. It also lets us take care of any setup or teardown. We use `ZIO.service` to grab things from the environment:
+Now, we need to create layers for each of our implementations. This lets ZIO automatically wire them together. It also lets us take care of any setup or tear down. We use `ZIO.service` to grab things from the environment:
 
 ```scala modc:silent
 import zio._
@@ -329,34 +329,6 @@ val myApp: ZIO[A with C, Nothing, Unit] =
     _ <- a.foo
     c <- ZIO.service[C]
     _ <- c.baz
-  } yield ()
-```
-
-To make our services more ergonomic, it is better to write an accessor method for each capability of our services. We put them in the companion object of the service interfaces:
-
-```scala mdoc:silent
-object A {
-  def foo: ZIO[A, Nothing, Int] = ZIO.serviceWithZIO[A](_.foo)
-}
-
-object B {
-  def bar = ZIO.serviceWithZIO[B](_.bar)
-}
-
-object C {
-  def baz: ZIO[C, Nothing, Unit] = ZIO.serviceWithZIO[C](_.baz)
-}
-```
-
-Let's rewrite the previous application logic with accessor methods:
-
-```scala mdoc:silent:nest
-import zio._
-
-val myApp: ZIO[A with C, Nothing, Unit] =
-  for {
-    _ <- A.foo
-    _ <- C.baz
   } yield ()
 ```
 
