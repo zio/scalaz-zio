@@ -90,7 +90,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] =
             ZChannel.unwrap(
               output.take
-                .flatMap(_.done)
+                .flatMap(_.exit)
                 .fold(
                   maybeError =>
                     ZChannel.fromZIO(output.shutdown) *>
@@ -132,7 +132,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
                  if (_)
                    Pull.end
                  else
-                   output.take.flatMap(_.done).onError(_ => done.set(true) *> output.shutdown)
+                   output.take.flatMap(_.exit).onError(_ => done.set(true) *> output.shutdown)
                }
       } yield pull
     }.flatMap(repeatZIOChunkOption(_))
@@ -162,7 +162,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
     } yield {
       lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] = ZChannel.unwrap(
         output.take
-          .flatMap(_.done)
+          .flatMap(_.exit)
           .foldCauseZIO(
             maybeError =>
               output.shutdown as (maybeError.failureOrCause match {
@@ -237,7 +237,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
             ZStream.repeatZIOChunkOption(
               for {
                 bytesRead <- ZIO.attempt(channel.read(reusableBuffer)).asSomeError
-                _         <- ZIO.fail(None).when(bytesRead == -1)
+                _         <- Exit.failNone.whenDiscard(bytesRead == -1)
                 chunk <- ZIO.succeed {
                            reusableBuffer.flip()
                            Chunk.fromByteBuffer(reusableBuffer)
@@ -280,9 +280,9 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           bufArray  <- ZIO.succeed(Array.ofDim[Char](chunkSize))
           bytesRead <- ZIO.attemptBlockingIO(reader.read(bufArray)).asSomeError
           chars <- if (bytesRead < 0)
-                     ZIO.fail(None)
+                     Exit.failNone
                    else if (bytesRead == 0)
-                     ZIO.succeed(Chunk.empty)
+                     Exit.emptyChunk
                    else if (bytesRead < chunkSize)
                      ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else
@@ -534,7 +534,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
       ZIO.acquireRelease(ZIO.succeed(new Connection(socket)))(_.close())
   }
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1 {
 
     /**
      * Constructs a `ZStream[Any, Throwable, A]` from a

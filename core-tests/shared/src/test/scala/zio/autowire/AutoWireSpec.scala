@@ -4,6 +4,7 @@ import zio._
 import zio.internal.macros.StringUtils.StringOps
 import zio.test.Assertion.{anything, equalTo, isLeft}
 import zio.test._
+
 import scala.annotation.nowarn
 
 object AutoWireSpec extends ZIOBaseSpec {
@@ -212,6 +213,22 @@ object AutoWireSpec extends ZIOBaseSpec {
               s1 <- ZIO.service[String].provideLayer(tree)
               s2 <- ZIO.service[String].provideLayer(mermaid)
             } yield assertTrue(s1 == "Hello 1!", s2 == "Hello 2!")
+          },
+          test("takes trace from the implicit scope") {
+            var numTraces: Int = 0
+            val layer = {
+              implicit def trace: Trace = {
+                numTraces += 1
+                Trace.empty
+              }
+
+              ZLayer.make[String](
+                ZLayer.succeed(42),
+                ZLayer.fromFunction((_: Int).toString)
+              )
+            }
+
+            assertZIO(layer.build.as(numTraces))(equalTo(3))
           }
         ),
         suite("`ZLayer.makeSome`")(

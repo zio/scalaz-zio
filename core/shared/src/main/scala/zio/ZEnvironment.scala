@@ -56,7 +56,7 @@ final class ZEnvironment[+R] private (
    * Adds a service to the environment.
    */
   def add[A](a: A)(implicit tag: Tag[A]): ZEnvironment[R with A] =
-    unsafe.add[A](tag.tag, a)(Unsafe.unsafe)
+    unsafe.add[A](tag.tag, a)(Unsafe)
 
   override def equals(that: Any): Boolean = that match {
     case that: ZEnvironment[_] =>
@@ -100,20 +100,28 @@ final class ZEnvironment[+R] private (
    * Retrieves a service from the environment.
    */
   def get[A >: R](implicit tag: Tag[A]): A =
-    unsafe.get[A](tag.tag)(Unsafe.unsafe)
+    unsafe.get[A](tag.tag)(Unsafe)
 
   /**
    * Retrieves a service from the environment corresponding to the specified
    * key.
    */
   def getAt[K, V](k: K)(implicit ev: R <:< Map[K, V], tagged: EnvironmentTag[Map[K, V]]): Option[V] =
-    unsafe.get[Map[K, V]](taggedTagType(tagged))(Unsafe.unsafe).get(k)
+    unsafe.get[Map[K, V]](taggedTagType(tagged))(Unsafe).get(k)
 
   /**
    * Retrieves a service from the environment if it exists in the environment.
    */
   def getDynamic[A](implicit tag: Tag[A]): Option[A] =
-    Option(unsafe.getOrElse(tag.tag, null.asInstanceOf[A])(Unsafe.unsafe))
+    Option(unsafe.getOrElse(tag.tag, null.asInstanceOf[A])(Unsafe))
+
+  /**
+   * Retrieves the current Scope the environment. Raises a compilation error if
+   * the `ZEnvironment` is not statically known to contain a `Scope`
+   */
+  private[zio] def getScope(implicit ev: R <:< Scope): Scope =
+    if (scope eq null) throw new Error(s"Defect in zio.ZEnvironment: Could not find Scope inside $self")
+    else scope
 
   override lazy val hashCode: Int =
     MurmurHash3.productHash((map, scope))
@@ -214,8 +222,11 @@ final class ZEnvironment[+R] private (
   def unionAll[R1](that: ZEnvironment[R1]): ZEnvironment[R with R1] =
     if (self.relaxedEquals(that)) that.asInstanceOf[ZEnvironment[R with R1]]
     else {
-      val newMap = that.map.iterator.foldLeft(self.map) { case (map, (k, v)) =>
-        map.updated(k, v)
+      var newMap = self.map
+      val it     = that.map.iterator
+      while (it.hasNext) {
+        val (k, v) = it.next()
+        newMap = newMap.updated(k, v)
       }
       val newScope = if (that.scope eq null) self.scope else that.scope
       // Reuse the cache of the right hand-side
@@ -232,7 +243,7 @@ final class ZEnvironment[+R] private (
    * Updates a service in the environment corresponding to the specified key.
    */
   def updateAt[K, V](k: K)(f: V => V)(implicit ev: R <:< Map[K, V], tag: Tag[Map[K, V]]): ZEnvironment[R] =
-    self.add[Map[K, V]](unsafe.get[Map[K, V]](taggedTagType(tag))(Unsafe.unsafe).updated(k, f(getAt(k).get)))
+    self.add[Map[K, V]](unsafe.get[Map[K, V]](taggedTagType(tag))(Unsafe).updated(k, f(getAt(k).get)))
 
   trait UnsafeAPI {
     def get[A](tag: LightTypeTag)(implicit unsafe: Unsafe): A
@@ -250,7 +261,7 @@ final class ZEnvironment[+R] private (
   }
 
   private def isScopeTag(tag: LightTypeTag): Boolean =
-    taggedIsSubtype(tag, ScopeTag)
+    (tag eq ScopeTag) || taggedIsSubtype(tag, ScopeTag)
 
   val unsafe: UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 =
     new UnsafeAPI with UnsafeAPI2 with UnsafeAPI3 with Serializable {
@@ -261,7 +272,8 @@ final class ZEnvironment[+R] private (
           addService[A](tag, a)
 
       private[zio] def addScope(scope: Scope)(implicit unsafe: Unsafe): ZEnvironment[R with Scope] =
-        new ZEnvironment(map, cache = cache, scope = scope)
+        if (scope eq self.scope) self.asInstanceOf[ZEnvironment[R with Scope]]
+        else new ZEnvironment(map, cache = cache, scope = scope)
 
       private[ZEnvironment] def addService[A](tag: LightTypeTag, a: A)(implicit
         unsafe: Unsafe
@@ -411,9 +423,9 @@ object ZEnvironment {
         if (patches eq Nil) env
         else
           patches.head match {
-            case AddService(service, tag) => loop(env.unsafe.addService(tag, service)(Unsafe.unsafe), patches.tail)
+            case AddScope(scope)          => loop(env.unsafe.addScope(scope)(Unsafe), patches.tail)
+            case AddService(service, tag) => loop(env.unsafe.addService(tag, service)(Unsafe), patches.tail)
             case AndThen(first, second)   => loop(env, erase(first) :: erase(second) :: patches.tail)
-            case AddScope(scope)          => loop(env.unsafe.addScope(scope)(Unsafe.unsafe), patches.tail)
             case _: Empty[?]              => loop(env, patches.tail)
             case _: RemoveService[?, ?]   => loop(env, patches.tail)
             case _: UpdateService[?, ?]   => loop(env, patches.tail)

@@ -3,7 +3,7 @@ package zio.stream
 import zio.ZLayer
 import zio.internal.macros.LayerMacros
 
-trait ZStreamVersionSpecific[-R, +E, +O] { self: ZStream[R, E, O] =>
+private[stream] trait ZStreamVersionSpecific[-R, +E, +O] { self: ZStream[R, E, O] =>
 
   /**
    * Automatically assembles a layer for the ZStream effect, which translates it
@@ -14,7 +14,7 @@ trait ZStreamVersionSpecific[-R, +E, +O] { self: ZStream[R, E, O] =>
 
 }
 
-object ZStreamProvideMacro {
+private[stream] object ZStreamProvideMacro {
   import scala.quoted._
 
   def provideImpl[R0: Type, R: Type, E: Type, A: Type](

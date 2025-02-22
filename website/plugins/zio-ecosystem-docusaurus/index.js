@@ -104,83 +104,8 @@ function copy(srcDir, destDir) {
 }
 var oldStyledZioProjects = [
     {
-        name: 'Caliban Deriving',
-        routeBasePath: 'caliban-deriving',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Monix',
-        routeBasePath: 'interop-monix',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Izumi Reflect',
-        routeBasePath: 'izumi-reflect',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Actors',
-        routeBasePath: 'zio-actors',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Akka Cluster",
-        routeBasePath: 'zio-akka-cluster',
-        sidebarPath: 'sidebars.js'
-    },
-    {
         name: 'ZIO AWS',
         routeBasePath: 'zio-aws',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Connect",
-        routeBasePath: 'zio-connect',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: "ZIO Deriving",
-        routeBasePath: 'zio-deriving',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Flow',
-        routeBasePath: 'zio-flow',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Guava',
-        routeBasePath: 'zio-interop-guava',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Scalaz',
-        routeBasePath: 'zio-interop-scalaz',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Interop Twitter',
-        routeBasePath: 'zio-interop-twitter',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Keeper',
-        routeBasePath: 'zio-keeper',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Memberlist',
-        routeBasePath: 'zio-memberlist',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Meta',
-        routeBasePath: 'zio-meta',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO NIO',
-        routeBasePath: 'zio-nio',
         sidebarPath: 'sidebars.js'
     },
     {
@@ -201,11 +126,6 @@ var oldStyledZioProjects = [
     {
         name: 'ZIO SQS',
         routeBasePath: 'zio-sqs',
-        sidebarPath: 'sidebars.js'
-    },
-    {
-        name: 'ZIO Webhooks',
-        routeBasePath: 'zio-webhooks',
         sidebarPath: 'sidebars.js'
     }
 ];

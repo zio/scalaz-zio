@@ -58,7 +58,7 @@ class SmartSpecMacros(val c: whitebox.Context) {
           val refined = internal.refinedType(allEnvs, c.prefix.tree.symbol)
 
           q"""
-val specBuffer = scala.collection.mutable.ListBuffer.empty[Spec[$refined,Any]]
+val specBuffer = scala.collection.mutable.ListBuffer.empty[_root_.zio.test.Spec[$refined,Any]]
 ..${acc.reverse}
 _root_.zio.test.suite($name)(
   specBuffer.toList:_*

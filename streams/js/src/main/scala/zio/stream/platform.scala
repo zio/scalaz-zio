@@ -74,7 +74,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
           lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] =
             ZChannel.unwrap(
               output.take
-                .flatMap(_.done)
+                .flatMap(_.exit)
                 .fold(
                   maybeError =>
                     ZChannel.fromZIO(output.shutdown) *>
@@ -115,7 +115,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
                  if (_)
                    Pull.end
                  else
-                   output.take.flatMap(_.done).onError(_ => done.set(true) *> output.shutdown)
+                   output.take.flatMap(_.exit).onError(_ => done.set(true) *> output.shutdown)
                }
       } yield pull
     }.flatMap(repeatZIOChunkOption(_))
@@ -144,7 +144,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
     } yield {
       lazy val loop: ZChannel[Any, Any, Any, Any, E, Chunk[A], Unit] = ZChannel.unwrap(
         output.take
-          .flatMap(_.done)
+          .flatMap(_.exit)
           .fold(
             maybeError =>
               ZChannel.fromZIO(output.shutdown) *>
@@ -168,7 +168,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
   )(implicit trace: Trace): ZStream[R, E, A] =
     asyncInterrupt(k => register(k).toRight(ZIO.unit), outputBuffer)
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
 
   def fromFile(file: => String, chunkSize: => Int = ZStream.DefaultChunkSize)(implicit
     trace: Trace
@@ -192,7 +192,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
               )
             )
         )
-        .on("end", () => cb(ZIO.fail(None)))
+        .on("end", () => cb(Exit.failNone))
         .on("error", (err: js.Dynamic) => cb(ZIO.fail(Some(new Throwable(err.toString)))))
     }
   }

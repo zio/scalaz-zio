@@ -491,23 +491,6 @@ object ZIOSpec extends ZIOBaseSpec {
         } yield assert(race1)(equalTo(race2))
       }
     ),
-    suite("done")(
-      test("Check done lifts exit result into IO") {
-
-        val fiberId = FiberId(0, 123, Trace.empty)
-        val error   = exampleError
-
-        for {
-          completed   <- ZIO.done(Exit.succeed(1))
-          interrupted <- ZIO.done(Exit.interrupt(fiberId)).exit
-          terminated  <- ZIO.done(Exit.die(error)).exit
-          failed      <- ZIO.done(Exit.fail(error)).exit
-        } yield assert(completed)(equalTo(1)) &&
-          assert(interrupted)(isInterrupted) &&
-          assert(terminated)(dies(equalTo(error))) &&
-          assert(failed)(fails(equalTo(error)))
-      }
-    ),
     suite("executor")(
       test("retrieves the current executor for this effect") {
         val executor = Executor.fromExecutionContext {
@@ -1325,6 +1308,22 @@ object ZIOSpec extends ZIOBaseSpec {
         assertCompletes
       }
     ),
+    suite("fromEither") {
+      test("produces a stack trace on failure") {
+        ZIO
+          .fromEither(Left("foo"))
+          .catchAllCause(cause => ZIO.succeed(cause.trace.stackTrace))
+          .map(t => assertTrue(t.nonEmpty))
+      }
+    },
+    suite("fromEitherCause") {
+      test("produces a stack trace on failure") {
+        ZIO
+          .fromEitherCause(Left(Cause.fail("foo")))
+          .catchAllCause(cause => ZIO.succeed(cause.trace.stackTrace))
+          .map(t => assertTrue(t.nonEmpty))
+      }
+    },
     suite("fromFutureInterrupt")(
       test("running Future can be interrupted") {
         import java.util.concurrent.atomic.AtomicInteger
@@ -1352,10 +1351,10 @@ object ZIOSpec extends ZIOBaseSpec {
     ) @@ zioTag(future, interruption) @@ exceptJS,
     suite("head")(
       test("on non empty list") {
-        assertZIO(ZIO.succeed(List(1, 2, 3)).head.either)(isRight(equalTo(1)))
+        assertZIO(ZIO.succeed(Seq(1, 2, 3)).head.either)(isRight(equalTo(1)))
       },
       test("on empty list") {
-        assertZIO(ZIO.succeed(List.empty).head.either)(isLeft(isNone))
+        assertZIO(ZIO.succeed(Seq.empty).head.either)(isLeft(isNone))
       },
       test("on failure") {
         assertZIO(ZIO.fail("Fail").head.either)(isLeft(isSome(equalTo("Fail"))))
@@ -1802,11 +1801,8 @@ object ZIOSpec extends ZIOBaseSpec {
         val successes = Gen.successes(smallInts)
         val exits     = Gen.either(causes, successes).map(_.fold(Exit.failCause, Exit.succeed))
         check(exits, exits, exits) { (exit1, exit2, exit3) =>
-          val zio1  = ZIO.done(exit1)
-          val zio2  = ZIO.done(exit2)
-          val zio3  = ZIO.done(exit3)
-          val left  = (zio1 orElse zio2) orElse zio3
-          val right = zio1 orElse (zio2 orElse zio3)
+          val left  = (exit1 orElse exit2) orElse exit3
+          val right = exit1 orElse (exit2 orElse exit3)
           for {
             left  <- left.exit
             right <- right.exit
@@ -2276,6 +2272,12 @@ object ZIOSpec extends ZIOBaseSpec {
       },
       test("suspendSucceed must be evaluatable") {
         assertZIO(ZIO.suspendSucceed(ZIO.succeed(42)))(equalTo(42))
+      },
+      test("ZIO.suspendSucceed is implemented with a ZIO.unit as first") {
+        ZIO.suspendSucceed(ZIO.succeed(42)) match {
+          case ZIO.FlatMap(_, first, _) => assertTrue(first eq ZIO.unit)
+          case _                        => assertNever("ZIO.suspendSucceed is not implemented as a FlatMap")
+        }
       },
       test("point, bind, map") {
         def fibIo(n: Int): Task[BigInt] =
@@ -2771,7 +2773,7 @@ object ZIOSpec extends ZIOBaseSpec {
                         }
                       }
                       ()
-                    //never complete
+                      // never complete
                     })
                     .ensuring(unexpectedPlace.update(2 :: _))
                     .forkDaemon
@@ -2947,7 +2949,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause.failures))
                          .fork
                      }
-            failures <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            failures <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(failures.length == 0)
         } +
         test("previous untyped errors are retained even after interruptible region") {
@@ -2963,7 +2965,7 @@ object ZIOSpec extends ZIOBaseSpec {
                          .catchAllCause(cause => ZIO.succeed(cause))
                          .fork
                      }
-            cause <- ensuring.await *> fiber.interrupt.flatMap(ZIO.done(_))
+            cause <- ensuring.await *> fiber.interrupt.unexit
           } yield assertTrue(cause.defects.length == 1)
         } @@ exceptJS(nonFlaky)
 
@@ -4663,6 +4665,60 @@ object ZIOSpec extends ZIOBaseSpec {
           _      <- ZIO.scoped(ZIO.fromAutoCloseable(closeable))
           result <- effects.get
         } yield assert(result)(equalTo(List("Closed")))
+      }
+    ),
+    suite("eager evaluation of ZIO methods on Exit")(
+      test("as") {
+        val exit = Exit.succeed(1).as(2)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("flatMap(success)") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.succeed(a + 1))
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("flatMap(failure)") {
+        val exit = Exit.succeed(1).flatMap(a => Exit.fail(a + 1))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("fold(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("fold(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).fold(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(0))
+      },
+      test("foldCause(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).foldCause(_ => -1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("foldCause(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).foldCause(_ => -1, _ + 1)
+        assertTrue(exit == Exit.succeed(-1))
+      },
+      test("map") {
+        val exit = Exit.succeed(1).map(_ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("mapBoth(success)") {
+        val exit = (Exit.succeed(1): IO[Int, Int]).mapBoth(_ - 1, _ + 1)
+        assertTrue(exit == Exit.succeed(2))
+      },
+      test("mapBoth(failure)") {
+        val exit = (Exit.fail(1): IO[Int, Int]).mapBoth(_ - 1, _ + 1)
+        assertTrue(exit == Exit.fail(0))
+      },
+      test("mapErrorCause(success)") {
+        val exit = Exit.succeed(1).mapErrorCause(_ => Cause.fail(2))
+        assertTrue(exit == Exit.succeed(1))
+      },
+      test("mapErrorCause(failure)") {
+        val exit = Exit.fail(1).mapErrorCause(_ => Cause.fail(2))
+        assertTrue(exit == Exit.fail(2))
+      },
+      test("unit") {
+        val exit = Exit.succeed(1).unit
+        assertTrue(exit == Exit.unit)
       }
     )
   )

@@ -20,7 +20,7 @@ object ZTestFrameworkSbtSpec {
   def tests: Seq[Try[Unit]] = Seq(
     test("should return correct fingerprints")(testFingerprints()),
     // TODO restore once we are calculating durations again. Fix for #6482
-    //test("should report durations")(testReportDurations()),
+    // test("should report durations")(testReportDurations()),
 //    test("should log messages")(testLogMessages()),
 //    test("should correctly display colorized output for multi-line strings")(testColored()),
 //    test("should test only selected test")(testTestSelection()),
@@ -277,16 +277,18 @@ object ZTestFrameworkSbtSpec {
   }
 
   def assertSourceLocation()(implicit trace: Trace): String = {
-    val filePath = Option(trace).collect { case Trace(_, file, _) =>
-      file
+    val filePath = Option(trace).flatMap { trace =>
+      val parsedTrace = Trace.parseOrNull(trace)
+      if (parsedTrace eq null) None else Some(parsedTrace.file)
     }
     filePath.fold("")(path => cyan(s"at $path:XXX"))
   }
 
   implicit class TestOutputOps(output: String) {
     def withNoLineNumbers(implicit trace: Trace): String = {
-      val filePath = Option(trace).collect { case Trace(_, file, _) =>
-        file
+      val filePath = Option(trace).flatMap { trace =>
+        val parsedTrace = Trace.parseOrNull(trace)
+        if (parsedTrace eq null) None else Some(parsedTrace.file)
       }
       filePath.fold(output)(path => output.replaceAll(Pattern.quote(path + ":") + "\\d+", path + ":XXX"))
     }

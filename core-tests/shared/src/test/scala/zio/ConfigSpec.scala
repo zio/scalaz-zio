@@ -13,7 +13,7 @@ object ConfigSpec extends ZIOBaseSpec {
     factor: Double = 1.0
   ): ZIO[Any, Throwable, Boolean] = {
 
-    //Box test from "Opportunities and Limits of Remote Timing Attacks", Scott A. Crosby, Dan S. Wallach, Rudolf H. Riedi
+    // Box test from "Opportunities and Limits of Remote Timing Attacks", Scott A. Crosby, Dan S. Wallach, Rudolf H. Riedi
     val i = 0.02
     val j = 0.15
 
@@ -68,6 +68,11 @@ object ConfigSpec extends ZIOBaseSpec {
         } +
         test("toString") {
           assertTrue(Secret("secret").toString() == "Secret(<redacted>)")
+        } +
+        test("stringValue") {
+          val string = "secret"
+          val secret = Secret(string)
+          assertTrue(secret.stringValue == string)
         } +
         test("equals") {
           assertTrue(Secret("secret") == Secret("secret")) &&

@@ -64,7 +64,24 @@ sealed trait FiberId extends Serializable { self =>
     case _: StackOverflowError => FiberId.toSetLazy(self).isEmpty
   }
 
-  final def threadName: String = s"zio-fiber-${self.ids.mkString(",")}"
+  final def threadName: String =
+    threadNameInto(new StringBuilder(32))(Unsafe).result()
+
+  private[zio] final def threadNameInto(sb: StringBuilder)(implicit unsafe: Unsafe): StringBuilder = {
+    sb.append("zio-fiber-")
+    self match {
+      case rt: Runtime => sb.append(rt.id) // Avoid boxing of the Int
+      case fid =>
+        val it   = fid.ids.iterator
+        var loop = it.hasNext
+        while (loop) {
+          sb.append(it.next())
+          if (it.hasNext) sb.append(',')
+          else loop = false
+        }
+    }
+    sb
+  }
 
   final def toOption: Option[FiberId] = toSet.asInstanceOf[Set[FiberId]].reduceOption(_.combine(_))
 

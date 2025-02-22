@@ -247,17 +247,16 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
             case ZChannel.DeferedUpstream(mkChannel) =>
               val inpAsChannel: ZChannel[Env, Any, Any, Any, Any, Any, Any] = execToPullingChannel(input)
 
-              //when input's provided env is null, we have to explicitly provide it with the 'outer' env
-              //otherwise any env provided by downstream will override the 'correct' env when the input channel executes effects.
-              val nextChannel: Channel[Env] = {
+              // when input's provided env is null, we have to explicitly provide it with the 'outer' env
+              // otherwise any env provided by downstream will override the 'correct' env when the input channel executes effects.
+              val nextChannel: Channel[Env] =
                 if (null != input.providedEnv)
                   mkChannel(inpAsChannel.asInstanceOf[ZChannel[Any, Any, Any, Any, Any, Any, Any]])
                 else
-                  ZChannel //todo: can we eliminate the effect evaluation here? i.e. by usingFiber.currentFiber()
+                  ZChannel // todo: can we eliminate the effect evaluation here? i.e. by usingFiber.currentFiber()
                     .environmentWithChannel[Env] { env =>
                       mkChannel(inpAsChannel.provideEnvironment(env))
                     }
-              }
 
               val previousInput = input
               input = null
@@ -472,7 +471,7 @@ private[zio] class ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, 
       ZIO
         .foreach(finalizers)(_.apply(ex).exit)
         .map(results => Exit.collectAll(results) getOrElse Exit.unit)
-        .flatMap(ZIO.done(_))
+        .unexit
 
   private[this] def runSubexecutor()(implicit trace: Trace): ChannelState[Env, Any] =
     activeSubexecutor match {
@@ -714,7 +713,7 @@ private[zio] object ChannelExecutor {
         val fin2 = parentSubexecutor.close(ex)
 
         if ((fin1 eq null) && (fin2 eq null)) null
-        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).flatMap(ZIO.done(_))
+        else if ((fin1 ne null) && (fin2 ne null)) fin1.exit.zipWith(fin2.exit)(_ *> _).unexit
         else if (fin1 ne null) fin1
         else fin2
       }
@@ -1000,10 +999,16 @@ private[zio] class SingleProducerAsyncInput[Err, Elem, Done](
 
 private[zio] object SingleProducerAsyncInput {
   def make[Err, Elem, Done](implicit trace: Trace): UIO[SingleProducerAsyncInput[Err, Elem, Done]] =
-    Promise
-      .make[Nothing, Unit]
-      .flatMap(p => Ref.make[State[Err, Elem, Done]](State.Empty(p)))
-      .map(new SingleProducerAsyncInput(_))
+    ZIO.fiberIdWith(fiberId => ZIO.succeed(unsafe.make(fiberId)(Unsafe)))
+
+  object unsafe {
+    def make[Err, Elem, Done](fiberId: FiberId)(implicit unsafe: Unsafe): SingleProducerAsyncInput[Err, Elem, Done] = {
+      val promise: Promise[Nothing, Unit]      = Promise.unsafe.make[Nothing, Unit](fiberId)
+      val initialState: State[Err, Elem, Done] = State.Empty[Err, Elem, Done](promise)
+      val ref: Ref[State[Err, Elem, Done]]     = Ref.unsafe.make(initialState)
+      new SingleProducerAsyncInput[Err, Elem, Done](ref)
+    }
+  }
 
   sealed trait State[Err, Elem, Done]
   object State {

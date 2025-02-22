@@ -1,7 +1,6 @@
 package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
-import izumi.reflect.macrortti.LightTypeTag
 
 trait ZLogger[-Message, +Output] { self =>
   def apply(
@@ -108,77 +107,64 @@ object ZLogger {
   private[zio] val stringTag: LightTypeTag = EnvironmentTag[String].tag
   private[zio] val causeTag: LightTypeTag  = EnvironmentTag[Cause[Any]].tag
 
-  import Predef.{Set => ScalaSet, _}
-
   val default: ZLogger[String, String] = (
     trace: Trace,
     fiberId: FiberId,
     logLevel: LogLevel,
     message0: () => String,
     cause: Cause[Any],
-    context: FiberRefs,
+    _: FiberRefs,
     spans0: List[LogSpan],
     annotations: Map[String, String]
   ) => {
-    val sb = new StringBuilder()
-
-    val _ = context
+    // For why 256 here, see https://github.com/zio/zio/pull/9416#discussion_r1886208534
+    val sb = new StringBuilder(256)
 
     val now = java.time.Instant.now()
 
-    val nowMillis = java.lang.System.currentTimeMillis()
-
     sb.append("timestamp=")
-      .append(now.toString())
+      .append(now.toString)
       .append(" level=")
       .append(logLevel.label)
       .append(" thread=#")
-      .append(fiberId.threadName)
+
+    fiberId
+      .threadNameInto(sb)(Unsafe)
       .append(" message=\"")
       .append(message0())
-      .append("\"")
+      .append('"')
 
-    if ((cause ne null) && cause != Cause.empty) {
+    if ((cause ne null) && (cause ne Cause.empty)) {
       sb.append(" cause=\"")
         .append(cause.prettyPrint)
-        .append("\"")
+        .append('"')
     }
 
     if (spans0.nonEmpty) {
-      sb.append(" ")
+      val nowMillis = now.toEpochMilli
 
-      val it    = spans0.iterator
-      var first = true
+      sb.append(' ')
 
+      val it = spans0.iterator
+
+      it.next().renderInto(sb, nowMillis)(Unsafe)
       while (it.hasNext) {
-        if (first) {
-          first = false
-        } else {
-          sb.append(" ")
-        }
-
-        it.next().renderInto(sb, nowMillis)(Unsafe.unsafe)
+        sb.append(' ')
+        it.next().renderInto(sb, nowMillis)(Unsafe)
       }
     }
 
-    trace match {
-      case Trace(location, file, line) =>
-        sb.append(" location=")
-
-        appendQuoted(location, sb)
-
-        sb.append(" file=")
-
-        appendQuoted(file, sb)
-
-        sb.append(" line=")
-          .append(line)
-
-      case _ =>
+    val parsedTrace = Trace.parseOrNull(trace)
+    if (parsedTrace ne null) {
+      sb.append(" location=")
+      appendQuoted(parsedTrace.location, sb)
+      sb.append(" file=")
+      appendQuoted(parsedTrace.file, sb)
+      sb.append(" line=").append(parsedTrace.line)
     }
 
     if (annotations.nonEmpty) {
-      sb.append(" ")
+      sb.append(' ')
 
       val it    = annotations.iterator
       var first = true
@@ -187,14 +173,14 @@ object ZLogger {
         if (first) {
           first = false
         } else {
-          sb.append(" ")
+          sb.append(' ')
         }
 
-        val (key, value) = it.next()
+        val kv = it.next()
 
-        appendQuoted(key, sb)
-        sb.append("=")
-        appendQuoted(value, sb)
+        appendQuoted(kv._1, sb)
+        sb.append('=')
+        appendQuoted(kv._2, sb)
       }
     }
 
@@ -236,8 +222,8 @@ object ZLogger {
   def succeed[A](a: => A): ZLogger[Any, A] = simple(_ => a)
 
   private def appendQuoted(label: String, sb: StringBuilder): StringBuilder = {
-    if (label.indexOf(" ") < 0) sb.append(label)
-    else sb.append("\"").append(label).append("\"")
+    if (label.indexOf(' ') < 0) sb.append(label)
+    else sb.append('"').append(label).append('"')
     sb
   }
 }

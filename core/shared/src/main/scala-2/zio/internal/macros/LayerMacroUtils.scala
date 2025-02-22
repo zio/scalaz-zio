@@ -4,7 +4,6 @@ import zio._
 import zio.internal.TerminalRendering
 
 import scala.reflect.macros.blackbox
-import zio.internal.stacktracer.Tracer
 
 private[zio] trait LayerMacroUtils {
   val c: blackbox.Context
@@ -49,16 +48,17 @@ private[zio] trait LayerMacroUtils {
       case Expr(q"$prefix.mermaid") if prefix.symbol == debug => ZLayer.Debug.Mermaid
     }
 
+    val trace           = c.freshName(TermName("trace"))
+    val compose         = c.freshName(TermName("compose"))
     var usesEnvironment = false
     var usesCompose     = false
 
     def typeToNode(tpe: Type): Node[Type, LayerExpr] = {
       usesEnvironment = true
-      Node(Nil, List(tpe), c.Expr(q"${reify(ZLayer)}.environment[$tpe]"))
+      Node(Nil, List(tpe), c.Expr(q"${reify(ZLayer)}.environment[$tpe]($trace)"))
     }
 
     def buildFinalTree(tree: LayerTree[LayerExpr]): LayerExpr = {
-      val compose = c.freshName(TermName("compose"))
       val memoList: List[(LayerExpr, LayerExpr)] =
         tree.toList.map(_ -> c.Expr[ZLayer[_, _, _]](q"${c.freshName(TermName("layer"))}"))
       val definitions = memoList.map { case (expr, memoizedNode) =>
@@ -79,10 +79,7 @@ private[zio] trait LayerMacroUtils {
       )
 
       val traceVal = if (usesEnvironment || usesCompose) {
-        val trace       = c.freshName(TermName("trace"))
-        val suppress    = typeOf[SuppressWarnings]
-        val wartRemover = q"""${reify(Array)}("org.wartremover.warts.ExplicitImplicitTypes")"""
-        List(q"@$suppress($wartRemover) implicit val $trace: ${typeOf[Trace]} = ${reify(Tracer)}.newTrace")
+        List(q"val $trace = ${reify(Predef)}.implicitly[${typeOf[Trace]}]")
       } else {
         Nil
       }
@@ -93,7 +90,12 @@ private[zio] trait LayerMacroUtils {
         val E      = c.freshName(TypeName("E"))
         val O1     = c.freshName(TypeName("O1"))
         val O2     = c.freshName(TypeName("O2"))
-        List(q"def $compose[$R, $E, $O1, $O2](lhs: $ZLayer[$R, $E, $O1], rhs: $ZLayer[$O1, $E, $O2]) = lhs >>> rhs")
+        List(q"""
+          def $compose[$R, $E, $O1, $O2](
+            lhs: $ZLayer[$R, $E, $O1],
+            rhs: $ZLayer[$O1, $E, $O2]
+          ) = lhs.>>>(rhs)($trace)
+        """)
       } else {
         Nil
       }

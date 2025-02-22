@@ -125,15 +125,15 @@ object ZChannelSpec extends ZIOBaseSpec {
                   )
                 )
               ) &&
-                assert(elements)(
-                  equalTo(
-                    Chunk(
-                      Second(First(1)),
-                      Second(First(2)),
-                      Second(First(3))
-                    )
+              assert(elements)(
+                equalTo(
+                  Chunk(
+                    Second(First(1)),
+                    Second(First(2)),
+                    Second(First(3))
                   )
                 )
+              )
             }
 
           }
@@ -310,8 +310,8 @@ object ZChannelSpec extends ZIOBaseSpec {
           val conduit = ZChannel
             .writeAll(1, 2, 3)
             .mergeWith(ZChannel.writeAll(4, 5, 6))(
-              ex => ZChannel.MergeDecision.awaitConst(ZIO.done(ex)),
-              ex => ZChannel.MergeDecision.awaitConst(ZIO.done(ex))
+              ZChannel.MergeDecision.awaitConst,
+              ZChannel.MergeDecision.awaitConst
             )
 
           conduit.runCollect.map { case (chunk, _) =>
@@ -323,13 +323,13 @@ object ZChannelSpec extends ZIOBaseSpec {
           val right = ZChannel.write(2) *> ZChannel.fromZIO(ZIO.attempt(true).refineToOrDie[IllegalStateException])
 
           val merged = left.mergeWith(right)(
-            ex => ZChannel.MergeDecision.await(ex2 => ZIO.done(ex <*> ex2)),
-            ex2 => ZChannel.MergeDecision.await(ex => ZIO.done(ex <*> ex2))
+            ex => ZChannel.MergeDecision.await(ex2 => ex <*> ex2),
+            ex2 => ZChannel.MergeDecision.await(ex => ex <*> ex2)
           )
 
           merged.runCollect.map { case (chunk, result) =>
             assert(chunk.toSet)(equalTo(Set(1, 2))) &&
-              assert(result)(equalTo(("Whatever", true)))
+            assert(result)(equalTo(("Whatever", true)))
           }
         },
         test("handles polymorphic failures") {
@@ -337,8 +337,8 @@ object ZChannelSpec extends ZIOBaseSpec {
           val right = ZChannel.write(2) *> ZChannel.fail(true).as(true)
 
           val merged = left.mergeWith(right)(
-            ex => ZChannel.MergeDecision.await(ex2 => ZIO.done(ex).flip.zip(ZIO.done(ex2).flip).flip),
-            ex2 => ZChannel.MergeDecision.await(ex => ZIO.done(ex).flip.zip(ZIO.done(ex2).flip).flip)
+            ex => ZChannel.MergeDecision.await(ex2 => ex.flip.zip(ex2.flip).flip),
+            ex2 => ZChannel.MergeDecision.await(ex => ex.flip.zip(ex2.flip).flip)
           )
 
           merged.runDrain.exit.map(ex => assert(ex)(fails(equalTo(("Boom", true)))))
@@ -351,7 +351,7 @@ object ZChannelSpec extends ZIOBaseSpec {
               val right = ZChannel.write(2) *> ZChannel.fromZIO(latch.await)
 
               val merged = left.mergeWith(right)(
-                ex => ZChannel.MergeDecision.done(ZIO.done(ex)),
+                ex => ZChannel.MergeDecision.done(ex),
                 _ => ZChannel.MergeDecision.done(interrupted.get.map(assert(_)(isTrue)))
               )
 
@@ -375,10 +375,10 @@ object ZChannelSpec extends ZIOBaseSpec {
 
           conduit.runCollect.map { case (chunk, _) =>
             assert(chunk.toSet)(equalTo(Set(1, 4, 9))) ||
-              assert(chunk.toSet)(equalTo(Set(1, 6))) ||
-              assert(chunk.toSet)(equalTo(Set(2, 3, 6))) ||
-              assert(chunk.toSet)(equalTo(Set(2, 9))) ||
-              assert(chunk.toSet)(equalTo(Set(3, 4)))
+            assert(chunk.toSet)(equalTo(Set(1, 6))) ||
+            assert(chunk.toSet)(equalTo(Set(2, 3, 6))) ||
+            assert(chunk.toSet)(equalTo(Set(2, 9))) ||
+            assert(chunk.toSet)(equalTo(Set(3, 4)))
           }
         }
       ),
@@ -488,7 +488,7 @@ object ZChannelSpec extends ZIOBaseSpec {
 
           conduit.runCollect.map { case (outputs, result) =>
             assert(outputs)(equalTo(Chunk(1, 1, 2, 2))) &&
-              assert(result)(equalTo(List(2, 2, 1, 1)))
+            assert(result)(equalTo(List(2, 2, 1, 1)))
           }
         },
         test("another pipeline") {
@@ -720,7 +720,7 @@ object ZChannelSpec extends ZIOBaseSpec {
                  .onExit(ref.set)
                  .ensuring(finished.succeed(()))
                  .raceEither(promise.await)
-          _ <- finished.await // Note: interruption in race is now done in the background
+          _    <- finished.await // Note: interruption in race is now done in the background
           exit <- ref.get
         } yield assertTrue(exit.isInterrupted)
       },

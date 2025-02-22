@@ -33,11 +33,12 @@ object DefaultServices {
       ConfigProvider.defaultProvider
     )(Clock.tag, Console.tag, System.tag, Random.tag, ConfigProvider.tag)
 
-  private[zio] val currentServices: FiberRef.WithPatch[ZEnvironment[
-    Clock with Console with System with Random with ConfigProvider
-  ], ZEnvironment.Patch[
-    Clock with Console with System with Random with ConfigProvider,
-    Clock with Console with System with Random with ConfigProvider
-  ]] =
+  private[zio] val currentServices: FiberRef.WithPatch[
+    ZEnvironment[Clock with Console with System with Random with ConfigProvider],
+    ZEnvironment.Patch[
+      Clock with Console with System with Random with ConfigProvider,
+      Clock with Console with System with Random with ConfigProvider
+    ]
+  ] =
     FiberRef.unsafe.makeEnvironment(live)(Unsafe.unsafe)
 }

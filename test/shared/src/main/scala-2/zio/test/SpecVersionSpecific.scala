@@ -1,6 +1,6 @@
 package zio.test
 
-import zio.{EnvironmentTag, Tag, Trace, ZLayer}
+import zio.ZLayer
 import zio.internal.macros.LayerMacros
 
 private[test] trait SpecVersionSpecific[-R, +E] { self: Spec[R, E] =>

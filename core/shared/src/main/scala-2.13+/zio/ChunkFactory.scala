@@ -18,8 +18,7 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
-import scala.collection.{IterableOnce, StrictOptimizedSeqFactory}
-import scala.collection.mutable.Builder
+import scala.collection.{IterableOnce, StrictOptimizedSeqFactory, mutable}
 
 private[zio] trait ChunkFactory extends StrictOptimizedSeqFactory[Chunk] {
 
@@ -31,4 +30,9 @@ private[zio] trait ChunkFactory extends StrictOptimizedSeqFactory[Chunk] {
         iterableOnce.iterator.foreach(chunkBuilder.addOne)
         chunkBuilder.result()
     }
+
+  final protected def fromArraySeq[A](seq: mutable.ArraySeq[A]): Chunk[A] = {
+    val arr = seq.array
+    Chunk.fromArray(Array.copyAs(arr, arr.length)(seq.elemTag)).asInstanceOf[Chunk[A]]
+  }
 }
