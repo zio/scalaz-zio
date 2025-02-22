@@ -168,7 +168,7 @@ private[stream] trait ZStreamPlatformSpecificConstructors {
   )(implicit trace: Trace): ZStream[R, E, A] =
     asyncInterrupt(k => register(k).toRight(ZIO.unit), outputBuffer)
 
-  trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
+  private[stream] trait ZStreamConstructorPlatformSpecific extends ZStreamConstructorLowPriority1
 
   def fromFile(file: => String, chunkSize: => Int = ZStream.DefaultChunkSize)(implicit
     trace: Trace

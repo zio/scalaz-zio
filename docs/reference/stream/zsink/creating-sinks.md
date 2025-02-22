@@ -26,7 +26,7 @@ val head: ZIO[Any, Nothing, Option[Int]]             = ZStream(1, 2, 3, 4).run(s
 **ZSink.last** — It consumes all elements of a stream and returns the last element of the stream:
 
 ```scala mdoc:silent:nest
-val sink: ZSink[Any, Nothing, Int, Int, Option[Int]] = ZSink.last[Int]
+val sink: ZSink[Any, Nothing, Int, Nothing, Option[Int]] = ZSink.last[Int]
 val last: ZIO[Any, Nothing, Option[Int]]                 = ZStream(1, 2, 3, 4).run(sink)
 // Result: Some(4)
 ```

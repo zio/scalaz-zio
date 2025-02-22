@@ -2,7 +2,7 @@ package zio.test
 
 import zio.{ZIO, ZLayer}
 
-trait SpecVersionSpecific[-R, +E] { self: Spec[R, E] =>
+private[test] trait SpecVersionSpecific[-R, +E] { self: Spec[R, E] =>
 
   /**
    * Automatically assembles a layer for the spec, translating it up a level.

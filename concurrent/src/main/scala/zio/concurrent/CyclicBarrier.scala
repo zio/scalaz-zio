@@ -29,7 +29,7 @@ final class CyclicBarrier private (
     _lock.get.flatMap(_.fail(()).unit)
 
   private val succeed: UIO[Unit] =
-    _lock.get.flatMap(_.succeed(()).unit)
+    _lock.get.flatMap(_.succeedUnit.unit)
 
   /** The number of parties required to trip this barrier. */
   def parties: Int = _parties

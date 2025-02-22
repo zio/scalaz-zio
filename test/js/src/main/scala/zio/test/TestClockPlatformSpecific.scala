@@ -19,7 +19,7 @@ package zio.test
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 import zio.{Duration, Scheduler, Trace, UIO, Unsafe, ZIO}
 
-trait TestClockPlatformSpecific { self: TestClock.Test =>
+private[test] trait TestClockPlatformSpecific { self: TestClock.Test =>
 
   def scheduler(implicit trace: Trace): UIO[Scheduler] =
     ZIO.runtime[Any].map { runtime =>

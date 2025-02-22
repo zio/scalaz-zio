@@ -41,7 +41,8 @@ object ThreadLocalBridge {
 
   private class FiberRefTrackingSupervisor extends Supervisor[Unit] {
 
-    private val trackedRefs: Ref.Atomic[Set[(FiberRef[_], Any => Unit)]] = Ref.Atomic(new AtomicReference(Set.empty))
+    private val trackedRefs: Ref.Atomic[Set[(FiberRef[_], Any => Unit)]] =
+      Ref.unsafe.make(Set.empty[(FiberRef[_], Any => Unit)])(Unsafe)
 
     override def value(implicit trace: Trace): UIO[Unit] = ZIO.unit
 

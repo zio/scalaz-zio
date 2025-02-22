@@ -3,20 +3,20 @@ import sbt.*
 object Dependencies {
   // Runtime dependencies
   val JunitVersion                 = "4.13.2"
-  val JunitPlatformEngineVersion   = "1.11.3"
-  val IzumiReflectVersion          = "2.3.10"
+  val JunitPlatformEngineVersion   = "1.11.4"
+  val IzumiReflectVersion          = "3.0.1"
   val MagnoliaScala2Version        = "1.1.10"
-  val MagnoliaScala3Version        = "1.3.8"
-  val RefinedVersion               = "0.11.2"
+  val MagnoliaScala3Version        = "1.3.14"
+  val RefinedVersion               = "0.11.3"
   val ScalaCheckVersion            = "1.18.1"
   val ScalaJavaTimeVersion         = "2.6.0"
-  val ScalaCollectionCompatVersion = "2.12.0"
+  val ScalaCollectionCompatVersion = "2.13.0"
   val ScalaNativeCryptoVersion     = "0.2.0"
   val ScalaSecureRandomVersion     = "1.0.0"
   val ScalaJsDomVersion            = "2.8.0"
 
   // Documentations and example dependencies
-  val CatsEffectVersion = "3.5.5"
+  val CatsEffectVersion = "3.5.7"
   val DoobieVersion     = "1.0.0-RC5"
   val Fs2Version        = "3.11.0"
   val Http4sVersion     = "0.23.29"
