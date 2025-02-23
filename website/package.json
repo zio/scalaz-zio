@@ -36,7 +36,7 @@
     "@zio.dev/zio-json": "0.7.29",
     "@zio.dev/zio-kafka": "2.11.0",
     "@zio.dev/zio-lambda": "1.0.5",
-    "@zio.dev/zio-logging": "2.4.0",
+    "@zio.dev/zio-logging": "2.5.0",
     "@zio.dev/zio-meta": "0.0.0--21-54bc2e8b-SNAPSHOT",
     "@zio.dev/zio-metrics-connectors": "2.3.1",
     "@zio.dev/zio-parser": "0.1.9",
