@@ -17,7 +17,7 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
   def derive[F <: codec.Format](format: F)(implicit deriver: Deriver[format.TypeClass]): format.TypeClass[A] =
     ??? // TODO
 
-  def deriving[TC[_]](implicit deriver: Deriver[TC]): DerivationBuilder[TC, A] = ??? // TODO
+  def deriving[F <: codec.Format](format: F)(implicit deriver: Deriver[format.TypeClass]): DerivationBuilder[format.TypeClass, A] = ??? // TODO
 
   def decode[F <: codec.Format](format: F)(decodeInput: format.DecodeInput): Either[codec.CodecError, A] =
     ??? // TODO
