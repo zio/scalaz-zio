@@ -370,7 +370,7 @@ sealed abstract class ZManaged[-R, +E, +A] extends ZManagedVersionSpecific[R, E,
     failure: E => ZManaged[R1, E2, B],
     success: A => ZManaged[R1, E2, B]
   )(implicit ev: CanFail[E], trace: Trace): ZManaged[R1, E2, B] =
-    foldCauseManaged(_.failureOrCause.fold(failure, ZManaged.failCause(_)), success)
+    foldCauseManaged(_.foldFailureOrCause(failure, ZManaged.failCause(_)), success)
 
   /**
    * Creates a `ZManaged` value that acquires the original resource in a fiber,

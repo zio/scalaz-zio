@@ -133,6 +133,17 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
   }
 
   /**
+   * Calls the `failure` function with the first checked error if available, if
+   * there are no checked errors, calls the `cause` function with the rest of
+   * the `Cause` that is known to contain only `Die` or `Interrupt` causes.
+   */
+  final def foldFailureOrCause[Z](failure: E => Z, cause: Cause[Nothing] => Z): Z =
+    failureOption match {
+      case Some(error) => failure(error)
+      case None        => cause(self.asInstanceOf[Cause[Nothing]]) // no E inside this cause, can safely cast
+    }
+
+  /**
    * Retrieve the first checked error and its trace on the `Left` if available,
    * if there are no checked errors return the rest of the `Cause` that is known
    * to contain only `Die` or `Interrupt` causes.
