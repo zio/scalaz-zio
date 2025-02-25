@@ -4323,16 +4323,26 @@ object ZStream extends ZStreamPlatformSpecificConstructors {
     ZStream.succeed((is, chunkSize)).flatMap { case (is, chunkSize) =>
       ZStream.repeatZIOChunkOption {
         for {
-          bufArray  <- ZIO.succeed(Array.ofDim[Byte](chunkSize))
-          bytesRead <- ZIO.attemptBlockingIO(is.read(bufArray)).asSomeError
+          bufArray <- ZIO.succeed(Array.ofDim[Byte](chunkSize))
+          bytesRead <-
+            if (is.available() > 0)
+              ZIO.succeed(is.read(bufArray))
+            else
+              ZIO
+                .attemptBlockingIO(is.read(bufArray))
+                .disconnect
+                .refineOrDie { case ex: IOException =>
+                  ex
+                }
+                .mapError(Option(_))
           bytes <- if (bytesRead < 0)
                      Exit.failNone
                    else if (bytesRead == 0)
                      Exit.emptyChunk
                    else if (bytesRead < chunkSize)
-                     ZIO.succeed(Chunk.fromArray(bufArray).take(bytesRead))
+                     Exit.succeed(Chunk.fromArray(bufArray).take(bytesRead))
                    else
-                     ZIO.succeed(Chunk.fromArray(bufArray))
+                     Exit.succeed(Chunk.fromArray(bufArray))
         } yield bytes
       }
     }
