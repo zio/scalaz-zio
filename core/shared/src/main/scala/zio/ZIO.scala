@@ -6377,6 +6377,21 @@ object ZIO extends ZIOCompanionPlatformSpecific with ZIOCompanionVersionSpecific
           }
         }
     }
+
+  private[zio] def unfoldPull[R, A](
+    runtime: Runtime[R],
+    pull: ZIO[R, Option[Throwable], A]
+  )(implicit trace: Trace, unsafe: Unsafe): Iterator[A] =
+    runtime.unsafe.run(pull) match {
+      case Exit.Success(value) =>
+        Iterator.single(value) ++ unfoldPull(runtime, pull)
+      case Exit.Failure(cause) =>
+        cause.failureOrCause match {
+          case Left(None)    => Iterator.empty
+          case Left(Some(e)) => Exit.fail(e).getOrThrow()
+          case Right(c)      => Exit.failCause(c).getOrThrowFiberFailure()
+        }
+    }
 }
 
 /**
@@ -6528,10 +6543,15 @@ sealed trait Exit[+E, +A] extends ZIO[Any, E, A] { self =>
   }
 
   final def getOrThrow()(implicit ev: E <:< Throwable, unsafe: Unsafe): A =
-    getOrElse(cause => throw cause.squashTrace)
+    getOrElse(cause => throw cause.traced(externalStackTrace).squashTrace)
 
   final def getOrThrowFiberFailure()(implicit unsafe: Unsafe): A =
-    getOrElse(c => throw FiberFailure(c))
+    getOrElse(cause => throw FiberFailure(cause.traced(externalStackTrace)))
+
+  private def externalStackTrace: StackTrace = {
+    val stackTrace = new Throwable().getStackTrace.dropWhile(_.getClassName.startsWith("zio.Exit"))
+    StackTrace.fromJava(FiberId.None, stackTrace)(Trace.empty)
+  }
 
   /**
    * Determines if the result is a failure.

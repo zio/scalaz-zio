@@ -18,6 +18,8 @@ package zio
 
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
+import java.io.{PrintStream, PrintWriter}
+
 /**
  * Represents a failure in a fiber. This could be caused by some non-
  * recoverable error, such as a defect or system error, by some typed error, or
@@ -27,21 +29,27 @@ import zio.stacktracer.TracingImplicits.disableAutoTrace
  * better integrate with Scala exception handling.
  */
 final case class FiberFailure(cause: Cause[Any]) extends Throwable(null, null, true, false) {
-  override def getMessage: String = cause.unified.headOption.fold("<unknown>")(_.message)
+  override def getMessage: String =
+    cause.unified.headOption.fold("<unknown>")(_.message)
 
-  override def getStackTrace(): Array[StackTraceElement] =
-    cause.unified.headOption.fold[Chunk[StackTraceElement]](Chunk.empty)(_.trace).toArray
+  override def getStackTrace: Array[StackTraceElement] =
+    cause.trace.toJava.toArray
 
-  override def getCause(): Throwable =
-    cause.find { case Cause.Die(throwable, _) => throwable }
-      .orElse(cause.find { case Cause.Fail(value: Throwable, _) => value })
-      .orNull
+  override def getCause: Throwable =
+    cause.dieOption.orElse(cause.failureOption.collect { case t: Throwable => t }).orNull
+
+  // Note: unlike standard Java exceptions, this includes the stack trace.
+  override def toString: String =
+    cause.prettyPrint
+
+  override def printStackTrace(s: PrintStream): Unit =
+    cause.prettyPrintWith(s.println)(Unsafe.unsafe)
+
+  override def printStackTrace(s: PrintWriter): Unit =
+    cause.prettyPrintWith(s.println)(Unsafe.unsafe)
 
   def fillSuppressed()(implicit unsafe: Unsafe): Unit =
-    if (getSuppressed().length == 0) {
-      cause.unified.iterator.drop(1).foreach(unified => addSuppressed(unified.toThrowable))
-    }
-
-  override def toString =
-    cause.prettyPrint
+    if (getSuppressed.length == 0)
+      for (unified <- cause.unified.iterator.drop(1))
+        addSuppressed(unified.toThrowable)
 }

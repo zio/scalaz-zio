@@ -63,7 +63,7 @@ object ZTestEventSpec extends ZIOSpecDefault {
           Some(
             new Exception(
               s"""|    ${ConsoleUtils.bold(red("- test"))}
-                  |      Exception in thread "zio-fiber-" java.lang.String: boom""".stripMargin
+                  |      java.lang.String: boom""".stripMargin
             )
           ),
           0L,
