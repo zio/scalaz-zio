@@ -8,19 +8,27 @@ import zio.blocks.schema.binding.Binding
  * build up values of that type.
  */
 final case class Schema[A](reflect: Reflect.Bound[A]) {
+  private var cache: Map[codec.Format, Any] = Map.empty
+
+  private def getInstance[F <: codec.Format](format: F): format.TypeClass[A] = {
+    val derived = cache
+      .asInstanceOf[Map[codec.Format, format.TypeClass[A]]]
+      .getOrElse(format, { val d = derive(format); cache = cache.updated(format, d); d })
+
+    derived
+  }
+
   def defaultValue[B](optic: Optic.Bound[A, B], value: => B): Schema[A] = ??? // TODO
 
   def defaultValue(value: => A): Schema[A] = ??? // TODO
 
-  def derive[TC[_]](implicit deriver: Deriver[TC]): TC[A] = deriving[TC].derive
-
-  def derive[F <: codec.Format](format: F)(implicit deriver: Deriver[format.TypeClass]): format.TypeClass[A] =
+  def derive[F <: codec.Format](format: F): format.TypeClass[A] =
     ??? // TODO
 
-  def deriving[F <: codec.Format](format: F)(implicit deriver: Deriver[format.TypeClass]): DerivationBuilder[format.TypeClass, A] = ??? // TODO
+  def deriving[F <: codec.Format](format: F): DerivationBuilder[format.TypeClass, A] = ??? // TODO
 
   def decode[F <: codec.Format](format: F)(decodeInput: format.DecodeInput): Either[codec.CodecError, A] =
-    ??? // TODO
+    getInstance(format).decode(decodeInput)
 
   def doc: Doc = ??? // TODO
 
@@ -30,7 +38,8 @@ final case class Schema[A](reflect: Reflect.Bound[A]) {
 
   def doc[B](optic: Optic.Bound[A, B])(value: String): Schema[A] = ??? // TODO
 
-  def encode[F <: codec.Format](format: F)(value: A): format.EncodeOutput = ??? // TODO
+  def encode[F <: codec.Format](format: F)(output: format.EncodeOutput)(value: A): Unit =
+    getInstance(format).encode(value, output)
 
   def examples: List[A] = ??? // TODO
 
