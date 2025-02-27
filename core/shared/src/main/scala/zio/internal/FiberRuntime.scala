@@ -753,6 +753,33 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
   private[zio] def isDone(): Boolean =
     _exitValue ne null
 
+  private[zio] def hasChildrenAlive(implicit trace: Trace): UIO[Boolean] =
+    ZIO.withFiberRuntime[Any, Nothing, Boolean] { (parent, _) =>
+      if (parent.id == self.id) Exit.boolean(hasChildrenAliveUnsafe)
+      else if (_exitValue ne null) Exit.`false`
+      else {
+        ZIO.async { cb =>
+          tell(FiberMessage.Stateful { state =>
+            val res = Exit.boolean(state.hasChildrenAliveUnsafe)
+            cb(res)
+          })
+        }
+      }
+    }
+
+  private def hasChildrenAliveUnsafe: Boolean = {
+    val children0 = _children
+    if ((children0 eq null) || (_exitValue ne null)) false
+    else {
+      val it = children0.iterator()
+      while (it.hasNext) {
+        val child = it.next()
+        if ((child ne null) && child.isAlive()) return true
+      }
+      false
+    }
+  }
+
   /**
    * Determines if the fiber is interrupted.
    *

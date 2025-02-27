@@ -195,11 +195,9 @@ object TestSystem extends Serializable {
   def live(data: Data): Layer[Nothing, TestSystem] = {
     implicit val trace: Trace = Tracer.newTrace
     ZLayer.scoped {
-      for {
-        ref <- ZIO.succeed(Ref.unsafe.make(data)(Unsafe.unsafe))
-        test = Test(ref)
-        _   <- ZIO.withSystemScoped(test)
-      } yield test
+      val ref  = Ref.unsafe.make(data)(Unsafe)
+      val test = Test(ref)
+      ZIO.withSystemScoped(test).as(test)
     }
   }
 
