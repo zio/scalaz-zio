@@ -61,6 +61,46 @@ final class TSemaphore private (val permits: TRef[Long]) extends Serializable {
     acquireBetween(n, n).unit
 
   /**
+   * Tries to acquire a single permit in a transactional context. Returns `true`
+   * if the permit was acquired, otherwise `false`.
+   */
+  def tryAcquire: USTM[Boolean] = tryAcquireN(1L)
+
+  /**
+   * Tries to acquire the specified number of permits in a transactional
+   * context. Returns `true` if the permits were acquired, otherwise `false`.
+   */
+  def tryAcquireN(n: Long): USTM[Boolean] =
+    ZSTM.Effect { (journal, _, _) =>
+      assertNonNegative(n)
+
+      val available: Long = permits.unsafeGet(journal)
+      if (available >= n) {
+        permits.unsafeSet(journal, available - n)
+        true
+      } else false
+    }
+
+  /**
+   * Executes the specified effect, acquiring `1` permit if available and
+   * releasing them after execution. Returns `None` if no permits were
+   * available.
+   */
+  def tryWithPermit[R, E, A](zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    tryWithPermits(1L)(zio)
+
+  /**
+   * Executes the specified effect, acquiring `n` permits if available and
+   * releasing them after execution. Returns `None` if no permits were
+   * available.
+   */
+  def tryWithPermits[R, E, A](n: Long)(zio: ZIO[R, E, A])(implicit trace: Trace): ZIO[R, E, Option[A]] =
+    tryAcquireN(n).commit.flatMap {
+      case true  => zio.onExit(_ => releaseN(n).commit).asSome
+      case false => ZIO.succeed(None)
+    }
+
+  /**
    * Acquire at least `min` permits and at most `max` permits in a transactional
    * context.
    */
