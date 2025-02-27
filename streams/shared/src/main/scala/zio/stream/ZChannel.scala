@@ -2,8 +2,8 @@ package zio.stream
 
 import zio.{ZIO, _}
 import zio.stacktracer.TracingImplicits.disableAutoTrace
+import zio.stream.internal.ChannelExecutor.ChannelState
 import zio.stream.internal.{AsyncInputConsumer, AsyncInputProducer, ChannelExecutor, SingleProducerAsyncInput}
-import ChannelExecutor.ChannelState
 
 import java.util.concurrent.atomic.AtomicReference
 
@@ -1299,27 +1299,31 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
    * emitted element.
    */
   final def toPull(implicit trace: Trace): ZIO[Env with Scope, Nothing, ZIO[Env, OutErr, Either[OutDone, OutElem]]] =
-    ZIO.scope.flatMap(scope => self.toPullIn(scope))
+    ZIO.scopeWith(self.toPullIn(_))
 
   final def toPullIn(
     scope: => Scope
   )(implicit trace: Trace): ZIO[Env, Nothing, ZIO[Env, OutErr, Either[OutDone, OutElem]]] =
-    ZIO.uninterruptible {
+    ZIO.suspendSucceed {
+      val scope0 = scope
+
       val exec = new ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone](
-        () => self,
-        null,
-        identity[URIO[Env, Any]]
+        initialChannel = () => self,
+        providedEnv = null,
+        executeCloseLastSubstream = ZIO.identityFn
       )
-      for {
-        environment <- ZIO.environment[Env]
-        scope       <- ZIO.succeed(scope)
-        _ <- scope.addFinalizerExit { exit =>
-               val finalizer = exec.close(exit)
-               if (finalizer ne null) finalizer.provideEnvironment(environment)
-               else ZIO.unit
-             }
-      } yield exec
-    }.map { exec =>
+
+      val setFinalizer: ZIO[Env, Nothing, Unit] =
+        ZIO
+          .environmentWithZIO[Env] { environment =>
+            scope0.addFinalizerExit { exit =>
+              val finalizer = exec.close(exit)
+              if (finalizer ne null) finalizer.provideEnvironment(environment)
+              else Exit.unit
+            }
+          }
+          .uninterruptible
+
       def interpret(
         channelState: ChannelExecutor.ChannelState[Env, OutErr]
       ): ZIO[Env, OutErr, Either[OutDone, OutElem]] =
@@ -1333,34 +1337,45 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
             ZIO.succeed(Right(exec.getEmit))
           case ChannelState.Effect(zio) =>
             zio *> interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
-          case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
+          case r: ChannelState.Read[Env, OutErr] =>
+            val continue = () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
+
             ChannelExecutor.readUpstream[Env, OutErr, OutErr, Either[OutDone, OutElem]](
-              r.asInstanceOf[ChannelState.Read[Env, OutErr]],
-              () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]),
-              Exit.failCause
+              r = r,
+              onSuccess = continue,
+              onFailure = Exit.failCause
             )
         }
 
-      ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+      val pull: ZIO[Env, OutErr, Either[OutDone, OutElem]] =
+        ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+
+      setFinalizer.as(pull)
     }
 
   final def toPullInAlt(
     scope: => Scope
   )(implicit trace: Trace): ZIO[Env, Nothing, ZIO[Env, Either[OutErr, OutDone], OutElem]] =
-    ZIO.uninterruptible {
+    ZIO.suspendSucceed {
+      val scope0 = scope
+
       val exec = new ChannelExecutor[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone](
-        () => self,
-        null,
-        ZIO.identityFn[URIO[Env, Any]]
+        initialChannel = () => self,
+        providedEnv = null,
+        executeCloseLastSubstream = ZIO.identityFn[URIO[Env, Any]]
       )
-      ZIO.environmentWithZIO[Env] { environment =>
-        scope.addFinalizerExit { exit =>
-          val finalizer = exec.close(exit)
-          if (finalizer ne null) finalizer.provideEnvironment(environment)
-          else ZIO.unit
-        }
-      } *> Exit.succeed(exec)
-    }.map { exec =>
+
+      val setFinalizer: ZIO[Env, Nothing, Unit] =
+        ZIO
+          .environmentWithZIO[Env] { environment =>
+            scope0.addFinalizerExit { exit =>
+              val finalizer = exec.close(exit)
+              if (finalizer ne null) finalizer.provideEnvironment(environment)
+              else Exit.unit
+            }
+          }
+          .uninterruptible
+
       def interpret(
         channelState: ChannelExecutor.ChannelState[Env, OutErr]
       ): ZIO[Env, Either[OutErr, OutDone], OutElem] =
@@ -1373,16 +1388,24 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
           case ChannelState.Emit =>
             Exit.succeed(exec.getEmit)
           case ChannelState.Effect(zio) =>
-            zio.mapError(Left(_)) *> interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
-          case r @ ChannelState.Read(upstream, onEffect, onEmit, onDone) =>
+            zio.foldZIO(
+              failure = e => Exit.fail(Left(e)),
+              success = _ => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
+            )
+          case r: ChannelState.Read[Env, OutErr] =>
+            val continue = () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]])
+
             ChannelExecutor.readUpstream[Env, OutErr, Either[OutErr, OutDone], OutElem](
-              r.asInstanceOf[ChannelState.Read[Env, OutErr]],
-              () => interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]),
-              Exit.failCause(_).mapError(Left(_))
+              r = r,
+              onSuccess = continue,
+              onFailure = Exit.failCause(_).mapError(Left(_))
             )
         }
 
-      ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+      val pull: ZIO[Env, Either[OutErr, OutDone], OutElem] =
+        ZIO.suspendSucceed(interpret(exec.run().asInstanceOf[ChannelState[Env, OutErr]]))
+
+      setFinalizer.as(pull)
     }
 
   /** Converts this channel to a [[ZPipeline]] */
