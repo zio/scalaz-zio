@@ -1287,7 +1287,7 @@ sealed trait ZIO[-R, +E, +A]
   final def provideSomeEnvironment[R0](
     f: ZEnvironment[R0] => ZEnvironment[R]
   )(implicit trace: Trace): ZIO[R0, E, A] =
-    ZIO.environmentWithZIO(r0 => self.provideEnvironment(f(r0)))
+    FiberRef.currentEnvironment.locallyWith(f)(self.asInstanceOf[ZIO[Any, E, A]])
 
   /**
    * Splits the environment into two parts, providing one part using the
