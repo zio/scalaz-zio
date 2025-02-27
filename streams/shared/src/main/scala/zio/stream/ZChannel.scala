@@ -138,7 +138,7 @@ sealed trait ZChannel[-Env, -InErr, -InElem, -InDone, +OutErr, +OutElem, +OutDon
   ](
     f: OutErr => ZChannel[Env1, InErr1, InElem1, InDone1, OutErr2, OutElem1, OutDone1]
   )(implicit trace: Trace): ZChannel[Env1, InErr1, InElem1, InDone1, OutErr2, OutElem1, OutDone1] =
-    catchAllCause((cause: Cause[OutErr]) => cause.failureOrCause.fold(f(_), ZChannel.refailCause))
+    catchAllCause((cause: Cause[OutErr]) => cause.foldFailureOrCause(f(_), ZChannel.refailCause))
 
   /**
    * Returns a new channel that is the same as this one, except if this channel
@@ -2126,7 +2126,7 @@ object ZChannel {
     error: InErr => ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone],
     done: InDone => ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone]
   )(implicit trace: Trace): ZChannel[Env, InErr, InElem, InDone, OutErr, OutElem, OutDone] =
-    readWithCause(in, (c: Cause[InErr]) => c.failureOrCause.fold(error, ZChannel.refailCause(_)), done)
+    readWithCause(in, (c: Cause[InErr]) => c.foldFailureOrCause(error, ZChannel.refailCause(_)), done)
 
   def readOrFail[E, In](e: => E)(implicit trace: Trace): ZChannel[Any, Any, In, Any, E, Nothing, In] =
     Read[Any, Any, In, Any, Any, E, Nothing, Nothing, In, In](

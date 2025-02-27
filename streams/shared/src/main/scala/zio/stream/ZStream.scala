@@ -595,7 +595,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def catchAll[R1 <: R, E2, A1 >: A](
     f: E => ZStream[R1, E2, A1]
   )(implicit ev: CanFail[E], trace: Trace): ZStream[R1, E2, A1] =
-    catchAllCause(_.failureOrCause.fold(f, ZStream.failCause(_)))
+    catchAllCause(_.foldFailureOrCause(f, ZStream.failCause(_)))
 
   /**
    * Switches over to the stream produced by the provided function in case this
@@ -3269,7 +3269,7 @@ final class ZStream[-R, +E, +A] private (val channel: ZChannel[R, Any, Any, Any,
   def tapError[R1 <: R, E1 >: E](
     f: E => ZIO[R1, E1, Any]
   )(implicit ev: CanFail[E], trace: Trace): ZStream[R1, E1, A] =
-    tapErrorCause(_.failureOrCause.fold(f, _ => ZIO.unit))
+    tapErrorCause(_.foldFailureOrCause(f, _ => ZIO.unit))
 
   /**
    * Returns a stream that effectfully "peeks" at the cause of failure of the
