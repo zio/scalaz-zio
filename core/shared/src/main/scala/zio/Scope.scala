@@ -218,7 +218,7 @@ object Scope {
     // the finalizers are already in correct order.
     final val initial: State = Running(-1L, LongMap.empty)
 
-    final case class Exited(nextKey: Long, exit: Exit[Any, Any])            extends State
+    final case class Exited(exit: Exit[Any, Any])                           extends State
     final case class Running(nextKey: Long, finalizers: LongMap[Finalizer]) extends State
   }
 
@@ -242,8 +242,10 @@ object Scope {
       ZIO.suspendSucceed {
         var b = null.asInstanceOf[UIO[B]]
         while (b eq null) {
-          val current        = ref.get()
-          val (value, state) = f(current)
+          val current = ref.get()
+          val kv      = f(current)
+          val value   = kv._1
+          val state   = kv._2
           if (ref.compareAndSet(current, state)) b = value
         }
         b
@@ -264,10 +266,10 @@ object Scope {
             Exit.succeed(release(nextKey, _)),
             Running(next(nextKey), fins.updated(nextKey, finalizer))
           )
-        case Exited(nextKey, exit) =>
+        case Exited(exit) =>
           (
             ZIO.suspendSucceed(finalizer(exit)) *> ReleaseMap.noopFinalizer,
-            Exited(next(nextKey), exit)
+            Exited(exit)
           )
       }
 
@@ -283,10 +285,10 @@ object Scope {
             Exit.unit,
             Running(next(nextKey), fins.updated(nextKey, finalizer))
           )
-        case Exited(nextKey, exit) =>
+        case Exited(exit) =>
           (
             ZIO.suspendSucceed(finalizer(exit).unit),
-            Exited(next(nextKey), exit)
+            Exited(exit)
           )
       }
 
@@ -316,47 +318,39 @@ object Scope {
     def releaseAll(exit: Exit[Any, Any], execStrategy: ExecutionStrategy)(implicit trace: Trace): UIO[Unit] =
       modify {
         case s: Exited => (Exit.unit, s)
-        case Running(nextKey, fins) if fins.size == 1 =>
-          (
-            ZIO.suspendSucceed(fins.values.head(exit).unit),
-            Exited(nextKey, exit)
-          )
-        case Running(nextKey, fins) =>
-          execStrategy match {
-            case ExecutionStrategy.Sequential =>
-              (
-                ZIO.suspendSucceed {
-                  var error = null.asInstanceOf[Cause[Nothing]]
-                  val it    = fins.values.iterator
+        case Running(_, fins) =>
+          val finalizer =
+            if (fins.isEmpty)
+              Exit.unit
+            else if (fins.firstKey == fins.lastKey) // Most efficient way of checking for size == 1 on LongMap
+              ZIO.suspendSucceed(fins(fins.firstKey)(exit)).unit
+            else {
+              execStrategy match {
+                case ExecutionStrategy.Sequential =>
+                  ZIO.suspendSucceed {
+                    var error = null.asInstanceOf[Cause[Nothing]]
+                    val it    = fins.values.iterator
+                    ZIO
+                      .whileLoop(it.hasNext)(it.next()(exit).exit) {
+                        case _: Exit.Success[?]               => ()
+                        case Exit.Failure(c) if error eq null => error = c
+                        case Exit.Failure(c)                  => error = error ++ c
+                      }
+                      .flatMap(_ => if (error eq null) Exit.unit else Exit.failCause(error))
+                  }
+                case ExecutionStrategy.Parallel =>
                   ZIO
-                    .whileLoop(it.hasNext)(it.next()(exit).exit) {
-                      case _: Exit.Success[?]               => ()
-                      case Exit.Failure(c) if error eq null => error = c
-                      case Exit.Failure(c)                  => error = error ++ c
-                    }
-                    .flatMap(_ => if (error eq null) Exit.unit else Exit.failCause(error))
-                },
-                Exited(nextKey, exit)
-              )
+                    .foreachPar(fins.values)(fin => fin(exit).exit)
+                    .flatMap(Exit.collectAllParDiscard)
 
-            case ExecutionStrategy.Parallel =>
-              (
-                ZIO
-                  .foreachPar(fins.values)(fin => fin(exit).exit)
-                  .flatMap(Exit.collectAllParDiscard),
-                Exited(nextKey, exit)
-              )
-
-            case ExecutionStrategy.ParallelN(n) =>
-              (
-                ZIO
-                  .foreachPar(fins.values)(fin => fin(exit).exit)
-                  .flatMap(Exit.collectAllParDiscard)
-                  .withParallelism(n),
-                Exited(nextKey, exit)
-              )
-
-          }
+                case ExecutionStrategy.ParallelN(n) =>
+                  ZIO
+                    .foreachPar(fins.values)(fin => fin(exit).exit)
+                    .flatMap(Exit.collectAllParDiscard)
+                    .withParallelism(n)
+              }
+            }
+          (finalizer, Exited(exit))
       }
 
     /**
