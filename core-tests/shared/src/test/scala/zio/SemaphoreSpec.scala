@@ -53,12 +53,11 @@ object SemaphoreSpec extends ZIOBaseSpec {
         permits <- sem.available
       } yield assertTrue(permits == 3L && ans.isDefined)
     },
-    test("tryWithPermits returns None if requested permits in negative number") {
+    test("tryWithPermits fails if requested permits in negative number") {
       for {
-        sem     <- Semaphore.make(3L)
-        ans     <- sem.tryWithPermits(-1L)(ZIO.unit)
-        permits <- sem.available
-      } yield assertTrue(permits == 3L && ans.isEmpty)
+        sem <- Semaphore.make(3L)
+        ans <- sem.tryWithPermits(-1L)(ZIO.unit).exit
+      } yield assert(ans)(dies(isSubtype[IllegalArgumentException](anything)))
     },
     test("awaiting returns the count of waiting fibers") {
       for {

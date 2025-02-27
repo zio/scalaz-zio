@@ -133,7 +133,8 @@ object Semaphore {
         case class Reservation(acquire: UIO[Unit], release: UIO[Any])
 
         def tryReserve(n: Long)(implicit trace: Trace): UIO[Option[Reservation]] =
-          if (n <= 0) ZIO.succeed(None)
+          if (n < 0) ZIO.die(new IllegalArgumentException(s"Unexpected negative `$n` permits requested."))
+          else if (n == 0L) ZIO.succeed(Some(Reservation(ZIO.unit, ZIO.unit)))
           else
             ref.modify {
               case Right(permits) if permits >= n =>
