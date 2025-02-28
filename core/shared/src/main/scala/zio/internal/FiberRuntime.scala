@@ -1126,7 +1126,8 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
               }
 
             case update0: UpdateRuntimeFlagsWithin.DynamicNoBox[Any, Any, Any] =>
-              updateLastTrace(update0.trace)
+              val trace = update0.trace
+              updateLastTrace(trace)
               val updateFlags     = update0.update
               val oldRuntimeFlags = _runtimeFlags
               val newRuntimeFlags = RuntimeFlags.patch(updateFlags)(oldRuntimeFlags)
@@ -1141,11 +1142,11 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
                 cur = Exit.Failure(getInterruptedCause())
               } else {
                 // Impossible to short circuit, so record the changes:
-                val _           = patchRuntimeFlagsOnly(updateFlags)
+                patchRuntimeFlagsOnly(updateFlags)
                 val revertFlags = RuntimeFlags.diff(newRuntimeFlags, oldRuntimeFlags)
 
                 // Since we updated the flags, we need to revert them:
-                val k = ZIO.UpdateRuntimeFlags(update0.trace, revertFlags)
+                val k = ZIO.UpdateRuntimeFlags(trace, revertFlags)
 
                 stackIndex = pushStackFrame(k, stackIndex)
 
@@ -1284,7 +1285,20 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
    * '''NOTE''': This method must be invoked by the fiber itself.
    */
   private def setExitValue(e: Exit[E, A]): Unit = {
-    def reportExitValue(v: Exit[E, A]): Unit = v match {
+    _exitValue = e
+
+    val runtimeMetricsEnabled = RuntimeFlags.runtimeMetrics(_runtimeFlags)
+
+    if (runtimeMetricsEnabled) {
+      val startTimeMillis = fiberId.startTimeMillis
+      val endTimeMillis   = java.lang.System.currentTimeMillis()
+      val lifetime        = (endTimeMillis - startTimeMillis) / 1000.0
+
+      val tags = getFiberRef(FiberRef.currentTags)
+      Metric.runtime.fiberLifetimes.unsafe.update(lifetime, tags)(Unsafe)
+    }
+
+    e match {
       case f: Exit.Failure[Any] =>
         try {
           val cause = f.cause
@@ -1297,7 +1311,7 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             )
           }
 
-          if (RuntimeFlags.runtimeMetrics(_runtimeFlags)) {
+          if (runtimeMetricsEnabled) {
             val tags = getFiberRef(FiberRef.currentTags)
             Metric.runtime.fiberFailures.unsafe.update(1, tags)(Unsafe)
             cause.foldContext(tags)(FiberRuntime.fiberFailureTracker)
@@ -1312,34 +1326,22 @@ final class FiberRuntime[E, A](fiberId: FiberId.Runtime, fiberRefs0: FiberRefs, 
             }
         }
       case _ =>
-        if (RuntimeFlags.runtimeMetrics(_runtimeFlags)) {
+        if (runtimeMetricsEnabled) {
           val tags = getFiberRef(FiberRef.currentTags)
           Metric.runtime.fiberSuccesses.unsafe.update(1, tags)(Unsafe)
         }
     }
 
-    _exitValue = e
-
-    if (RuntimeFlags.runtimeMetrics(_runtimeFlags)) {
-      val startTimeMillis = fiberId.startTimeMillis
-      val endTimeMillis   = java.lang.System.currentTimeMillis()
-      val lifetime        = (endTimeMillis - startTimeMillis) / 1000.0
-
-      val tags = getFiberRef(FiberRef.currentTags)
-      Metric.runtime.fiberLifetimes.unsafe.update(lifetime, tags)(Unsafe)
-    }
-
-    reportExitValue(e)
-
     // ensure we notify observers in the same order they subscribed to us
-    val iterator = observers.reverseIterator
+    val obs = observers
+    if (obs ne Nil) {
+      val it = obs.reverseIterator
+      while (it.hasNext) {
+        it.next().apply(e)
+      }
 
-    while (iterator.hasNext) {
-      val observer = iterator.next()
-
-      observer(e)
+      observers = Nil
     }
-    observers = Nil
   }
 
   private[zio] def setFiberRef[@specialized(SpecializeInt) A](fiberRef: FiberRef[A], value: A): Unit =
