@@ -364,6 +364,9 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
   final def isFailure: Boolean =
     failureOption.isDefined
 
+  final def isFailureOnly: Boolean =
+    foldContext(())(Folder.IsFailureOnly)
+
   /**
    * Determines if the `Cause` contains an interruption.
    */
@@ -395,6 +398,28 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
       None,
       (_, _, _, _) => None,
       (t, trace, spans, annotations) => Some(Die(t, trace, spans, annotations)),
+      (_, _, _, _) => None
+    )(
+      {
+        case (Some(l), Some(r)) => Some(Then(l, r))
+        case (Some(l), None)    => Some(l)
+        case (None, Some(r))    => Some(r)
+        case (None, None)       => None
+      },
+      {
+        case (Some(l), Some(r)) => Some(Both(l, r))
+        case (Some(l), None)    => Some(l)
+        case (None, Some(r))    => Some(r)
+        case (None, None)       => None
+      },
+      (causeOption, stackless) => causeOption.map(Stackless(_, stackless))
+    )
+
+  def keepFailures: Option[Cause[E]] =
+    foldLog[Option[Cause[E]]](
+      None,
+      (e, trace, spans, annotations) => Some(Fail(e, trace, spans, annotations)),
+      (_, _, _, _) => None,
       (_, _, _, _) => None
     )(
       {
@@ -816,6 +841,17 @@ object Cause extends Serializable {
       def failCase(context: Any, error: Any, stackTrace: StackTrace): Boolean            = false
       def dieCase(context: Any, t: Throwable, stackTrace: StackTrace): Boolean           = false
       def interruptCase(context: Any, fiberId: FiberId, stackTrace: StackTrace): Boolean = true
+
+      def bothCase(context: Any, left: Boolean, right: Boolean): Boolean           = left && right
+      def thenCase(context: Any, left: Boolean, right: Boolean): Boolean           = left && right
+      def stacklessCase(context: Any, value: Boolean, stackless: Boolean): Boolean = value
+    }
+
+    case object IsFailureOnly extends Folder[Any, Any, Boolean] {
+      def empty(context: Any): Boolean                                                   = true
+      def failCase(context: Any, error: Any, stackTrace: StackTrace): Boolean            = true
+      def dieCase(context: Any, t: Throwable, stackTrace: StackTrace): Boolean           = false
+      def interruptCase(context: Any, fiberId: FiberId, stackTrace: StackTrace): Boolean = false
 
       def bothCase(context: Any, left: Boolean, right: Boolean): Boolean           = left && right
       def thenCase(context: Any, left: Boolean, right: Boolean): Boolean           = left && right
