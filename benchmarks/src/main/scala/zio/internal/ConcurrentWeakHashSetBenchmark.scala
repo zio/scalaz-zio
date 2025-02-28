@@ -33,8 +33,8 @@ private[this] class AddContext extends BaseContext {
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2, time = 2)
-@Measurement(iterations = 2, time = 2)
+@Warmup(iterations = 10, time = 3)
+@Measurement(iterations = 10, time = 3)
 @Fork(1)
 private[this] class ConcurrentWeakHashSetAddBenchmark {
 
@@ -101,8 +101,8 @@ private[this] class RemoveContext extends BaseContext {
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2, time = 2)
-@Measurement(iterations = 2, time = 2)
+@Warmup(iterations = 10, time = 3)
+@Measurement(iterations = 10, time = 3)
 @Fork(1)
 private[this] class ConcurrentWeakHashSetRemoveBenchmark {
 
@@ -150,8 +150,8 @@ private[this] class IterateContext extends BaseContext {
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2, time = 2)
-@Measurement(iterations = 2, time = 2)
+@Warmup(iterations = 10, time = 3)
+@Measurement(iterations = 10, time = 3)
 @Fork(1)
 private[this] class ConcurrentWeakHashSetIterateBenchmark {
 
@@ -199,8 +199,8 @@ private[this] class ContainsContext extends BaseContext {
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2, time = 2)
-@Measurement(iterations = 2, time = 2)
+@Warmup(iterations = 10, time = 3)
+@Measurement(iterations = 10, time = 3)
 @Fork(1)
 private[this] class ConcurrentWeakHashSetContainsBenchmark {
 
