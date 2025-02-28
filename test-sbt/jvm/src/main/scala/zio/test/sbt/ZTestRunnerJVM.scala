@@ -93,14 +93,10 @@ final class ZTestRunnerJVM(val args: Array[String], val remoteArgs: Array[String
     renderer = testArgs.testRenderer // Ensures summary is pretty in same style as rest of the test output
     val sharedTestOutputLayer = ExecutionEventPrinter.live(console, testArgs.testEventRenderer) >>> TestOutput.live
 
-    val specTasks: Array[ZIOSpecAbstract] = defs.map(disectTask(_, testClassLoader))
-    val sharedLayerFromSpecs: ZLayer[Any, Any, Any] =
-      (Scope.default ++ ZIOAppArgs.empty) >>> specTasks
-        .map(_.bootstrap)
-        .foldLeft(ZLayer.empty: ZLayer[ZIOAppArgs, Any, Any])(_ +!+ _)
-
-    val sharedLayer: ZLayer[Any, Any, TestOutput] =
-      sharedLayerFromSpecs +!+ sharedTestOutputLayer
+    val specTasks: Array[ZIOSpecAbstract]           = defs.map(disectTask(_, testClassLoader))
+    val bootstrapLayer                              = if (specTasks.nonEmpty) specTasks.map(_.bootstrap).reduce(_ +!+ _) else ZLayer.empty
+    val sharedLayerFromSpecs: ZLayer[Any, Any, Any] = (Scope.default +!+ ZIOAppArgs.empty) >>> bootstrapLayer
+    val sharedLayer: ZLayer[Any, Any, TestOutput]   = sharedLayerFromSpecs >>> sharedTestOutputLayer
 
     val runtime: Runtime.Scoped[TestOutput] =
       zio.Runtime.unsafe.fromLayer(sharedLayer)(Trace.empty, Unsafe.unsafe)

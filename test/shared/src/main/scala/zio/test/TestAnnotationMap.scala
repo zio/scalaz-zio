@@ -25,19 +25,18 @@ import scala.collection.immutable.Map
  */
 final class TestAnnotationMap private (private val map: Map[TestAnnotation[Any], AnyRef]) { self =>
 
-  def ++(that: TestAnnotationMap): TestAnnotationMap =
-    new TestAnnotationMap((self.map.toVector ++ that.map.toVector).foldLeft[Map[TestAnnotation[Any], AnyRef]](Map()) {
-      case (acc, (key, value)) =>
-        acc.updated(key, acc.get(key).fold(value)(key.combine(_, value).asInstanceOf[AnyRef]))
-    })
+  def ++(that: TestAnnotationMap): TestAnnotationMap = {
+    val map0 = that.map.foldLeft(self.map) { case (acc, (k, v)) =>
+      acc.updated(k, acc.get(k).fold(v)(k.combine(_, v).asInstanceOf[AnyRef]))
+    }
+    new TestAnnotationMap(map0)
+  }
 
   /**
    * Appends the specified annotation to the annotation map.
    */
-  def annotate[V](key: TestAnnotation[V], value: V): TestAnnotationMap = {
-    val res = update[V](key, key.combine(_, value))
-    res
-  }
+  def annotate[V](key: TestAnnotation[V], value: V): TestAnnotationMap =
+    update[V](key, key.combine(_, value))
 
   /**
    * Retrieves the annotation of the specified type, or its default value if

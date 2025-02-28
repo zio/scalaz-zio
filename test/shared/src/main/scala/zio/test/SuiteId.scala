@@ -1,6 +1,6 @@
 package zio.test
 
-import zio.{Random, ZIO}
+import zio.{Random, Unsafe, ZIO}
 
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,8 +18,8 @@ object SuiteId {
   private val counter = new AtomicInteger(1)
 
   val newRandom: ZIO[Any, Nothing, SuiteId] =
-    for {
-      // TODO  Consider counting up from 0, rather than completely random ints
-      random <- ZIO.succeed(counter.getAndIncrement())
-    } yield SuiteId(random)
+    ZIO.succeed(newRandomUnsafe(Unsafe))
+
+  private[test] def newRandomUnsafe(implicit unsafe: Unsafe): SuiteId =
+    SuiteId(counter.getAndIncrement())
 }

@@ -3,7 +3,7 @@ package zio.test
 import zio.{Ref, ZIO}
 
 private[test] object TestDebugFileLock {
-  def make: ZIO[Any, Nothing, TestDebugFileLock] =
+  val make: ZIO[Any, Nothing, TestDebugFileLock] =
     Ref.Synchronized.make[Unit](()).map(TestDebugFileLock(_))
 }
 

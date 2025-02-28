@@ -16,6 +16,7 @@
 
 package zio.test
 
+import zio.Clock.ClockLive
 import zio._
 import zio.internal.stacktracer.Tracer
 import zio.stacktracer.TracingImplicits.disableAutoTrace
@@ -789,12 +790,10 @@ object TestRandom extends Serializable {
   def make(data: Data): Layer[Nothing, TestRandom] = {
     implicit val trace = Tracer.newTrace
     ZLayer.scoped {
-      for {
-        data   <- ZIO.succeed(Ref.unsafe.make(data)(Unsafe.unsafe))
-        buffer <- ZIO.succeed(Ref.unsafe.make(Buffer())(Unsafe.unsafe))
-        test    = Test(data, buffer)
-        _      <- ZIO.withRandomScoped(test)
-      } yield test
+      val data0  = Ref.unsafe.make(data)(Unsafe.unsafe)
+      val buffer = Ref.unsafe.make(Buffer())(Unsafe.unsafe)
+      val test   = Test(data0, buffer)
+      ZIO.withRandomScoped(test).as(test)
     }
   }
 
@@ -804,15 +803,14 @@ object TestRandom extends Serializable {
   val deterministic: Layer[Nothing, TestRandom] =
     make(DefaultData)
 
-  val random: ZLayer[Clock, Nothing, TestRandom] = {
+  val random: ZLayer[Any, Nothing, TestRandom] = {
     implicit val trace = Tracer.newTrace
-    (ZLayer.service[Clock] ++ deterministic) >>> ZLayer {
-      for {
-        random     <- ZIO.service[Random]
-        testRandom <- ZIO.service[TestRandom]
-        time       <- Clock.nanoTime
-        _          <- TestRandom.setSeed(time)
-      } yield testRandom
+    deterministic >>> ZLayer {
+      ZIO.serviceWithZIO[TestRandom] { testRandom =>
+        ClockLive.nanoTime
+          .flatMap(testRandom.setSeed(_))
+          .as(testRandom)
+      }
     }
   }
 
@@ -820,11 +818,11 @@ object TestRandom extends Serializable {
    * Constructs a new `Test` object that implements the `TestRandom` interface.
    * This can be useful for mixing in with implementations of other interfaces.
    */
-  def makeTest(data: Data)(implicit trace: Trace): UIO[Test] =
-    for {
-      data   <- ZIO.succeed(Ref.unsafe.make(data)(Unsafe.unsafe))
-      buffer <- ZIO.succeed(Ref.unsafe.make(Buffer())(Unsafe.unsafe))
-    } yield Test(data, buffer)
+  def makeTest(data: Data)(implicit trace: Trace): UIO[Test] = ZIO.succeedUnsafe { implicit unsafe =>
+    val data0  = Ref.unsafe.make(data)
+    val buffer = Ref.unsafe.make(Buffer())(Unsafe.unsafe)
+    Test(data0, buffer)
+  }
 
   /**
    * Accesses a `TestRandom` instance in the environment and saves the random
