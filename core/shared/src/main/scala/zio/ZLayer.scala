@@ -2412,9 +2412,9 @@ object ZLayer extends ZLayerCompanionVersionSpecific {
                         }
                       }
                       val memoized = (
-                        promise.await.onExit {
-                          case _: Exit.Success[?] => ZIO.succeed(observers.incrementAndGet(): Unit)
-                          case _: Exit.Failure[?] => ZIO.unit
+                        promise.await.exitWith {
+                          case exit: Exit.Success[?] => observers.incrementAndGet(); exit
+                          case exit                  => exit
                         },
                         (exit: Exit[Any, Any]) => ZIO.suspendSucceed(finalizerRef.get.apply(exit))
                       )

@@ -503,12 +503,15 @@ object TestAspect extends TimeoutVariants {
         )
     }
 
+  @deprecated("This aspect is automatically applied to all tests and can be safely removed", since = "2.1.17")
+  lazy val fibers: TestAspectPoly = supervisedFibers
+
   /**
    * An aspect that records the state of fibers spawned by the current test in
    * [[TestAnnotation.fibers]]. Applied by default in [[ZIOSpecAbstract]]. This
    * aspect is required for the proper functioning of `TestClock.adjust`.
    */
-  lazy val fibers: TestAspectPoly =
+  private[test] val supervisedFibers: TestAspectPoly =
     new PerTest.Poly {
       private implicit val trace: Trace = Trace.empty
 
@@ -524,11 +527,12 @@ object TestAspect extends TimeoutVariants {
             case 1 => refs0.head.size
             case _ =>
               val set = mutable.HashSet.empty[Fiber.Runtime[Any, Any]]
-              refs0.foreach(set ++= _)
+              val it  = refs0.iterator
+              while (it.hasNext) set ++= it.next()
               set.size
           }
           Annotations.annotate(TestAnnotation.fibers, Left(n))
-        case Left(_) => Exit.unit
+        case _ => Exit.unit
       }
 
       def perTest[R, E](
