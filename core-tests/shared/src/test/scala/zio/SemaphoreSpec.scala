@@ -32,6 +32,33 @@ object SemaphoreSpec extends ZIOBaseSpec {
         permits   <- semaphore.available
       } yield assertTrue(permits == 2L)
     },
+    test("tryWithPermits acquires and releases same number of permits") {
+      for {
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermits(2L)(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isDefined)
+    },
+    test("tryWithPermits returns None if no permits available") {
+      for {
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermits(4L)(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isEmpty)
+    },
+    test("tryWithPermit acquires and releases same number of permits") {
+      for {
+        sem     <- Semaphore.make(3L)
+        ans     <- sem.tryWithPermit(ZIO.unit)
+        permits <- sem.available
+      } yield assertTrue(permits == 3L && ans.isDefined)
+    },
+    test("tryWithPermits fails if requested permits in negative number") {
+      for {
+        sem <- Semaphore.make(3L)
+        ans <- sem.tryWithPermits(-1L)(ZIO.unit).exit
+      } yield assert(ans)(dies(isSubtype[IllegalArgumentException](anything)))
+    },
     test("awaiting returns the count of waiting fibers") {
       for {
         semaphore    <- Semaphore.make(1)
