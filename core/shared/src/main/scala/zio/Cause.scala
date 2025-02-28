@@ -16,7 +16,6 @@
 
 package zio
 
-import zio.Cause.Both
 import zio.stacktracer.TracingImplicits.disableAutoTrace
 
 import scala.annotation.tailrec
@@ -49,10 +48,10 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    */
   def annotations: Map[String, String] =
     self.foldLeft(Map.empty[String, String]) {
-      case (z, die @ Die(_, _))             => z ++ die.annotations
-      case (z, fail @ Fail(_, _))           => z ++ fail.annotations
-      case (z, interrupt @ Interrupt(_, _)) => z ++ interrupt.annotations
-      case (z, _)                           => z
+      case (z, die: Die)             => z ++ die.annotations
+      case (z, fail: Fail[?])        => z ++ fail.annotations
+      case (z, interrupt: Interrupt) => z ++ interrupt.annotations
+      case (z, _)                    => z
     }
 
   private[zio] final def applyAll(
@@ -92,7 +91,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    */
   final def defects: List[Throwable] =
     self
-      .foldLeft(List.empty[Throwable]) { case (z, Die(v, _)) => v :: z }
+      .foldLeft(List.empty[Throwable]) { case (z, die: Die) => die.value :: z }
       .reverse
 
   /**
@@ -100,7 +99,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    * one exists.
    */
   final def dieOption: Option[Throwable] =
-    find { case Die(t, _) => t }
+    findOr({ case die: Die => Some(die.value) }, fallback = None)
 
   override def equals(that: Any): Boolean =
     that match {
@@ -112,8 +111,17 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    * Returns the `E` associated with the first `Fail` in this `Cause` if one
    * exists.
    */
-  def failureOption: Option[E] =
-    find { case Fail(e, _) => e }
+  def failureOption: Option[E] = failureOr(Some(_), fallback = None)
+
+  /**
+   * Maps the `E` associated with the first `Fail` in this `Cause` to `f` if one
+   * exists. Otherwise, returns the `fallback`.
+   */
+  final def failureOr[Z](f: E => Z, fallback: => Z): Z =
+    findOr(
+      { case fail: Fail[?] => f(fail.value) },
+      fallback
+    )
 
   /**
    * Returns the `E` associated with the first `Fail` in this `Cause` if one
@@ -127,10 +135,22 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    * no checked errors return the rest of the `Cause` that is known to contain
    * only `Die` or `Interrupt` causes.
    */
-  final def failureOrCause: Either[E, Cause[Nothing]] = failureOption match {
-    case Some(error) => Left(error)
-    case None        => Right(self.asInstanceOf[Cause[Nothing]]) // no E inside this cause, can safely cast
-  }
+  final def failureOrCause: Either[E, Cause[Nothing]] =
+    failureOr(
+      Left(_),
+      fallback = Right(self.asInstanceOf[Cause[Nothing]]) // no E inside this cause, can safely cast
+    )
+
+  /**
+   * Calls the `failure` function with the first checked error if available, if
+   * there are no checked errors, calls the `cause` function with the rest of
+   * the `Cause` that is known to contain only `Die` or `Interrupt` causes.
+   */
+  final def foldFailureOrCause[Z](failure: E => Z, cause: Cause[Nothing] => Z): Z =
+    failureOr(
+      failure,
+      fallback = cause(self.asInstanceOf[Cause[Nothing]]) // no E inside this cause, can safely cast
+    )
 
   /**
    * Retrieve the first checked error and its trace on the `Left` if available,
@@ -147,9 +167,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    */
   final def failures: List[E] =
     self
-      .foldLeft(List.empty[E]) { case (z, Fail(v, _)) =>
-        v :: z
-      }
+      .foldLeft(List.empty[E]) { case (z, f: Fail[?]) => f.value :: z }
       .reverse
 
   /**
@@ -172,6 +190,27 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
           case Stackless(cause, _) => loop(cause, stack)
           case _ if stack.nonEmpty => loop(stack.head, stack.tail)
           case _                   => None
+        }
+      }
+    }
+    loop(self, Nil)
+  }
+
+  /**
+   * Finds something and extracts some details from it.
+   */
+  final def findOr[Z](f: PartialFunction[Cause[E], Z], fallback: => Z): Z = {
+    @tailrec
+    def loop(cause: Cause[E], stack: List[Cause[E]]): Z = {
+      val isDefined = f.isDefinedAt(cause)
+      if (isDefined) f(cause)
+      else {
+        cause match {
+          case Then(left, right)   => loop(left, right :: stack)
+          case Both(left, right)   => loop(left, right :: stack)
+          case Stackless(cause, _) => loop(cause, stack)
+          case _ if stack.nonEmpty => loop(stack.head, stack.tail)
+          case _                   => fallback
         }
       }
     }
@@ -334,7 +373,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
     }
 
   final def interruptOption: Option[FiberId] =
-    find { case Interrupt(fiberId, _) => fiberId }
+    findOr({ case Interrupt(fiberId, _) => Some(fiberId) }, fallback = None)
 
   final def isDie: Boolean =
     dieOption.isDefined
@@ -368,7 +407,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    * Determines if the `Cause` contains an interruption.
    */
   final def isInterrupted: Boolean =
-    find { case Interrupt(_, _) => () }.isDefined
+    findOr({ case _: Interrupt => true }, fallback = false)
 
   /**
    * Determines if the `Cause` contains only interruptions and not any `Die` or
@@ -380,11 +419,14 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
    * Determines if the `Cause` is traced.
    */
   final def isTraced: Boolean =
-    find {
-      case Die(_, trace) if !trace.isEmpty       => ()
-      case Fail(_, trace) if !trace.isEmpty      => ()
-      case Interrupt(_, trace) if !trace.isEmpty => ()
-    }.isDefined
+    findOr(
+      {
+        case die: Die             => !die.trace.isEmpty
+        case fail: Fail[?]        => !fail.trace.isEmpty
+        case interrupt: Interrupt => !interrupt.trace.isEmpty
+      },
+      fallback = false
+    )
 
   /**
    * Remove all `Fail` and `Interrupt` nodes from this `Cause`, return only
@@ -531,11 +573,14 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
     val (die, fail, interrupt) =
       self.linearize.foldLeft((Set.empty[Cause[E]], Set.empty[Cause[E]], Set.empty[Cause[E]])) {
         case ((die, fail, interrupt), cause) =>
-          cause.find {
-            case Die(_, _)       => (die + cause, fail, interrupt)
-            case Fail(_, _)      => (die, fail + cause, interrupt)
-            case Interrupt(_, _) => (die, fail, interrupt + cause)
-          }.getOrElse((die, fail, interrupt))
+          cause.findOr(
+            {
+              case _: Die       => (die + cause, fail, interrupt)
+              case _: Fail[?]   => (die, fail + cause, interrupt)
+              case _: Interrupt => (die, fail, interrupt + cause)
+            },
+            fallback = (die, fail, interrupt)
+          )
       }
 
     die.foreach(appendCause)
@@ -559,10 +604,10 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
   def spans: List[LogSpan] =
     self
       .foldLeft(List.empty[LogSpan]) {
-        case (z, die @ Die(_, _))             => die.spans.reverse_:::(z)
-        case (z, fail @ Fail(_, _))           => fail.spans.reverse_:::(z)
-        case (z, interrupt @ Interrupt(_, _)) => interrupt.spans.reverse_:::(z)
-        case (z, _)                           => z
+        case (z, die: Die)             => die.spans.reverse_:::(z)
+        case (z, fail: Fail[?])        => fail.spans.reverse_:::(z)
+        case (z, interrupt: Interrupt) => interrupt.spans.reverse_:::(z)
+        case (z, _)                    => z
       }
       .reverse
 
@@ -612,7 +657,7 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
   final def stripFailures: Cause[Nothing] =
     foldLog[Cause[Nothing]](
       Empty,
-      (e, trace, spans, annotations) => Empty,
+      (_, _, _, _) => Empty,
       (t, trace, spans, annotations) => Die(t, trace, spans, annotations),
       (fiberId, trace, spans, annotations) => Interrupt(fiberId, trace, spans, annotations)
     )(
@@ -660,10 +705,10 @@ sealed abstract class Cause[+E] extends Product with Serializable { self =>
   final def traces: List[StackTrace] =
     self
       .foldLeft(List.empty[StackTrace]) {
-        case (z, Die(_, trace))       => trace :: z
-        case (z, Fail(_, trace))      => trace :: z
-        case (z, Interrupt(_, trace)) => trace :: z
-        case (z, _)                   => z
+        case (z, die: Die)             => die.trace :: z
+        case (z, fail: Fail[?])        => fail.trace :: z
+        case (z, interrupt: Interrupt) => interrupt.trace :: z
+        case (z, _)                    => z
       }
       .reverse
 
